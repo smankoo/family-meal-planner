@@ -26,6 +26,8 @@ import {
   generateMealPrepPlan, 
   generateGroceryList 
 } from './services/geminiService';
+import { analyticsService } from './services/analyticsService';
+import { getAnalyticsConfig, validateAnalyticsConfig } from './config/analytics';
 import { Undo2, Sparkles, ChefHat, Settings, ArrowLeft, ArrowRight, X, Loader2, RotateCcw } from 'lucide-react';
 
 type ViewMode = 'planning' | 'household';
@@ -95,6 +97,36 @@ const App: React.FC = () => {
   const [lastDiffPlan, setLastDiffPlan] = useState<WeekPlan | undefined>(undefined);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
+  // --- Analytics Initialization ---
+  useEffect(() => {
+    const initializeAnalytics = async () => {
+      const config = getAnalyticsConfig();
+      
+      if (validateAnalyticsConfig(config)) {
+        try {
+          await analyticsService.initialize({
+            measurementId: config.measurementId,
+            debug: config.debug,
+            testMode: config.testMode
+          });
+          
+          // Track initial page view
+          await analyticsService.trackPageView({
+            page_title: 'Family Meal Planner - Home'
+          });
+          
+          if (config.debug) {
+            console.log('Analytics initialized successfully');
+          }
+        } catch (error) {
+          console.warn('Analytics initialization failed:', error);
+        }
+      }
+    };
+
+    initializeAnalytics();
+  }, []);
+
 
   // --- Persistence Effects ---
 
@@ -111,6 +143,15 @@ const App: React.FC = () => {
 
   const handleGenerateInitialPlan = async (members: FamilyMember[], prefs: FamilyPreferences) => {
     setIsLoading(true);
+    
+    // Track plan generation start
+    await analyticsService.trackMealPlanningEvent('plan_generation_started', {
+      family_size: members.length,
+      dietary_restrictions: prefs.dietaryRestrictions?.length || 0,
+      cooking_time: prefs.cookingTime,
+      budget: prefs.budget
+    });
+    
     try {
       const plan = await generateInitialMealPlan(members, prefs);
       setPlanHistory({
@@ -121,8 +162,21 @@ const App: React.FC = () => {
       setHasPlanGenerated(true);
       setViewMode('planning');
       setCurrentStage(Stage.MEAL_PLANNING);
+      
+      // Track successful plan generation
+      await analyticsService.trackMealPlanningEvent('plan_generation_completed', {
+        family_size: members.length,
+        total_meals: Object.values(plan).flat().length
+      });
+      
     } catch (error) {
       console.error("Error generating plan:", error);
+      
+      // Track plan generation failure
+      await analyticsService.trackMealPlanningEvent('plan_generation_failed', {
+        error_message: error instanceof Error ? error.message : 'Unknown error'
+      });
+      
       alert(`Failed to generate plan: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
@@ -131,6 +185,12 @@ const App: React.FC = () => {
 
   const handleRegeneratePlan = async () => {
     if (window.confirm("This will create a completely new plan based on your current settings, overwriting any changes. Continue?")) {
+        // Track plan regeneration
+        await analyticsService.trackMealPlanningEvent('plan_regenerated', {
+          had_previous_plan: hasPlanGenerated,
+          family_size: family.length
+        });
+        
         setPrepTasks([]);
         setGroceryItems([]);
         await handleGenerateInitialPlan(family, preferences);
@@ -159,6 +219,12 @@ const App: React.FC = () => {
     const userMsg: ChatMessage = { id: newMsgId, role: 'user', content: userMessage, timestamp: Date.now() };
     setMessages(prev => [...prev, userMsg]);
 
+    // Track LLM interaction start
+    await analyticsService.trackLLMEvent('plan_update_requested', {
+      message_length: userMessage.length,
+      current_stage: currentStage
+    });
+
     try {
       const { plan: newPlan, explanation } = await updateMealPlanWithAgent(
         planHistory.present,
@@ -183,8 +249,20 @@ const App: React.FC = () => {
       };
       setMessages(prev => [...prev, botMsg]);
       
+      // Track successful LLM interaction
+      await analyticsService.trackLLMEvent('plan_update_completed', {
+        response_length: explanation.length,
+        changes_made: true
+      });
+      
     } catch (error) {
       console.error(error);
+      
+      // Track LLM interaction failure
+      await analyticsService.trackLLMEvent('plan_update_failed', {
+        error_message: error instanceof Error ? error.message : 'Unknown error'
+      });
+      
       const errorMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'system',
@@ -199,6 +277,12 @@ const App: React.FC = () => {
 
   const handleUndo = () => {
     if (planHistory.past.length === 0) return;
+    
+    // Track undo action
+    analyticsService.trackEngagement('plan_undo', {
+      undo_depth: planHistory.past.length
+    });
+    
     const previous = planHistory.past[planHistory.past.length - 1];
     const newPast = planHistory.past.slice(0, -1);
     setLastDiffPlan(undefined);
@@ -210,14 +294,32 @@ const App: React.FC = () => {
   };
 
   const handleStageChange = async (newStage: Stage) => {
+    // Track stage navigation
+    await analyticsService.trackEngagement('stage_changed', {
+      from_stage: currentStage,
+      to_stage: newStage
+    });
+    
     // If switching to prep and we don't have prep tasks, generate them
     if (newStage === Stage.MEAL_PREP && prepTasks.length === 0) {
       setIsLoading(true);
+      
+      await analyticsService.trackMealPlanningEvent('prep_generation_started');
+      
       try {
         const tasks = await generateMealPrepPlan(planHistory.present);
         setPrepTasks(tasks);
+        
+        await analyticsService.trackMealPlanningEvent('prep_generation_completed', {
+          task_count: tasks.length
+        });
       } catch (e) { 
-        console.error(e); 
+        console.error(e);
+        
+        await analyticsService.trackMealPlanningEvent('prep_generation_failed', {
+          error_message: e instanceof Error ? e.message : 'Unknown error'
+        });
+        
         // Still allow navigation even if generation fails
       } finally { 
         setIsLoading(false); 
@@ -227,11 +329,23 @@ const App: React.FC = () => {
     // If switching to grocery list and we don't have grocery items, generate them
     if (newStage === Stage.GROCERY_LIST && groceryItems.length === 0) {
       setIsLoading(true);
+      
+      await analyticsService.trackMealPlanningEvent('grocery_generation_started');
+      
       try {
         const items = await generateGroceryList(planHistory.present, prepTasks);
         setGroceryItems(items);
+        
+        await analyticsService.trackMealPlanningEvent('grocery_generation_completed', {
+          item_count: items.length
+        });
       } catch (e) { 
-        console.error(e); 
+        console.error(e);
+        
+        await analyticsService.trackMealPlanningEvent('grocery_generation_failed', {
+          error_message: e instanceof Error ? e.message : 'Unknown error'
+        });
+        
         // Still allow navigation even if generation fails
       } finally { 
         setIsLoading(false); 
@@ -451,7 +565,15 @@ const App: React.FC = () => {
              {/* Right: Assistant Toggle (Black Circle) */}
              <div className="pointer-events-auto">
                 <button
-                    onClick={() => setIsChatOpen(!isChatOpen)}
+                    onClick={() => {
+                      const newState = !isChatOpen;
+                      setIsChatOpen(newState);
+                      
+                      // Track chat interactions
+                      analyticsService.trackEngagement(newState ? 'chat_opened' : 'chat_closed', {
+                        current_stage: currentStage
+                      });
+                    }}
                     className={`
                         w-14 h-14 flex items-center justify-center rounded-full shadow-xl transition-all duration-300
                         ${isChatOpen 
