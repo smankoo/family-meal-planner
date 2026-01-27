@@ -5,10 +5,10 @@ import { ChefHat, ShoppingBag, CalendarRange } from 'lucide-react';
 interface StageStepperProps {
   currentStage: Stage;
   setStage: (stage: Stage) => void;
-  maxStageReached: Stage;
+  hasMealPlan: boolean;
 }
 
-const StageStepper: React.FC<StageStepperProps> = ({ currentStage, setStage, maxStageReached }) => {
+const StageStepper: React.FC<StageStepperProps> = ({ currentStage, setStage, hasMealPlan }) => {
   const steps = [
     { id: Stage.MEAL_PLANNING, label: 'Meals', icon: CalendarRange },
     { id: Stage.MEAL_PREP, label: 'Prep', icon: ChefHat },
@@ -19,7 +19,9 @@ const StageStepper: React.FC<StageStepperProps> = ({ currentStage, setStage, max
     <div className="inline-flex bg-zinc-100/80 p-1 rounded-full">
         {steps.map((step) => {
           const isActive = currentStage === step.id;
-          const isClickable = maxStageReached >= step.id;
+          // All stages are clickable if we have a meal plan
+          // Meal planning is always clickable
+          const isClickable = step.id === Stage.MEAL_PLANNING || hasMealPlan;
           
           return (
             <button

@@ -72,10 +72,6 @@ const App: React.FC = () => {
   const [currentStage, setCurrentStage] = useState<Stage>(() => 
     loadState('fmp_current_stage', Stage.MEAL_PLANNING)
   );
-  
-  const [maxStageReached, setMaxStageReached] = useState<Stage>(() => 
-    loadState('fmp_max_stage', Stage.MEAL_PLANNING)
-  );
 
   const [planHistory, setPlanHistory] = useState<PlanHistory>(() => 
     loadState('fmp_plan_history', {
@@ -106,7 +102,6 @@ const App: React.FC = () => {
   useEffect(() => saveState('fmp_preferences', preferences), [preferences]);
   useEffect(() => saveState('fmp_has_plan', hasPlanGenerated), [hasPlanGenerated]);
   useEffect(() => saveState('fmp_current_stage', currentStage), [currentStage]);
-  useEffect(() => saveState('fmp_max_stage', maxStageReached), [maxStageReached]);
   useEffect(() => saveState('fmp_plan_history', planHistory), [planHistory]);
   useEffect(() => saveState('fmp_prep_tasks', prepTasks), [prepTasks]);
   useEffect(() => saveState('fmp_grocery_items', groceryItems), [groceryItems]);
@@ -126,7 +121,6 @@ const App: React.FC = () => {
       setHasPlanGenerated(true);
       setViewMode('planning');
       setCurrentStage(Stage.MEAL_PLANNING);
-      setMaxStageReached(Stage.MEAL_PLANNING);
     } catch (error) {
       console.error("Error generating plan:", error);
       alert(`Failed to generate plan: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -139,7 +133,6 @@ const App: React.FC = () => {
     if (window.confirm("This will create a completely new plan based on your current settings, overwriting any changes. Continue?")) {
         setPrepTasks([]);
         setGroceryItems([]);
-        setMaxStageReached(Stage.MEAL_PLANNING);
         await handleGenerateInitialPlan(family, preferences);
     }
   };
@@ -216,28 +209,36 @@ const App: React.FC = () => {
     });
   };
 
-  const handleProceedToPrep = async () => {
-    if (prepTasks.length === 0) {
+  const handleStageChange = async (newStage: Stage) => {
+    // If switching to prep and we don't have prep tasks, generate them
+    if (newStage === Stage.MEAL_PREP && prepTasks.length === 0) {
       setIsLoading(true);
       try {
         const tasks = await generateMealPrepPlan(planHistory.present);
         setPrepTasks(tasks);
-      } catch (e) { console.error(e); } finally { setIsLoading(false); }
+      } catch (e) { 
+        console.error(e); 
+        // Still allow navigation even if generation fails
+      } finally { 
+        setIsLoading(false); 
+      }
     }
-    setCurrentStage(Stage.MEAL_PREP);
-    if (maxStageReached < Stage.MEAL_PREP) setMaxStageReached(Stage.MEAL_PREP);
-  };
-
-  const handleProceedToGrocery = async () => {
-    if (groceryItems.length === 0) {
-       setIsLoading(true);
-       try {
-         const items = await generateGroceryList(planHistory.present, prepTasks);
-         setGroceryItems(items);
-       } catch (e) { console.error(e); } finally { setIsLoading(false); }
+    
+    // If switching to grocery list and we don't have grocery items, generate them
+    if (newStage === Stage.GROCERY_LIST && groceryItems.length === 0) {
+      setIsLoading(true);
+      try {
+        const items = await generateGroceryList(planHistory.present, prepTasks);
+        setGroceryItems(items);
+      } catch (e) { 
+        console.error(e); 
+        // Still allow navigation even if generation fails
+      } finally { 
+        setIsLoading(false); 
+      }
     }
-    setCurrentStage(Stage.GROCERY_LIST);
-    if (maxStageReached < Stage.GROCERY_LIST) setMaxStageReached(Stage.GROCERY_LIST);
+    
+    setCurrentStage(newStage);
   };
 
   // --- Render ---
@@ -264,8 +265,8 @@ const App: React.FC = () => {
           <div className="pointer-events-auto transition-opacity duration-300 hidden md:block" style={{ opacity: viewMode === 'planning' ? 1 : 0 }}>
                <StageStepper 
                   currentStage={currentStage} 
-                  setStage={setCurrentStage} 
-                  maxStageReached={maxStageReached} 
+                  setStage={handleStageChange} 
+                  hasMealPlan={hasPlanGenerated} 
                />
           </div>
 
@@ -313,8 +314,8 @@ const App: React.FC = () => {
                <div className="md:hidden mb-6 relative flex justify-center">
                  <StageStepper 
                     currentStage={currentStage} 
-                    setStage={setCurrentStage} 
-                    maxStageReached={maxStageReached} 
+                    setStage={handleStageChange} 
+                    hasMealPlan={hasPlanGenerated} 
                  />
                  <button 
                     onClick={handleRegeneratePlan} 
@@ -397,7 +398,7 @@ const App: React.FC = () => {
              <div className="pointer-events-auto">
                 {currentStage !== Stage.MEAL_PLANNING ? (
                      <button 
-                        onClick={() => setCurrentStage(currentStage - 1)}
+                        onClick={() => handleStageChange(currentStage - 1)}
                         className="w-12 h-12 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-md shadow-lg border border-white/50 text-zinc-600 hover:bg-white hover:text-zinc-900 transition-all active:scale-95"
                         title="Back"
                     >
@@ -410,7 +411,7 @@ const App: React.FC = () => {
              <div className="pointer-events-auto">
                 {currentStage === Stage.MEAL_PLANNING && (
                     <button 
-                        onClick={handleProceedToPrep}
+                        onClick={() => handleStageChange(Stage.MEAL_PREP)}
                         disabled={isLoading}
                         className="group flex items-center gap-3 bg-zinc-900 text-white px-8 py-4 rounded-full shadow-xl shadow-zinc-900/20 hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-80 disabled:hover:scale-100 disabled:cursor-wait"
                     >
@@ -426,7 +427,7 @@ const App: React.FC = () => {
                 )}
                 {currentStage === Stage.MEAL_PREP && (
                     <button 
-                        onClick={handleProceedToGrocery}
+                        onClick={() => handleStageChange(Stage.GROCERY_LIST)}
                         disabled={isLoading}
                         className="group flex items-center gap-3 bg-zinc-900 text-white px-8 py-4 rounded-full shadow-xl shadow-zinc-900/20 hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-80 disabled:hover:scale-100 disabled:cursor-wait"
                     >

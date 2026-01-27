@@ -13,9 +13,10 @@ const MealGrid: React.FC<MealGridProps> = ({ plan, previousPlan, onCellClick }) 
   
   const hasChanged = (dayIndex: number, time: MealTime): boolean => {
     if (!previousPlan) return false;
-    const currentName = plan[dayIndex].meals[time].name;
-    const prevName = previousPlan[dayIndex]?.meals[time]?.name;
-    return currentName !== prevName && currentName !== '';
+    const currentMeal = plan[dayIndex]?.meals[time];
+    const prevMeal = previousPlan[dayIndex]?.meals[time];
+    if (!currentMeal || !prevMeal) return false;
+    return currentMeal.name !== prevMeal.name && currentMeal.name !== '';
   };
 
   // --- Mobile View (Apple-style sticky section headers) ---
@@ -35,7 +36,7 @@ const MealGrid: React.FC<MealGridProps> = ({ plan, previousPlan, onCellClick }) 
                 {/* Cards for that day */}
                 <div className="space-y-3 px-4">
                     {mealTimes.map((time) => {
-                        const cell = dayPlan.meals[time];
+                        const cell = dayPlan.meals[time] || { name: '', description: '', notes: '' };
                         const isChanged = hasChanged(dayIdx, time);
 
                         return (
@@ -99,7 +100,7 @@ const MealGrid: React.FC<MealGridProps> = ({ plan, previousPlan, onCellClick }) 
                     grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7
                     2xl:grid-cols-7">
                     {plan.map((dayPlan, dayIdx) => {
-                        const cell = dayPlan.meals[time];
+                        const cell = dayPlan.meals[time] || { name: '', description: '', notes: '' };
                         const isChanged = hasChanged(dayIdx, time);
 
                         return (

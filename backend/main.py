@@ -15,7 +15,7 @@ app = FastAPI(title="Family Meal Planner API")
 # Configure CORS - update with your frontend URL later
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://*.vercel.app"],  # Add your deployed frontend URL
+    allow_origins=["http://localhost:3000", "http://localhost:3001", "https://*.vercel.app"],  # Add your deployed frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
