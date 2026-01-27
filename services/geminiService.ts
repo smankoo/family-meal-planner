@@ -1,7 +1,7 @@
 import { FamilyMember, FamilyPreferences, WeekPlan, PrepTask, GroceryItem } from "../types";
 
-// FastAPI backend base URL
-const API_BASE_URL = "http://localhost:8000";
+// FastAPI backend base URL - use environment variable in production
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 // Helper function for API calls
 const apiCall = async (endpoint: string, data: any) => {

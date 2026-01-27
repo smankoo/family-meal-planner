@@ -2,8 +2,20 @@ services:
   - type: web
     name: meal-planner-api
     env: python
-    buildCommand: "cd backend && pip install -r requirements.txt"
-    startCommand: "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
+    buildCommand: "cd backend && uv pip install -r requirements.txt"
+    startCommand: "cd backend && uv run uvicorn main:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: GEMINI_API_KEY
         sync: false  # You'll set this in Render dashboard
+  
+  - type: static
+    name: meal-planner-frontend
+    buildCommand: "npm install && npm run build"
+    publishPath: "./dist"
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: "https://meal-planner-api.onrender.com"
+      - key: VITE_GA_MEASUREMENT_ID
+        value: "G-X5HX141WYD"
+      - key: VITE_GA_DEBUG
+        value: "false"
