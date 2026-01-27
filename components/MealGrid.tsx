@@ -80,7 +80,7 @@ const MealGrid: React.FC<MealGridProps> = ({ plan, previousPlan, onCellClick }) 
     );
   };
 
-  // --- Desktop View (Strict Grid of Cards) ---
+  // --- Adaptive Desktop View (Apple-like fluid responsive) ---
   const DesktopView = () => {
     return (
       <div className="hidden md:flex flex-col gap-10">
@@ -94,8 +94,10 @@ const MealGrid: React.FC<MealGridProps> = ({ plan, previousPlan, onCellClick }) 
                     <div className="h-[1px] flex-1 bg-zinc-100"></div>
                 </div>
                 
-                {/* The Grid Row */}
-                <div className="grid grid-cols-7 gap-4">
+                {/* Adaptive Grid - Apple-like responsive behavior */}
+                <div className="grid gap-4 
+                    grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7
+                    2xl:grid-cols-7">
                     {plan.map((dayPlan, dayIdx) => {
                         const cell = dayPlan.meals[time];
                         const isChanged = hasChanged(dayIdx, time);
@@ -105,8 +107,9 @@ const MealGrid: React.FC<MealGridProps> = ({ plan, previousPlan, onCellClick }) 
                                 key={`${dayPlan.day}-${time}`}
                                 onClick={() => onCellClick && onCellClick(dayPlan.day, time)}
                                 className={`
-                                    relative p-5 bg-white rounded-2xl border transition-all duration-300 group
-                                    flex flex-col h-full min-h-[160px] hover:-translate-y-1 hover:shadow-lg hover:shadow-zinc-200/50 cursor-default
+                                    relative p-4 xl:p-5 bg-white rounded-2xl border transition-all duration-300 group
+                                    flex flex-col h-full min-h-[140px] xl:min-h-[160px] 
+                                    hover:-translate-y-1 hover:shadow-lg hover:shadow-zinc-200/50 cursor-default
                                     ${isChanged 
                                         ? 'border-indigo-100 bg-gradient-to-br from-indigo-50/30 to-white' 
                                         : 'border-zinc-100 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.03)]'}
@@ -114,16 +117,18 @@ const MealGrid: React.FC<MealGridProps> = ({ plan, previousPlan, onCellClick }) 
                             >
                                 {/* Day Label inside card for context */}
                                 <div className="flex justify-between items-start mb-2">
-                                    <span className="text-[10px] font-bold text-zinc-300 uppercase">{dayPlan.day}</span>
+                                    <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-wider">
+                                        {dayPlan.day.slice(0, 3)}
+                                    </span>
                                     {isChanged && <Sparkles size={14} className="text-indigo-400" />}
                                 </div>
 
                                 <div className="flex-1">
-                                    <h4 className={`font-bold text-sm leading-snug mb-2 ${!cell.name ? 'text-zinc-300 italic' : 'text-zinc-800'}`}>
+                                    <h4 className={`font-bold text-sm xl:text-sm leading-snug mb-2 ${!cell.name ? 'text-zinc-300 italic' : 'text-zinc-800'}`}>
                                         {cell.name || "—"}
                                     </h4>
                                     {cell.description && (
-                                        <p className="text-xs text-zinc-500 font-light leading-relaxed line-clamp-3">
+                                        <p className="text-xs text-zinc-500 font-light leading-relaxed line-clamp-2 xl:line-clamp-3">
                                             {cell.description}
                                         </p>
                                     )}
