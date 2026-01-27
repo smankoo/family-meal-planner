@@ -93,7 +93,7 @@ async def generate_plan(request: GeneratePlanRequest):
         6. Return a JSON array of 7 Day objects.
         """
 
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         response = model.generate_content(
             prompt,
             generation_config=genai.GenerationConfig(
@@ -143,7 +143,7 @@ async def update_plan(request: UpdatePlanRequest):
         {{"plan": [...], "explanation": "..."}}
         """
 
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         response = model.generate_content(
             prompt,
             generation_config=genai.GenerationConfig(
@@ -173,7 +173,7 @@ async def generate_prep(request: PrepPlanRequest):
         - Return as JSON array of prep tasks with fields: day, task, relatedMeals
         """
 
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         response = model.generate_content(
             prompt,
             generation_config=genai.GenerationConfig(
@@ -205,7 +205,7 @@ async def generate_grocery(request: GroceryListRequest):
         - Return as JSON array with fields: name, category, quantity
         """
 
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         response = model.generate_content(
             prompt,
             generation_config=genai.GenerationConfig(
