@@ -35,7 +35,7 @@ const StageStepper: React.FC<StageStepperProps> = ({ currentStage, setStage, max
                     : 'text-zinc-300 cursor-not-allowed'}
               `}
             >
-              <step.icon size={14} strokeWidth={2.5} className={isActive ? 'text-indigo-500' : 'currentColor'} />
+              <step.icon size={14} strokeWidth={2.5} className={isActive ? 'text-zinc-900' : 'currentColor'} />
               <span>{step.label}</span>
             </button>
           );

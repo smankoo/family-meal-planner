@@ -3,6 +3,7 @@ Frontend:
 - Use tailwind for styling
 - The app will treat both mobile and desktop as first class citizens. UI should be 100% usable and delighftul on a phone and use the additional screen space available on a desktop well. The UI should have consistency between desktop and mobile UIs. Like between these diffent modes, layouts will obviously change, but things like button and text colors etc should not change.
 - Whenever a long running call happens (typically call to LLM), it should be an asynch call as per our principles, but also, in the UI, there should be an immediate update, cleanly showing that the user input has been accepted and is being processed, once the async call is completed, the UI should update to show the results. Wherever possible, these results should stream instead of batch-update so the app feels more responsive.
+- Nothing randomly appears or disappears. Everything flows in or out of something.
 
 Backend:
 - use uv (instead of pip or python venv) to manage python versions, virtual environments, dependencies etc.
