@@ -4,6 +4,9 @@ dist
 dist-ssr
 *.local
 
+# Runtime files
+*.pid
+
 # Logs
 logs
 *.log
