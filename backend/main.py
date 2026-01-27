@@ -2,7 +2,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import os
 import json
 from dotenv import load_dotenv
@@ -21,8 +22,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure Gemini
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# Configure Gemini with new SDK
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Pydantic models
 class FamilyMember(BaseModel):
@@ -108,10 +109,10 @@ async def generate_plan(request: GeneratePlanRequest):
         Each meal must have "name", "description", and "notes" fields. Include all 4 meal times: Breakfast, Lunch, Snack, Dinner.
         """
 
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.GenerationConfig(
+        response = client.models.generate_content(
+            model="gemini-3-flash-preview",
+            contents=prompt,
+            config=types.GenerateContentConfig(
                 response_mime_type="application/json"
             )
         )
@@ -158,10 +159,10 @@ async def update_plan(request: UpdatePlanRequest):
         {{"plan": [...], "explanation": "..."}}
         """
 
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.GenerationConfig(
+        response = client.models.generate_content(
+            model="gemini-3-flash-preview",
+            contents=prompt,
+            config=types.GenerateContentConfig(
                 response_mime_type="application/json"
             )
         )
@@ -188,10 +189,10 @@ async def generate_prep(request: PrepPlanRequest):
         - Return as JSON array of prep tasks with fields: day, task, relatedMeals
         """
 
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.GenerationConfig(
+        response = client.models.generate_content(
+            model="gemini-3-flash-preview",
+            contents=prompt,
+            config=types.GenerateContentConfig(
                 response_mime_type="application/json"
             )
         )
@@ -220,10 +221,10 @@ async def generate_grocery(request: GroceryListRequest):
         - Return as JSON array with fields: name, category, quantity
         """
 
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.GenerationConfig(
+        response = client.models.generate_content(
+            model="gemini-3-flash-preview",
+            contents=prompt,
+            config=types.GenerateContentConfig(
                 response_mime_type="application/json"
             )
         )
