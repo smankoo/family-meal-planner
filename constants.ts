@@ -6,8 +6,8 @@ export const INITIAL_FAMILY: FamilyMember[] = [
     name: 'Alex',
     age: 38,
     role: 'Adult',
-    likes: ['Spicy food', 'Asian cuisine', 'Salads'],
-    dislikes: ['Heavy cream'],
+    likes: 'Spicy food, Asian cuisine, Salads',
+    dislikes: 'Heavy cream',
     notes: 'Likes high protein'
   },
   {
@@ -15,8 +15,8 @@ export const INITIAL_FAMILY: FamilyMember[] = [
     name: 'Sam',
     age: 35,
     role: 'Adult',
-    likes: ['Pasta', 'Comfort food'],
-    dislikes: ['Mushrooms'],
+    likes: 'Pasta, Comfort food',
+    dislikes: 'Mushrooms',
     notes: 'Vegetarian preference on weekdays'
   },
   {
@@ -24,14 +24,14 @@ export const INITIAL_FAMILY: FamilyMember[] = [
     name: 'Leo',
     age: 4,
     role: 'Toddler',
-    likes: ['Mac & Cheese', 'Fruits', 'Chicken nuggets'],
-    dislikes: ['Spicy food', 'Broccoli'],
+    likes: 'Mac & Cheese, Fruits, Chicken nuggets',
+    dislikes: 'Spicy food, Broccoli',
     notes: 'Needs food cut into small pieces'
   }
 ];
 
 export const INITIAL_PREFERENCES: FamilyPreferences = {
-  cuisines: ['Italian', 'Mexican', 'Indian', 'American'],
+  cuisines: 'Italian, Mexican, Indian, American',
   restrictions: [],
   weekendEffort: 'Medium',
   generalNotes: ''

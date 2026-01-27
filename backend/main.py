@@ -36,10 +36,11 @@ class FamilyMember(BaseModel):
     name: str
     age: int
     role: str
-    dislikes: List[str] = []
+    likes: str = ""
+    dislikes: str = ""
 
 class FamilyPreferences(BaseModel):
-    cuisines: List[str] = []
+    cuisines: str = ""
     weekendEffort: str = "medium"
     generalNotes: str = ""
 
@@ -77,8 +78,8 @@ async def generate_plan(request: GeneratePlanRequest):
         preferences_json = request.preferences.model_dump()
         
         cuisine_instruction = ""
-        if request.preferences.cuisines:
-            cuisine_instruction = f"IMPORTANT: The majority of meals MUST be from the following cuisines: {', '.join(request.preferences.cuisines)}."
+        if request.preferences.cuisines.strip():
+            cuisine_instruction = f"IMPORTANT: The majority of meals MUST be from the following cuisines: {request.preferences.cuisines}."
         else:
             cuisine_instruction = "Provide a balanced variety of cuisines."
 
@@ -140,8 +141,8 @@ async def update_plan(request: UpdatePlanRequest):
         preferences_json = request.preferences.model_dump()
         
         cuisine_instruction = ""
-        if request.preferences.cuisines:
-            cuisine_instruction = f"Maintain the preference for these cuisines: {', '.join(request.preferences.cuisines)}."
+        if request.preferences.cuisines.strip():
+            cuisine_instruction = f"Maintain the preference for these cuisines: {request.preferences.cuisines}."
 
         prompt = f"""
         User Request: "{request.chatInput}"

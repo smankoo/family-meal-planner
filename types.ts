@@ -16,13 +16,13 @@ export interface FamilyMember {
   name: string;
   age: number;
   role: 'Adult' | 'Child' | 'Toddler' | 'Baby';
-  likes: string[];
-  dislikes: string[];
+  likes: string;
+  dislikes: string;
   notes?: string;
 }
 
 export interface FamilyPreferences {
-  cuisines: string[];
+  cuisines: string;
   restrictions: string[];
   weekendEffort: 'Low' | 'Medium' | 'High';
   generalNotes?: string; // New field for freeform lifestyle constraints

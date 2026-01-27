@@ -26,8 +26,8 @@ const FamilySetup: React.FC<FamilySetupProps> = ({
       name: '',
       age: 30,
       role: 'Adult',
-      likes: [],
-      dislikes: [],
+      likes: '',
+      dislikes: '',
       notes: ''
     };
     setMembers([...members, newMember]);
@@ -111,7 +111,7 @@ const FamilySetup: React.FC<FamilySetupProps> = ({
                           type="text" 
                           value={member.name}
                           onChange={e => updateMember(member.id, { name: e.target.value })}
-                          className="w-full bg-zinc-50 border-none rounded-2xl px-5 py-4 text-lg font-semibold text-zinc-800 placeholder-zinc-300 focus:ring-2 focus:ring-zinc-100 focus:bg-white transition-all"
+                          className="mobile-text-lg w-full bg-zinc-50 border-none rounded-2xl px-5 py-4 text-lg font-semibold text-zinc-800 placeholder-zinc-300 focus:ring-2 focus:ring-zinc-100 focus:bg-white transition-all"
                           placeholder="First Name"
                         />
                       </div>
@@ -145,9 +145,9 @@ const FamilySetup: React.FC<FamilySetupProps> = ({
                             <span className="text-xs font-bold text-zinc-500 uppercase">Likes</span>
                          </div>
                          <textarea
-                            value={member.likes.join(', ')}
-                            onChange={e => updateMember(member.id, { likes: e.target.value.split(',').map(s=>s.trim()) })}
-                            className="flex-1 w-full bg-transparent border-none p-4 text-sm text-zinc-700 leading-relaxed focus:ring-0 resize-none placeholder-zinc-300 min-h-[100px]"
+                            value={member.likes || ''}
+                            onChange={e => updateMember(member.id, { likes: e.target.value })}
+                            className="mobile-text-sm flex-1 w-full bg-transparent border-none p-4 text-sm text-zinc-700 leading-relaxed focus:ring-0 resize-none placeholder-zinc-300 min-h-[100px]"
                             placeholder="e.g. Avocado, Pasta, Crunchy textures..."
                          />
                       </div>
@@ -159,9 +159,9 @@ const FamilySetup: React.FC<FamilySetupProps> = ({
                             <span className="text-xs font-bold text-zinc-500 uppercase">Avoids</span>
                          </div>
                          <textarea
-                            value={member.dislikes.join(', ')}
-                            onChange={e => updateMember(member.id, { dislikes: e.target.value.split(',').map(s=>s.trim()) })}
-                            className="flex-1 w-full bg-transparent border-none p-4 text-sm text-zinc-700 leading-relaxed focus:ring-0 resize-none placeholder-zinc-300 min-h-[100px]"
+                            value={member.dislikes || ''}
+                            onChange={e => updateMember(member.id, { dislikes: e.target.value })}
+                            className="mobile-text-sm flex-1 w-full bg-transparent border-none p-4 text-sm text-zinc-700 leading-relaxed focus:ring-0 resize-none placeholder-zinc-300 min-h-[100px]"
                             placeholder="e.g. Mushrooms, Spicy food..."
                          />
                       </div>
@@ -193,9 +193,9 @@ const FamilySetup: React.FC<FamilySetupProps> = ({
                    <label className="block text-sm font-bold text-zinc-700 mb-4">Cuisines & Styles</label>
                    <input 
                       type="text" 
-                      value={prefs.cuisines.join(', ')}
-                      onChange={(e) => setPrefs({ ...prefs, cuisines: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
-                      className="w-full bg-zinc-50 border-none rounded-2xl px-5 py-4 text-zinc-800 font-medium focus:ring-2 focus:ring-zinc-100 placeholder-zinc-400 transition-colors"
+                      value={prefs.cuisines || ''}
+                      onChange={(e) => setPrefs({ ...prefs, cuisines: e.target.value })}
+                      className="mobile-text-lg w-full bg-zinc-50 border-none rounded-2xl px-5 py-4 text-zinc-800 font-medium focus:ring-2 focus:ring-zinc-100 placeholder-zinc-400 transition-colors"
                       placeholder="e.g. Italian, Mediterranean, Thai..."
                    />
                 </div>
@@ -230,7 +230,7 @@ const FamilySetup: React.FC<FamilySetupProps> = ({
                  <textarea 
                     value={prefs.generalNotes || ''}
                     onChange={(e) => setPrefs({ ...prefs, generalNotes: e.target.value })}
-                    className="w-full bg-zinc-50 border-none rounded-2xl px-5 py-4 text-zinc-800 font-medium focus:ring-2 focus:ring-zinc-100 placeholder-zinc-400 transition-colors min-h-[120px] resize-none leading-relaxed"
+                    className="mobile-text-sm w-full bg-zinc-50 border-none rounded-2xl px-5 py-4 text-zinc-800 font-medium focus:ring-2 focus:ring-zinc-100 placeholder-zinc-400 transition-colors min-h-[120px] resize-none leading-relaxed"
                     placeholder="Tell us about your schedule or specific needs for the whole family..."
                  />
              </div>
