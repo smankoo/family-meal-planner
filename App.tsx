@@ -8,6 +8,7 @@ import FamilySetup from './components/FamilySetup';
 import ToastContainer from './components/Toast';
 import ErrorModal from './components/ErrorModal';
 import ConfirmationModal from './components/ConfirmationModal';
+import Footer from './components/Footer';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import { 
   Stage, 
@@ -537,20 +538,7 @@ const App: React.FC = () => {
                isLoading={isLoading}
              />
              
-             {/* Footer */}
-             <div className="flex justify-center py-8 mt-12">
-               <p className="text-xs text-zinc-400 font-medium">
-                 Made with <span className="text-zinc-500">♥</span> by{' '}
-                 <a 
-                   href="https://www.linkedin.com/in/sumeetsinghmankoo/" 
-                   target="_blank" 
-                   rel="noopener noreferrer"
-                   className="text-zinc-500 hover:text-zinc-700 transition-colors"
-                 >
-                   Sumeet Singh Mankoo
-                 </a>
-               </p>
-             </div>
+             <Footer className="mt-12" />
            </div>
         )}
 
@@ -630,21 +618,7 @@ const App: React.FC = () => {
                     isLoading={isLoading}
                 />
              )}
-
-             {/* Footer */}
-             <div className="flex justify-center py-8 mt-16">
-               <p className="text-xs text-zinc-400 font-medium">
-                 Made with <span className="text-zinc-500">♡</span> by{' '}
-                 <a 
-                   href="https://www.linkedin.com/in/sumeetsinghmankoo/" 
-                   target="_blank" 
-                   rel="noopener noreferrer"
-                   className="text-zinc-500 hover:text-zinc-700 transition-colors"
-                 >
-                   Sumeet Singh Mankoo
-                 </a>
-               </p>
-             </div>
+             <Footer className="mt-16" />
 
           </div>
         )}
