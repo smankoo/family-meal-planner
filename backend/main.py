@@ -5,6 +5,10 @@ from typing import List, Dict, Any
 import google.generativeai as genai
 import os
 import json
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 app = FastAPI(title="Family Meal Planner API")
 
@@ -57,8 +61,8 @@ async def root():
 async def generate_plan(request: GeneratePlanRequest):
     try:
         # Convert your existing TypeScript logic to Python
-        members_json = [member.dict() for member in request.members]
-        preferences_json = request.preferences.dict()
+        members_json = [member.model_dump() for member in request.members]
+        preferences_json = request.preferences.model_dump()
         
         cuisine_instruction = ""
         if request.preferences.cuisines:
@@ -87,7 +91,7 @@ async def generate_plan(request: GeneratePlanRequest):
         model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content(
             prompt,
-            generation_config=genai.types.GenerationConfig(
+            generation_config=genai.GenerationConfig(
                 response_mime_type="application/json"
             )
         )
@@ -101,8 +105,8 @@ async def generate_plan(request: GeneratePlanRequest):
 @app.post("/api/update-plan")
 async def update_plan(request: UpdatePlanRequest):
     try:
-        members_json = [member.dict() for member in request.members]
-        preferences_json = request.preferences.dict()
+        members_json = [member.model_dump() for member in request.members]
+        preferences_json = request.preferences.model_dump()
         
         cuisine_instruction = ""
         if request.preferences.cuisines:
@@ -133,7 +137,7 @@ async def update_plan(request: UpdatePlanRequest):
         model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content(
             prompt,
-            generation_config=genai.types.GenerationConfig(
+            generation_config=genai.GenerationConfig(
                 response_mime_type="application/json"
             )
         )
@@ -163,7 +167,7 @@ async def generate_prep(request: PrepPlanRequest):
         model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content(
             prompt,
-            generation_config=genai.types.GenerationConfig(
+            generation_config=genai.GenerationConfig(
                 response_mime_type="application/json"
             )
         )
@@ -195,7 +199,7 @@ async def generate_grocery(request: GroceryListRequest):
         model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content(
             prompt,
-            generation_config=genai.types.GenerationConfig(
+            generation_config=genai.GenerationConfig(
                 response_mime_type="application/json"
             )
         )
