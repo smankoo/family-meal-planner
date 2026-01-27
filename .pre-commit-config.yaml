@@ -1,0 +1,9 @@
+repos:
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.5.14
+    hooks:
+      # Keep requirements.txt in sync with uv.lock for deployment compatibility
+      - id: uv-export
+        args: [--output-file, backend/requirements.txt, --no-hashes]
+        files: ^backend/(pyproject\.toml|uv\.lock)$
+        pass_filenames: false
