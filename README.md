@@ -16,7 +16,14 @@ View your app in AI Studio: https://ai.studio/apps/drive/1MF1dWa5oZaGgIdiWFym23q
 
 ## 🚀 Quick Start
 
-**Prerequisites:** Node.js and Python 3.8+
+**Prerequisites:** Node.js and Python 3.11+ with [uv](https://docs.astral.sh/uv/) package manager
+
+### Install uv (if not already installed)
+```bash
+# Install uv package manager
+curl -LsSf https://astral.sh/uv/install.sh | sh
+# Or with pip: pip install uv
+```
 
 ### Simple Start (Recommended)
 ```bash
@@ -73,7 +80,7 @@ If you prefer to set up manually:
 1. **Install dependencies:**
    ```bash
    npm install
-   cd backend && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt
+   cd backend && uv sync
    ```
 
 2. **Set up environment variables:**
@@ -83,7 +90,7 @@ If you prefer to set up manually:
 3. **Run services separately:**
    ```bash
    # Terminal 1 - Backend
-   cd backend && source venv/bin/activate && python main.py
+   cd backend && source .venv/bin/activate && python main.py
    
    # Terminal 2 - Frontend  
    npm run dev

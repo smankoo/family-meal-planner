@@ -5,6 +5,9 @@ import ChatInterface from './components/ChatInterface';
 import MealPrepView from './components/MealPrepView';
 import GroceryListView from './components/GroceryListView';
 import FamilySetup from './components/FamilySetup';
+import ToastContainer from './components/Toast';
+import ErrorModal from './components/ErrorModal';
+import { ToastProvider, useToast } from './contexts/ToastContext';
 import { 
   Stage, 
   WeekPlan, 
@@ -52,6 +55,7 @@ const saveState = (key: string, value: any) => {
 };
 
 const App: React.FC = () => {
+  const { showToast } = useToast();
   // --- Initialization with Persistence ---
   
   const [family, setFamily] = useState<FamilyMember[]>(() => 
@@ -96,6 +100,16 @@ const App: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [lastDiffPlan, setLastDiffPlan] = useState<WeekPlan | undefined>(undefined);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [errorModal, setErrorModal] = useState<{
+    isOpen: boolean;
+    title?: string;
+    message: string;
+    details?: string;
+    onRetry?: () => void;
+  }>({
+    isOpen: false,
+    message: ''
+  });
 
   // --- Analytics Initialization ---
   useEffect(() => {
@@ -185,14 +199,39 @@ const App: React.FC = () => {
         error_message: error instanceof Error ? error.message : 'Unknown error'
       });
       
-      alert(`Failed to generate plan: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      // Show elegant error instead of alert
+      if (errorMessage.includes('GEMINI_API_KEY')) {
+        setErrorModal({
+          isOpen: true,
+          title: 'API Configuration Required',
+          message: 'The Gemini API key needs to be configured to generate meal plans.',
+          details: errorMessage,
+          onRetry: () => handleGenerateInitialPlan(members, prefs)
+        });
+      } else if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
+        showToast('Rate limit reached. Please try again in a few minutes.', 'warning', 8000);
+      } else {
+        setErrorModal({
+          isOpen: true,
+          title: 'Plan Generation Failed',
+          message: 'We encountered an issue while creating your meal plan. This might be temporary.',
+          details: errorMessage,
+          onRetry: () => handleGenerateInitialPlan(members, prefs)
+        });
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleRegeneratePlan = async () => {
-    if (window.confirm("This will create a completely new plan based on your current settings, overwriting any changes. Continue?")) {
+    setErrorModal({
+      isOpen: true,
+      title: 'Regenerate Plan?',
+      message: 'This will create a completely new plan based on your current settings, overwriting any changes. Continue?',
+      onRetry: async () => {
         // Track plan regeneration
         await analyticsService.trackMealPlanningEvent('plan_regenerated', {
           had_previous_plan: hasPlanGenerated,
@@ -203,7 +242,8 @@ const App: React.FC = () => {
         setGroceryItems([]);
         await handleGenerateInitialPlan(family, preferences);
         // Note: scroll behavior is handled in handleGenerateInitialPlan
-    }
+      }
+    });
   };
 
   const handleSaveSetup = (newFamily: FamilyMember[], newPrefs: FamilyPreferences) => {
@@ -272,13 +312,21 @@ const App: React.FC = () => {
         error_message: error instanceof Error ? error.message : 'Unknown error'
       });
       
-      const errorMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'system',
-        content: "Sorry, I encountered an error updating the plan.",
-        timestamp: Date.now()
-      };
-      setMessages(prev => [...prev, errorMsg]);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
+        showToast('Rate limit reached. Please try again in a few minutes.', 'warning', 8000);
+      } else {
+        const errorMsg: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'system',
+          content: "I encountered an error updating the plan. Please try again or rephrase your request.",
+          timestamp: Date.now()
+        };
+        setMessages(prev => [...prev, errorMsg]);
+        
+        showToast('Failed to update plan. Please try again.', 'error');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -329,6 +377,13 @@ const App: React.FC = () => {
           error_message: e instanceof Error ? e.message : 'Unknown error'
         });
         
+        const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+        if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
+          showToast('Rate limit reached. Prep tasks will be generated later.', 'warning', 6000);
+        } else {
+          showToast('Failed to generate prep tasks. You can try again later.', 'error', 6000);
+        }
+        
         // Still allow navigation even if generation fails
       } finally { 
         setIsLoading(false); 
@@ -355,6 +410,13 @@ const App: React.FC = () => {
           error_message: e instanceof Error ? e.message : 'Unknown error'
         });
         
+        const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+        if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
+          showToast('Rate limit reached. Grocery list will be generated later.', 'warning', 6000);
+        } else {
+          showToast('Failed to generate grocery list. You can try again later.', 'error', 6000);
+        }
+        
         // Still allow navigation even if generation fails
       } finally { 
         setIsLoading(false); 
@@ -364,10 +426,30 @@ const App: React.FC = () => {
     setCurrentStage(newStage);
   };
 
+  // Helper functions for regenerating prep and grocery lists
+  const handleProceedToPrep = async () => {
+    await handleStageChange(Stage.MEAL_PREP);
+  };
+
+  const handleProceedToGrocery = async () => {
+    await handleStageChange(Stage.GROCERY_LIST);
+  };
+
   // --- Render ---
 
   return (
     <div className="flex flex-col h-full bg-zinc-50 font-sans">
+      
+      {/* Error Modal */}
+      <ErrorModal
+        isOpen={errorModal.isOpen}
+        onClose={() => setErrorModal({ ...errorModal, isOpen: false })}
+        title={errorModal.title}
+        message={errorModal.message}
+        details={errorModal.details}
+        onRetry={errorModal.onRetry}
+        showSupport={true}
+      />
       
       {/* Header - Apple-like frosted glass effect */}
       <header className="frosted-header fixed top-0 left-0 right-0 z-50 h-16 md:h-20 flex items-center justify-between px-4 md:px-6 lg:px-10 pointer-events-none">

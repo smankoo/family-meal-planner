@@ -138,20 +138,26 @@ check_prerequisites() {
         npm install
     fi
     
+    # Check if uv is installed
+    if ! command -v uv &> /dev/null; then
+        error "uv is not installed. Please install uv first:"
+        error "curl -LsSf https://astral.sh/uv/install.sh | sh"
+        exit 1
+    fi
+    
     # Check if Python virtual environment exists
-    if [ ! -d "backend/venv" ]; then
-        warning "Python virtual environment not found. Creating one..."
+    if [ ! -d "backend/.venv" ]; then
+        warning "Python virtual environment not found. Creating with uv..."
         cd backend
-        python3 -m venv venv
+        uv sync
         cd ..
     fi
     
     # Check if Python dependencies are installed
-    if [ ! -f "backend/venv/lib/python*/site-packages/fastapi" ]; then
-        warning "Python dependencies not found. Installing..."
+    if [ ! -f "backend/.venv/lib/python*/site-packages/fastapi" ]; then
+        warning "Python dependencies not found. Installing with uv..."
         cd backend
-        source venv/bin/activate
-        pip install -r requirements.txt
+        uv sync
         cd ..
     fi
     
@@ -175,7 +181,7 @@ EOF
     fi
     
     # Activate virtual environment and start server
-    source venv/bin/activate
+    source .venv/bin/activate
     
     # Start backend in background
     python main.py > ../logs/backend.log 2>&1 &

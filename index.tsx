@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
-import App from './App';
+import AppWithProviders from './components/AppWithProviders';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -11,6 +11,6 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <App />
+    <AppWithProviders />
   </React.StrictMode>
 );

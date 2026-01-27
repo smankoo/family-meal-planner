@@ -91,21 +91,21 @@ check_dev_prerequisites() {
         npm install
     fi
     
-    if [ ! -d "backend/venv" ]; then
-        warning "Creating Python virtual environment..."
+    if [ ! -d "backend/.venv" ]; then
+        warning "Creating Python virtual environment with uv..."
         cd backend
-        python3 -m venv venv
+        uv sync
         cd ..
     fi
     
     # Check Python dependencies
     cd backend
-    source venv/bin/activate
+    source .venv/bin/activate
     
     # Check if FastAPI is installed
     if ! python -c "import fastapi" 2>/dev/null; then
-        warning "Installing Python dependencies..."
-        pip install -r requirements.txt
+        warning "Installing Python dependencies with uv..."
+        uv sync
     fi
     
     cd ..
@@ -149,7 +149,7 @@ start_backend_dev() {
     log "Starting backend in development mode..."
     
     cd backend
-    source venv/bin/activate
+    source .venv/bin/activate
     
     # Start with auto-reload enabled
     uvicorn main:app --host 0.0.0.0 --port $BACKEND_PORT --reload --log-level debug > ../logs/backend-dev.log 2>&1 &

@@ -1,17 +1,69 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from google import genai
 from google.genai import types
 import os
 import json
+import logging
 from dotenv import load_dotenv
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
 
 app = FastAPI(title="Family Meal Planner API")
+
+# Error response model
+class ErrorResponse(BaseModel):
+    error: str
+    message: str
+    code: str
+    retry_after: Optional[int] = None
+    details: Optional[str] = None
+
+# Custom exception handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
+    
+    # Handle specific error types
+    if "rate limit" in str(exc).lower() or "quota" in str(exc).lower():
+        return JSONResponse(
+            status_code=429,
+            content=ErrorResponse(
+                error="Rate Limit Exceeded",
+                message="API rate limit reached. Please try again in a few minutes.",
+                code="RATE_LIMIT_EXCEEDED",
+                retry_after=300,  # 5 minutes
+                details=str(exc)
+            ).model_dump()
+        )
+    elif "api key" in str(exc).lower() or "authentication" in str(exc).lower():
+        return JSONResponse(
+            status_code=401,
+            content=ErrorResponse(
+                error="Authentication Error",
+                message="API key is missing or invalid. Please check your configuration.",
+                code="AUTH_ERROR",
+                details=str(exc)
+            ).model_dump()
+        )
+    else:
+        return JSONResponse(
+            status_code=500,
+            content=ErrorResponse(
+                error="Internal Server Error",
+                message="An unexpected error occurred. Please try again later.",
+                code="INTERNAL_ERROR",
+                details=str(exc) if os.getenv("DEBUG") == "true" else None
+            ).model_dump()
+        )
 
 # Configure CORS - allow production domains
 app.add_middleware(
@@ -33,14 +85,17 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Pydantic models
 class FamilyMember(BaseModel):
+    id: str
     name: str
     age: int
     role: str
     likes: str = ""
     dislikes: str = ""
+    notes: str = ""
 
 class FamilyPreferences(BaseModel):
     cuisines: str = ""
+    restrictions: List[str] = []
     weekendEffort: str = "medium"
     generalNotes: str = ""
 
@@ -70,9 +125,18 @@ async def generate_plan(request: GeneratePlanRequest):
     # Check if API key is available
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key or api_key == "PLACEHOLDER_API_KEY":
-        raise HTTPException(status_code=400, detail="GEMINI_API_KEY not configured. Please set a valid API key.")
+        raise HTTPException(
+            status_code=400, 
+            detail=ErrorResponse(
+                error="Configuration Error",
+                message="GEMINI_API_KEY not configured. Please set a valid API key.",
+                code="MISSING_API_KEY"
+            ).model_dump()
+        )
     
     try:
+        logger.info("Generating meal plan for family")
+        
         # Convert your existing TypeScript logic to Python
         members_json = [member.model_dump() for member in request.members]
         preferences_json = request.preferences.model_dump()
@@ -125,18 +189,30 @@ async def generate_plan(request: GeneratePlanRequest):
         )
         
         plan = json.loads(response.text)
+        logger.info("Successfully generated meal plan")
         return {"plan": plan}
         
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON parsing error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=ErrorResponse(
+                error="Response Parsing Error",
+                message="Failed to parse the generated meal plan. Please try again.",
+                code="PARSE_ERROR",
+                details=str(e)
+            ).model_dump()
+        )
     except Exception as e:
-        print(f"Error in generate_plan: {str(e)}")
-        print(f"Error type: {type(e)}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        logger.error(f"Error in generate_plan: {str(e)}")
+        # Let the global exception handler deal with it
+        raise e
 
 @app.post("/api/update-plan")
 async def update_plan(request: UpdatePlanRequest):
     try:
+        logger.info("Updating meal plan with user request")
+        
         members_json = [member.model_dump() for member in request.members]
         preferences_json = request.preferences.model_dump()
         
@@ -175,14 +251,29 @@ async def update_plan(request: UpdatePlanRequest):
         )
         
         result = json.loads(response.text)
+        logger.info("Successfully updated meal plan")
         return result
         
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON parsing error in update_plan: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=ErrorResponse(
+                error="Response Parsing Error",
+                message="Failed to parse the updated meal plan. Please try again.",
+                code="PARSE_ERROR",
+                details=str(e)
+            ).model_dump()
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error in update_plan: {str(e)}")
+        raise e
 
 @app.post("/api/generate-prep")
 async def generate_prep(request: PrepPlanRequest):
     try:
+        logger.info("Generating meal prep plan")
+        
         prompt = f"""
         Analyze this meal plan and generate a high-level meal prep strategy.
         
@@ -205,14 +296,29 @@ async def generate_prep(request: PrepPlanRequest):
         )
         
         tasks = json.loads(response.text)
+        logger.info("Successfully generated prep plan")
         return {"tasks": tasks}
         
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON parsing error in generate_prep: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=ErrorResponse(
+                error="Response Parsing Error",
+                message="Failed to parse the prep plan. Please try again.",
+                code="PARSE_ERROR",
+                details=str(e)
+            ).model_dump()
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error in generate_prep: {str(e)}")
+        raise e
 
 @app.post("/api/generate-grocery")
 async def generate_grocery(request: GroceryListRequest):
     try:
+        logger.info("Generating grocery list")
+        
         prompt = f"""
         Generate a consolidated grocery list based on this meal plan and prep strategy.
         
@@ -237,10 +343,23 @@ async def generate_grocery(request: GroceryListRequest):
         )
         
         items = json.loads(response.text)
+        logger.info("Successfully generated grocery list")
         return {"items": items}
         
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON parsing error in generate_grocery: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=ErrorResponse(
+                error="Response Parsing Error",
+                message="Failed to parse the grocery list. Please try again.",
+                code="PARSE_ERROR",
+                details=str(e)
+            ).model_dump()
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error in generate_grocery: {str(e)}")
+        raise e
 
 if __name__ == "__main__":
     import uvicorn

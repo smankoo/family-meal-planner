@@ -3,7 +3,7 @@ import { FamilyMember, FamilyPreferences, WeekPlan, PrepTask, GroceryItem } from
 // FastAPI backend base URL - use environment variable in production
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
-// Helper function for API calls
+// Helper function for API calls with enhanced error handling
 const apiCall = async (endpoint: string, data: any) => {
   console.log(`Making API call to ${API_BASE_URL}${endpoint}`, data);
   
@@ -18,9 +18,26 @@ const apiCall = async (endpoint: string, data: any) => {
   console.log(`Response status: ${response.status} ${response.statusText}`);
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    let errorData;
+    try {
+      errorData = await response.json();
+    } catch {
+      errorData = { 
+        error: 'Network Error',
+        message: `HTTP ${response.status}: ${response.statusText}`,
+        code: 'NETWORK_ERROR'
+      };
+    }
+    
     console.error("API error response:", errorData);
-    throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+    
+    // Create a structured error
+    const error = new Error(errorData.message || errorData.detail || 'Unknown error');
+    (error as any).code = errorData.code;
+    (error as any).retryAfter = errorData.retry_after;
+    (error as any).details = errorData.details;
+    
+    throw error;
   }
 
   const result = await response.json();
