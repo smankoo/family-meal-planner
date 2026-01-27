@@ -233,13 +233,33 @@ async def update_plan(request: UpdatePlanRequest):
         {json.dumps(preferences_json)}
         
         Task:
-        1. Analyze the request.
-        2. Modify the current plan to satisfy the request while maintaining other constraints.
-        3. {cuisine_instruction}
-        4. Maintain these ongoing LIFESTYLE CONSTRAINTS: {request.preferences.generalNotes or "None"}
-        5. If the request implies a new preference (e.g., "We hate mushrooms"), implicitly apply it to this update.
-        6. Return the FULL updated plan and a concise explanation in this format:
-        {{"plan": [...], "explanation": "..."}}
+        1. Analyze the user request and identify which specific meals need to be changed.
+        2. {cuisine_instruction}
+        3. Maintain these ongoing LIFESTYLE CONSTRAINTS: {request.preferences.generalNotes or "None"}
+        4. If the request implies a new preference (e.g., "We hate mushrooms"), apply it to relevant changes.
+        
+        IMPORTANT: Return EXACTLY this JSON structure with ONLY the meals that need to be changed:
+        {{
+          "changes": [
+            {{
+              "day": "Monday",
+              "mealType": "Breakfast",
+              "meal": {{"name": "New Meal Name", "description": "Brief description", "notes": "Any notes"}}
+            }},
+            {{
+              "day": "Tuesday", 
+              "mealType": "Dinner",
+              "meal": {{"name": "Another New Meal", "description": "Brief description", "notes": "Any notes"}}
+            }}
+          ],
+          "explanation": "Brief explanation of what changes were made and why"
+        }}
+        
+        Rules:
+        - Only include meals that actually need to be changed
+        - Use exact day names: "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
+        - Use exact meal types: "Breakfast", "Lunch", "Snack", "Dinner"
+        - If no changes are needed, return empty changes array: {{"changes": [], "explanation": "No changes needed"}}
         """
 
         response = client.models.generate_content(
@@ -251,8 +271,26 @@ async def update_plan(request: UpdatePlanRequest):
         )
         
         result = json.loads(response.text)
-        logger.info("Successfully updated meal plan")
-        return result
+        
+        # Apply changes as a diff/patch to the current plan
+        updated_plan = json.loads(json.dumps(request.currentPlan))  # Deep copy
+        
+        for change in result.get("changes", []):
+            day_name = change["day"]
+            meal_type = change["mealType"] 
+            new_meal = change["meal"]
+            
+            # Find the day in the plan and update the specific meal
+            for day_plan in updated_plan:
+                if day_plan["day"] == day_name:
+                    day_plan["meals"][meal_type] = new_meal
+                    break
+        
+        logger.info(f"Successfully applied {len(result.get('changes', []))} meal changes")
+        return {
+            "plan": updated_plan,
+            "explanation": result.get("explanation", "Plan updated successfully")
+        }
         
     except json.JSONDecodeError as e:
         logger.error(f"JSON parsing error in update_plan: {str(e)}")
@@ -351,7 +389,30 @@ async def generate_grocery(request: GroceryListRequest):
         Rules:
         - Group by category (Produce, Meat, Dairy, Pantry, etc.).
         - Estimate quantities reasonably for a family of 4 (unless context implies otherwise).
-        - Return as JSON array with fields: name, category, quantity
+        
+        IMPORTANT: Return EXACTLY this JSON structure:
+        [
+          {{
+            "name": "Tomatoes",
+            "category": "Produce", 
+            "quantity": "2 lbs"
+          }},
+          {{
+            "name": "Chicken Breast",
+            "category": "Meat",
+            "quantity": "1.5 lbs"
+          }},
+          {{
+            "name": "Milk",
+            "category": "Dairy",
+            "quantity": "1 gallon"
+          }}
+        ]
+        
+        Each item MUST have:
+        - "name": The grocery item name
+        - "category": The grocery category (Produce, Meat, Dairy, Pantry, etc.)
+        - "quantity": Estimated quantity needed (e.g., "2 lbs", "1 gallon", "3 pieces")
         """
 
         response = client.models.generate_content(
