@@ -128,8 +128,8 @@ const App: React.FC = () => {
       setCurrentStage(Stage.MEAL_PLANNING);
       setMaxStageReached(Stage.MEAL_PLANNING);
     } catch (error) {
-      console.error(error);
-      alert("Failed to generate plan. Please check API Key.");
+      console.error("Error generating plan:", error);
+      alert(`Failed to generate plan: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }

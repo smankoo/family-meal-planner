@@ -90,7 +90,22 @@ async def generate_plan(request: GeneratePlanRequest):
         3. Respect dislikes explicitly.
         4. Weekend Effort Level: {request.preferences.weekendEffort}.
         5. FAMILY LIFESTYLE CONSTRAINTS (CRITICAL): {request.preferences.generalNotes or "None provided. Assume standard family schedule."}
-        6. Return a JSON array of 7 Day objects.
+        
+        IMPORTANT: Return EXACTLY this JSON structure:
+        [
+          {{
+            "day": "Monday",
+            "meals": {{
+              "Breakfast": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}},
+              "Lunch": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}},
+              "Snack": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}},
+              "Dinner": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}}
+            }}
+          }},
+          ... (repeat for all 7 days)
+        ]
+        
+        Each meal must have "name", "description", and "notes" fields. Include all 4 meal times: Breakfast, Lunch, Snack, Dinner.
         """
 
         model = genai.GenerativeModel('gemini-2.5-flash')

@@ -5,6 +5,8 @@ const API_BASE_URL = "http://localhost:8000";
 
 // Helper function for API calls
 const apiCall = async (endpoint: string, data: any) => {
+  console.log(`Making API call to ${API_BASE_URL}${endpoint}`, data);
+  
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     method: 'POST',
     headers: {
@@ -13,12 +15,17 @@ const apiCall = async (endpoint: string, data: any) => {
     body: JSON.stringify(data),
   });
 
+  console.log(`Response status: ${response.status} ${response.statusText}`);
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    console.error("API error response:", errorData);
     throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
   }
 
-  return response.json();
+  const result = await response.json();
+  console.log("API success response:", result);
+  return result;
 };
 
 // --- Service Methods ---
@@ -28,10 +35,17 @@ export const generateInitialMealPlan = async (
   preferences: FamilyPreferences
 ): Promise<WeekPlan> => {
   try {
+    console.log("Making API call to generate plan...");
     const response = await apiCall('/api/generate-plan', {
       members,
       preferences
     });
+    
+    console.log("API response received:", response);
+    
+    if (!response.plan) {
+      throw new Error("No plan in response");
+    }
     
     return response.plan as WeekPlan;
   } catch (error) {
