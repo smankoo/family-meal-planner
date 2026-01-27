@@ -420,13 +420,30 @@ const App: React.FC = () => {
       <main className="flex-1 overflow-y-auto no-scrollbar pt-16 md:pt-20">
         
         {viewMode === 'household' && (
-           <FamilySetup 
-             family={family} 
-             preferences={preferences} 
-             onSave={handleSaveSetup} 
-             isFirstRun={!hasPlanGenerated}
-             isLoading={isLoading}
-           />
+           <div>
+             <FamilySetup 
+               family={family} 
+               preferences={preferences} 
+               onSave={handleSaveSetup} 
+               isFirstRun={!hasPlanGenerated}
+               isLoading={isLoading}
+             />
+             
+             {/* Footer */}
+             <div className="flex justify-center py-8 mt-12">
+               <p className="text-xs text-zinc-400 font-medium">
+                 Made with <span className="text-zinc-500">♥</span> by{' '}
+                 <a 
+                   href="https://www.linkedin.com/in/sumeetsinghmankoo/" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   className="text-zinc-500 hover:text-zinc-700 transition-colors"
+                 >
+                   Sumeet Singh Mankoo
+                 </a>
+               </p>
+             </div>
+           </div>
         )}
 
         {viewMode === 'planning' && (
@@ -505,6 +522,21 @@ const App: React.FC = () => {
                     isLoading={isLoading}
                 />
              )}
+
+             {/* Footer */}
+             <div className="flex justify-center py-8 mt-16">
+               <p className="text-xs text-zinc-400 font-medium">
+                 Made with <span className="text-zinc-500">♡</span> by{' '}
+                 <a 
+                   href="https://www.linkedin.com/in/sumeetsinghmankoo/" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   className="text-zinc-500 hover:text-zinc-700 transition-colors"
+                 >
+                   Sumeet Singh Mankoo
+                 </a>
+               </p>
+             </div>
 
           </div>
         )}
