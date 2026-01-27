@@ -4,6 +4,6 @@ repos:
     hooks:
       # Keep requirements.txt in sync with uv.lock for deployment compatibility
       - id: uv-export
-        args: [--output-file, backend/requirements.txt, --no-hashes]
+        args: [--output-file, backend/requirements.txt, --no-hashes, --directory, backend]
         files: ^backend/(pyproject\.toml|uv\.lock)$
         pass_filenames: false
