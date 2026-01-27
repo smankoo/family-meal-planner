@@ -3,35 +3,17 @@ import { FamilyMember, FamilyPreferences, MealTime, WeekPlan } from "./types";
 export const INITIAL_FAMILY: FamilyMember[] = [
   {
     id: '1',
-    name: 'Alex',
-    age: 38,
+    name: '',
+    age: 30,
     role: 'Adult',
-    likes: 'Spicy food, Asian cuisine, Salads',
-    dislikes: 'Heavy cream',
-    notes: 'Likes high protein'
-  },
-  {
-    id: '2',
-    name: 'Sam',
-    age: 35,
-    role: 'Adult',
-    likes: 'Pasta, Comfort food',
-    dislikes: 'Mushrooms',
-    notes: 'Vegetarian preference on weekdays'
-  },
-  {
-    id: '3',
-    name: 'Leo',
-    age: 4,
-    role: 'Toddler',
-    likes: 'Mac & Cheese, Fruits, Chicken nuggets',
-    dislikes: 'Spicy food, Broccoli',
-    notes: 'Needs food cut into small pieces'
+    likes: '',
+    dislikes: '',
+    notes: ''
   }
 ];
 
 export const INITIAL_PREFERENCES: FamilyPreferences = {
-  cuisines: 'Italian, Mexican, Indian, American',
+  cuisines: '',
   restrictions: [],
   weekendEffort: 'Medium',
   generalNotes: ''
