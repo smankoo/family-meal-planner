@@ -8,13 +8,101 @@ This contains everything you need to run your app locally.
 
 View your app in AI Studio: https://ai.studio/apps/drive/1MF1dWa5oZaGgIdiWFym23qBk8oQNPx36
 
-## Run Locally
+# Run and deploy your AI Studio app
 
-**Prerequisites:**  Node.js
+This contains everything you need to run your app locally.
 
+View your app in AI Studio: https://ai.studio/apps/drive/1MF1dWa5oZaGgIdiWFym23qBk8oQNPx36
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## 🚀 Quick Start
+
+**Prerequisites:** Node.js and Python 3.8+
+
+### Simple Start (Recommended)
+```bash
+# Install dependencies and start both frontend and backend
+npm run start
+# Services start and script exits - they run in background
+```
+
+### Development Mode
+```bash
+# Start with hot reloading and enhanced logging
+npm run dev:full
+# Services start and script exits - they run in background
+
+# Or start with live log monitoring
+npm run dev:logs
+# Services start and logs are monitored (Ctrl+C stops monitoring only)
+```
+
+### Stop Application
+```bash
+# Graceful shutdown
+npm run stop
+
+# Force stop if needed
+npm run stop:force
+```
+
+### Check Status
+```bash
+# Quick status check
+npm run status
+
+# Full health check
+npm run health
+```
+
+## 📋 Available Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run start` | Start both frontend and backend (services run in background) |
+| `npm run stop` | Gracefully stop all services |
+| `npm run dev:full` | Start in development mode (services run in background) |
+| `npm run dev:logs` | Development mode with live log monitoring |
+| `npm run status` | Quick service status check |
+| `npm run health` | Check application health status |
+| `npm run health:detailed` | Detailed health check with system info |
+
+## 🔧 Manual Setup (Alternative)
+
+If you prefer to set up manually:
+
+1. **Install dependencies:**
+   ```bash
+   npm install
+   cd backend && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt
+   ```
+
+2. **Set up environment variables:**
+   - Set `GEMINI_API_KEY` in `backend/.env`
+   - Configure frontend settings in `.env.local`
+
+3. **Run services separately:**
+   ```bash
+   # Terminal 1 - Backend
+   cd backend && source venv/bin/activate && python main.py
+   
+   # Terminal 2 - Frontend  
+   npm run dev
+   ```
+
+## 📊 Application URLs
+
+When running:
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8000  
+- **API Documentation**: http://localhost:8000/docs
+
+## 🛠️ Troubleshooting
+
+- **Port conflicts**: Run `npm run stop:force` to kill any stuck processes
+- **Dependencies issues**: The start script will auto-install missing dependencies
+- **Service health**: Use `npm run health:detailed` to diagnose issues
+- **Logs**: Check `logs/` directory for detailed error information
+
+## 📚 Documentation
+
+For detailed script documentation and advanced usage, see [scripts/README.md](scripts/README.md).

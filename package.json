@@ -6,7 +6,16 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "./scripts/start.sh",
+    "stop": "./scripts/stop.sh",
+    "dev:full": "./scripts/dev.sh",
+    "dev:logs": "./scripts/dev.sh --logs",
+    "stop:force": "./scripts/stop.sh --force",
+    "health": "./scripts/health-check.sh",
+    "health:detailed": "./scripts/health-check.sh --detailed",
+    "health:json": "./scripts/health-check.sh --json",
+    "status": "./scripts/status.sh"
   },
   "dependencies": {
     "react": "^19.2.3",
