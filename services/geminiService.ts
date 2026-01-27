@@ -71,6 +71,106 @@ export const generateInitialMealPlan = async (
   }
 };
 
+// Streaming version of meal plan generation
+export const generateInitialMealPlanStream = async (
+  members: FamilyMember[],
+  preferences: FamilyPreferences,
+  onDayReceived: (day: any, dayIndex: number) => void,
+  onComplete: () => void,
+  onError: (error: Error) => void
+): Promise<void> => {
+  try {
+    console.log("Starting streaming meal plan generation...");
+    
+    const response = await fetch(`${API_BASE_URL}/api/generate-plan-stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        members,
+        preferences
+      }),
+    });
+
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { 
+          error: 'Network Error',
+          message: `HTTP ${response.status}: ${response.statusText}`,
+          code: 'NETWORK_ERROR'
+        };
+      }
+      
+      const error = new Error(errorData.message || errorData.detail || 'Unknown error');
+      (error as any).code = errorData.code;
+      throw error;
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('No response body reader available');
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let dayIndex = 0;
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          console.log("Stream completed");
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        
+        // Process complete lines
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6)); // Remove 'data: ' prefix
+              
+              if (data.type === 'complete') {
+                console.log("Received completion signal");
+                onComplete();
+                return;
+              } else if (data.type === 'error') {
+                console.error("Received error from stream:", data);
+                const error = new Error(data.message || 'Streaming error');
+                (error as any).code = data.code;
+                onError(error);
+                return;
+              } else if (data.day) {
+                // This is a day object
+                console.log(`Received day: ${data.day}`, data);
+                onDayReceived(data, dayIndex);
+                dayIndex++;
+              }
+            } catch (parseError) {
+              console.warn("Failed to parse SSE data:", line, parseError);
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    
+  } catch (error) {
+    console.error("Error in streaming generation:", error);
+    onError(error as Error);
+  }
+};
+
 export const updateMealPlanWithAgent = async (
   currentPlan: WeekPlan,
   chatInput: string,

@@ -1,14 +1,22 @@
 import React, { useState } from 'react';
 import { WeekPlan, MealTime } from '../types';
-import { Users, Sparkles, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Users, Sparkles, ChevronRight, ChevronLeft, Loader2 } from 'lucide-react';
 
 interface MealGridProps {
   plan: WeekPlan;
   previousPlan?: WeekPlan;
   onCellClick?: (day: string, time: MealTime) => void;
+  isStreaming?: boolean;
+  newlyReceivedCards?: Set<string>;
 }
 
-const MealGrid: React.FC<MealGridProps> = ({ plan, previousPlan, onCellClick }) => {
+const MealGrid: React.FC<MealGridProps> = ({ 
+  plan, 
+  previousPlan, 
+  onCellClick, 
+  isStreaming = false, 
+  newlyReceivedCards = new Set() 
+}) => {
   const mealTimes = [MealTime.BREAKFAST, MealTime.LUNCH, MealTime.SNACK, MealTime.DINNER];
   
   const hasChanged = (dayIndex: number, time: MealTime): boolean => {
@@ -18,6 +26,36 @@ const MealGrid: React.FC<MealGridProps> = ({ plan, previousPlan, onCellClick }) 
     if (!currentMeal || !prevMeal) return false;
     return currentMeal.name !== prevMeal.name && currentMeal.name !== '';
   };
+
+  const isEmpty = (dayIndex: number, time: MealTime): boolean => {
+    const meal = plan[dayIndex]?.meals[time];
+    return !meal || !meal.name || meal.name.trim() === '';
+  };
+
+  const isNewlyReceived = (dayIndex: number, time: MealTime): boolean => {
+    const cardKey = `${plan[dayIndex]?.day}-${time}`;
+    return newlyReceivedCards.has(cardKey);
+  };
+
+  // Skeleton component for loading states
+  const MealSkeleton: React.FC<{ isLoading?: boolean }> = ({ isLoading = false }) => (
+    <div className={`
+      relative bg-white rounded-2xl p-5 shadow-sm border border-zinc-100 
+      min-h-[140px] xl:min-h-[160px] flex flex-col
+      ${isLoading ? 'animate-pulse' : ''}
+    `}>
+      <div className="flex justify-between items-start mb-2">
+        <div className="w-8 h-2 bg-zinc-200 rounded"></div>
+        {isLoading && <Loader2 size={14} className="text-zinc-300 animate-spin" />}
+      </div>
+      
+      <div className="flex-1">
+        <div className="w-3/4 h-4 bg-zinc-200 rounded mb-2"></div>
+        <div className="w-full h-3 bg-zinc-100 rounded mb-1"></div>
+        <div className="w-2/3 h-3 bg-zinc-100 rounded"></div>
+      </div>
+    </div>
+  );
 
   // --- Mobile View (Apple-style sticky section headers) ---
   const MobileView = () => {
@@ -38,24 +76,36 @@ const MealGrid: React.FC<MealGridProps> = ({ plan, previousPlan, onCellClick }) 
                     {mealTimes.map((time) => {
                         const cell = dayPlan.meals[time] || { name: '', description: '', notes: '' };
                         const isChanged = hasChanged(dayIdx, time);
+                        const isEmpty = !cell.name || cell.name.trim() === '';
+                        const isLoadingThisMeal = isStreaming && isEmpty;
+                        const isNewCard = isNewlyReceived(dayIdx, time);
+
+                        // Show skeleton for empty meals during streaming
+                        if (isLoadingThisMeal) {
+                          return (
+                            <MealSkeleton key={time} isLoading={true} />
+                          );
+                        }
 
                         return (
                              <div 
                                 key={time}
                                 onClick={() => onCellClick && onCellClick(dayPlan.day, time)}
                                 className={`
-                                  relative bg-white rounded-2xl p-5 shadow-sm border transition-all active:scale-[0.98]
+                                  relative bg-white rounded-2xl p-5 shadow-sm border transition-all duration-500 active:scale-[0.98]
                                   ${isChanged 
                                     ? 'border-indigo-100 bg-indigo-50/20' 
                                     : 'border-zinc-100'}
+                                  ${isNewCard ? 'animate-fade-in-up' : ''}
                                 `}
                               >
                                 <div className="flex justify-between items-start mb-2">
                                   <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{time}</span>
                                   {isChanged && <Sparkles size={14} className="text-indigo-500 animate-pulse" />}
+                                  {isNewCard && <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>}
                                 </div>
                                 
-                                <h4 className={`text-lg font-semibold mb-1 leading-snug ${!cell.name ? 'text-zinc-300 italic' : 'text-zinc-800'}`}>
+                                <h4 className={`text-lg font-semibold mb-1 leading-snug ${isEmpty ? 'text-zinc-300 italic' : 'text-zinc-800'}`}>
                                   {cell.name || "Nothing planned"}
                                 </h4>
                                 
@@ -102,18 +152,29 @@ const MealGrid: React.FC<MealGridProps> = ({ plan, previousPlan, onCellClick }) 
                     {plan.map((dayPlan, dayIdx) => {
                         const cell = dayPlan.meals[time] || { name: '', description: '', notes: '' };
                         const isChanged = hasChanged(dayIdx, time);
+                        const isEmpty = !cell.name || cell.name.trim() === '';
+                        const isLoadingThisMeal = isStreaming && isEmpty;
+                        const isNewCard = isNewlyReceived(dayIdx, time);
+
+                        // Show skeleton for empty meals during streaming
+                        if (isLoadingThisMeal) {
+                          return (
+                            <MealSkeleton key={`${dayPlan.day}-${time}`} isLoading={true} />
+                          );
+                        }
 
                         return (
                             <div
                                 key={`${dayPlan.day}-${time}`}
                                 onClick={() => onCellClick && onCellClick(dayPlan.day, time)}
                                 className={`
-                                    relative p-4 xl:p-5 bg-white rounded-2xl border transition-all duration-300 group
+                                    relative p-4 xl:p-5 bg-white rounded-2xl border transition-all duration-500 group
                                     flex flex-col h-full min-h-[140px] xl:min-h-[160px] 
                                     hover:-translate-y-1 hover:shadow-lg hover:shadow-zinc-200/50 cursor-default
                                     ${isChanged 
                                         ? 'border-indigo-100 bg-gradient-to-br from-indigo-50/30 to-white' 
                                         : 'border-zinc-100 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.03)]'}
+                                    ${isNewCard ? 'animate-fade-in-up' : ''}
                                 `}
                             >
                                 {/* Day Label inside card for context */}
@@ -121,11 +182,12 @@ const MealGrid: React.FC<MealGridProps> = ({ plan, previousPlan, onCellClick }) 
                                     <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-wider">
                                         {dayPlan.day.slice(0, 3)}
                                     </span>
-                                    {isChanged && <Sparkles size={14} className="text-indigo-400" />}
+                                    {isChanged && <Sparkles size={14} className="text-indigo-400 animate-pulse" />}
+                                    {isNewCard && <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>}
                                 </div>
 
                                 <div className="flex-1">
-                                    <h4 className={`font-bold text-sm xl:text-sm leading-snug mb-2 ${!cell.name ? 'text-zinc-300 italic' : 'text-zinc-800'}`}>
+                                    <h4 className={`font-bold text-sm xl:text-sm leading-snug mb-2 ${isEmpty ? 'text-zinc-300 italic' : 'text-zinc-800'}`}>
                                         {cell.name || "—"}
                                     </h4>
                                     {cell.description && (

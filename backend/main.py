@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 from google import genai
@@ -8,6 +8,8 @@ from google.genai import types
 import os
 import json
 import logging
+import asyncio
+import re
 from dotenv import load_dotenv
 
 # Configure logging
@@ -207,6 +209,242 @@ async def generate_plan(request: GeneratePlanRequest):
         logger.error(f"Error in generate_plan: {str(e)}")
         # Let the global exception handler deal with it
         raise e
+
+@app.post("/api/generate-plan-stream")
+async def generate_plan_stream(request: GeneratePlanRequest):
+    """Streaming version of meal plan generation - returns days progressively"""
+    
+    # Check if API key is available
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key or api_key == "PLACEHOLDER_API_KEY":
+        raise HTTPException(
+            status_code=400, 
+            detail=ErrorResponse(
+                error="Configuration Error",
+                message="GEMINI_API_KEY not configured. Please set a valid API key.",
+                code="MISSING_API_KEY"
+            ).model_dump()
+        )
+    
+    async def generate_stream():
+        try:
+            logger.info("Generating streaming meal plan for family")
+            
+            members_json = [member.model_dump() for member in request.members]
+            preferences_json = request.preferences.model_dump()
+            
+            cuisine_instruction = ""
+            if request.preferences.cuisines.strip():
+                cuisine_instruction = f"IMPORTANT: The majority of meals MUST be from the following cuisines: {request.preferences.cuisines}."
+            else:
+                cuisine_instruction = "Provide a balanced variety of cuisines."
+
+            # Modified prompt for streaming - request standard JSON format
+            prompt = f"""
+            Generate a 7-day meal plan (Mon-Sun) for this family.
+            
+            Family Members (ages and roles included):
+            {json.dumps(members_json, indent=2)}
+            
+            Preferences:
+            {json.dumps(preferences_json, indent=2)}
+            
+            Rules:
+            1. {cuisine_instruction}
+            2. Respect ages (toddlers need safer foods, less spice if not specified otherwise).
+            3. Respect dislikes explicitly.
+            4. Weekend Effort Level: {request.preferences.weekendEffort}.
+            5. FAMILY LIFESTYLE CONSTRAINTS (CRITICAL): {request.preferences.generalNotes or "None provided. Assume standard family schedule."}
+            
+            IMPORTANT: Return EXACTLY this JSON structure (valid JSON array):
+            [
+              {{
+                "day": "Monday",
+                "meals": {{
+                  "Breakfast": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}},
+                  "Lunch": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}},
+                  "Snack": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}},
+                  "Dinner": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}}
+                }}
+              }},
+              {{
+                "day": "Tuesday",
+                "meals": {{
+                  "Breakfast": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}},
+                  "Lunch": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}},
+                  "Snack": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}},
+                  "Dinner": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}}
+                }}
+              }},
+              ... (continue for all 7 days: Monday through Sunday)
+            ]
+            
+            Each meal must have "name", "description", and "notes" fields.
+            Return only the JSON array, no other text.
+            """
+
+            # Use text mode instead of JSON mode for streaming
+            response = client.models.generate_content(
+                model="gemini-3-flash-preview",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    # Remove JSON mode to allow streaming
+                )
+            )
+            
+            # Parse the response and extract day objects
+            response_text = response.text
+            logger.info("Received LLM response, parsing days...")
+            logger.info(f"Response text preview: {response_text[:500]}...")
+            
+            # Try multiple parsing strategies
+            days_sent = 0
+            
+            # Strategy 1: Try to parse as complete JSON array first
+            try:
+                plan = json.loads(response_text)
+                if isinstance(plan, list) and len(plan) > 0:
+                    logger.info("Parsed as complete JSON array, streaming individual days")
+                    for day_data in plan:
+                        if isinstance(day_data, dict) and 'day' in day_data:
+                            logger.info(f"Streaming day: {day_data['day']}")
+                            yield f"data: {json.dumps(day_data)}\n\n"
+                            days_sent += 1
+                            await asyncio.sleep(0.8)  # Delay between days
+                else:
+                    raise ValueError("Not a valid plan array")
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.info(f"Complete JSON parsing failed: {e}, trying regex extraction...")
+                
+                # Strategy 2: Extract day objects using improved regex
+                # Look for JSON objects that contain "day" and "meals" fields
+                day_pattern = r'\{[^{}]*"day"[^{}]*"meals"[^{}]*\{[^{}]*\}[^{}]*\}'
+                potential_days = re.findall(day_pattern, response_text, re.DOTALL)
+                
+                logger.info(f"Found {len(potential_days)} potential day objects")
+                
+                for i, day_json in enumerate(potential_days):
+                    try:
+                        # Clean up the JSON string
+                        day_json = day_json.strip()
+                        if not day_json.endswith('}'):
+                            day_json += '}'
+                        
+                        day_data = json.loads(day_json)
+                        if 'day' in day_data and 'meals' in day_data:
+                            logger.info(f"Successfully parsed and streaming day: {day_data['day']}")
+                            yield f"data: {json.dumps(day_data)}\n\n"
+                            days_sent += 1
+                            await asyncio.sleep(0.8)
+                        else:
+                            logger.warning(f"Day object missing required fields: {day_data}")
+                    except json.JSONDecodeError as parse_error:
+                        logger.error(f"Failed to parse day object {i}: {parse_error}")
+                        logger.error(f"Problematic JSON: {day_json[:200]}...")
+                        continue
+                
+                # Strategy 3: If regex fails, try line-by-line parsing
+                if days_sent == 0:
+                    logger.info("Regex parsing failed, trying line-by-line parsing...")
+                    lines = response_text.split('\n')
+                    current_day = None
+                    current_json = ""
+                    brace_count = 0
+                    
+                    for line in lines:
+                        line = line.strip()
+                        if '"day":' in line and brace_count == 0:
+                            # Start of a new day object
+                            current_json = ""
+                            brace_count = 0
+                        
+                        if line:
+                            current_json += line + "\n"
+                            brace_count += line.count('{') - line.count('}')
+                            
+                            # If we have a complete object
+                            if brace_count == 0 and current_json.strip() and '"day":' in current_json:
+                                try:
+                                    # Clean and parse the JSON
+                                    clean_json = current_json.strip()
+                                    if not clean_json.startswith('{'):
+                                        clean_json = '{' + clean_json
+                                    if not clean_json.endswith('}'):
+                                        clean_json = clean_json + '}'
+                                    
+                                    day_data = json.loads(clean_json)
+                                    if 'day' in day_data and 'meals' in day_data:
+                                        logger.info(f"Line-by-line parsed day: {day_data['day']}")
+                                        yield f"data: {json.dumps(day_data)}\n\n"
+                                        days_sent += 1
+                                        await asyncio.sleep(0.8)
+                                except json.JSONDecodeError as e:
+                                    logger.error(f"Line-by-line parsing failed: {e}")
+                                    logger.error(f"Problematic JSON: {clean_json[:200]}...")
+                                
+                                current_json = ""
+                                brace_count = 0
+            
+            if days_sent == 0:
+                logger.error("No days were successfully parsed and sent, falling back to batch mode")
+                # Fallback to batch generation
+                try:
+                    logger.info("Attempting fallback to batch generation...")
+                    batch_response = client.models.generate_content(
+                        model="gemini-3-flash-preview",
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            response_mime_type="application/json"
+                        )
+                    )
+                    
+                    plan = json.loads(batch_response.text)
+                    if isinstance(plan, list) and len(plan) > 0:
+                        logger.info("Batch fallback successful, streaming individual days")
+                        for day_data in plan:
+                            if isinstance(day_data, dict) and 'day' in day_data:
+                                logger.info(f"Fallback streaming day: {day_data['day']}")
+                                yield f"data: {json.dumps(day_data)}\n\n"
+                                days_sent += 1
+                                await asyncio.sleep(0.3)  # Faster for fallback
+                    else:
+                        raise ValueError("Batch fallback also failed")
+                        
+                except Exception as fallback_error:
+                    logger.error(f"Batch fallback failed: {fallback_error}")
+                    error_response = {
+                        "type": "error",
+                        "error": "Generation Error",
+                        "message": "Failed to generate meal plan. Please check your API key configuration.",
+                        "code": "GENERATION_ERROR"
+                    }
+                    yield f"data: {json.dumps(error_response)}\n\n"
+            else:
+                logger.info(f"Successfully streamed {days_sent} days")
+            
+            # Send completion signal
+            yield f"data: {json.dumps({'type': 'complete'})}\n\n"
+            logger.info("Successfully completed streaming meal plan generation")
+            
+        except Exception as e:
+            logger.error(f"Error in streaming generation: {str(e)}")
+            error_response = {
+                "type": "error",
+                "error": "Generation Error",
+                "message": str(e),
+                "code": "STREAMING_ERROR"
+            }
+            yield f"data: {json.dumps(error_response)}\n\n"
+    
+    return StreamingResponse(
+        generate_stream(),
+        media_type="text/plain",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Content-Type": "text/event-stream",
+        }
+    )
 
 @app.post("/api/update-plan")
 async def update_plan(request: UpdatePlanRequest):

@@ -27,6 +27,7 @@ import {
 } from './constants';
 import { 
   generateInitialMealPlan, 
+  generateInitialMealPlanStream,
   updateMealPlanWithAgent, 
   generateMealPrepPlan, 
   generateGroceryList 
@@ -101,6 +102,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [lastDiffPlan, setLastDiffPlan] = useState<WeekPlan | undefined>(undefined);
+  const [newlyReceivedCards, setNewlyReceivedCards] = useState<Set<string>>(new Set());
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [errorModal, setErrorModal] = useState<{
     isOpen: boolean;
@@ -181,63 +183,172 @@ const App: React.FC = () => {
       budget: prefs.budget
     });
     
+    // Initialize empty plan for streaming updates
+    const emptyPlan: WeekPlan = Array.from({ length: 7 }, (_, index) => ({
+      day: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][index],
+      meals: {
+        Breakfast: { name: '', description: '', notes: '' },
+        Lunch: { name: '', description: '', notes: '' },
+        Snack: { name: '', description: '', notes: '' },
+        Dinner: { name: '', description: '', notes: '' }
+      }
+    }));
+    
+    // Clear previously received cards and set initial empty plan
+    setNewlyReceivedCards(new Set());
+    setPlanHistory({
+      past: [],
+      present: emptyPlan,
+      future: []
+    });
+    setHasPlanGenerated(true);
+    setViewMode('planning');
+    setCurrentStage(Stage.MEAL_PLANNING);
+    
+    // Elegant scroll to top - Apple-style smooth behavior
+    setTimeout(() => {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }, 100);
+    
     try {
-      const plan = await generateInitialMealPlan(members, prefs);
-      setPlanHistory({
-        past: [],
-        present: plan,
-        future: []
-      });
-      setHasPlanGenerated(true);
-      setViewMode('planning');
-      setCurrentStage(Stage.MEAL_PLANNING);
-      
-      // Elegant scroll to top after plan generation - Apple-style smooth behavior
-      setTimeout(() => {
-        window.scrollTo({
-          top: 0,
-          behavior: 'smooth'
-        });
-      }, 100); // Small delay to ensure DOM updates are complete
-      
-      // Track successful plan generation
-      await analyticsService.trackMealPlanningEvent('plan_generation_completed', {
-        family_size: members.length,
-        total_meals: Object.values(plan).flat().length
-      });
+      // Use streaming generation
+      await generateInitialMealPlanStream(
+        members,
+        prefs,
+        // onDayReceived callback
+        (dayData: any, dayIndex: number) => {
+          console.log(`Received day ${dayIndex}:`, dayData);
+          
+          // Track newly received cards for this day
+          const newCards = new Set<string>();
+          const mealTimes = ['Breakfast', 'Lunch', 'Snack', 'Dinner'];
+          mealTimes.forEach(time => {
+            if (dayData.meals && dayData.meals[time] && dayData.meals[time].name) {
+              newCards.add(`${dayData.day}-${time}`);
+            }
+          });
+          
+          // Update newly received cards state
+          setNewlyReceivedCards(prev => new Set([...prev, ...newCards]));
+          
+          // Update plan with new day data
+          setPlanHistory(prev => {
+            const newPlan = [...prev.present];
+            if (dayIndex < newPlan.length) {
+              newPlan[dayIndex] = dayData;
+            }
+            return {
+              ...prev,
+              present: newPlan
+            };
+          });
+          
+          // Clear the animation state after animation completes
+          setTimeout(() => {
+            setNewlyReceivedCards(prev => {
+              const updated = new Set(prev);
+              newCards.forEach(card => updated.delete(card));
+              return updated;
+            });
+          }, 600); // Match animation duration
+        },
+        // onComplete callback
+        async () => {
+          console.log("Streaming plan generation completed");
+          setIsLoading(false);
+          
+          // Track successful plan generation
+          await analyticsService.trackMealPlanningEvent('plan_generation_completed', {
+            family_size: members.length,
+            streaming: true
+          });
+        },
+        // onError callback
+        async (error: Error) => {
+          console.error("Streaming error:", error);
+          setIsLoading(false);
+          
+          // Track plan generation failure
+          await analyticsService.trackMealPlanningEvent('plan_generation_failed', {
+            error_message: error.message,
+            streaming: true
+          });
+          
+          const errorMessage = error.message;
+          
+          // Show elegant error instead of alert
+          if (errorMessage.includes('GEMINI_API_KEY')) {
+            setErrorModal({
+              isOpen: true,
+              title: 'API Configuration Required',
+              message: 'The Gemini API key needs to be configured to generate meal plans.',
+              details: errorMessage,
+              onRetry: () => handleGenerateInitialPlan(members, prefs)
+            });
+          } else if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
+            showToast('Rate limit reached. Please try again in a few minutes.', 'warning', 8000);
+          } else {
+            setErrorModal({
+              isOpen: true,
+              title: 'Plan Generation Failed',
+              message: 'We encountered an issue while creating your meal plan. This might be temporary.',
+              details: errorMessage,
+              onRetry: () => handleGenerateInitialPlan(members, prefs)
+            });
+          }
+        }
+      );
       
     } catch (error) {
-      console.error("Error generating plan:", error);
-      
-      // Track plan generation failure
-      await analyticsService.trackMealPlanningEvent('plan_generation_failed', {
-        error_message: error instanceof Error ? error.message : 'Unknown error'
-      });
-      
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      
-      // Show elegant error instead of alert
-      if (errorMessage.includes('GEMINI_API_KEY')) {
-        setErrorModal({
-          isOpen: true,
-          title: 'API Configuration Required',
-          message: 'The Gemini API key needs to be configured to generate meal plans.',
-          details: errorMessage,
-          onRetry: () => handleGenerateInitialPlan(members, prefs)
-        });
-      } else if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
-        showToast('Rate limit reached. Please try again in a few minutes.', 'warning', 8000);
-      } else {
-        setErrorModal({
-          isOpen: true,
-          title: 'Plan Generation Failed',
-          message: 'We encountered an issue while creating your meal plan. This might be temporary.',
-          details: errorMessage,
-          onRetry: () => handleGenerateInitialPlan(members, prefs)
-        });
-      }
-    } finally {
+      console.error("Error starting streaming generation:", error);
       setIsLoading(false);
+      
+      // Fallback to batch generation if streaming fails
+      console.log("Falling back to batch generation...");
+      try {
+        const plan = await generateInitialMealPlan(members, prefs);
+        setPlanHistory({
+          past: [],
+          present: plan,
+          future: []
+        });
+        
+        await analyticsService.trackMealPlanningEvent('plan_generation_completed', {
+          family_size: members.length,
+          fallback: true
+        });
+        
+      } catch (fallbackError) {
+        const errorMessage = fallbackError instanceof Error ? fallbackError.message : 'Unknown error occurred';
+        
+        await analyticsService.trackMealPlanningEvent('plan_generation_failed', {
+          error_message: errorMessage,
+          fallback: true
+        });
+        
+        if (errorMessage.includes('GEMINI_API_KEY')) {
+          setErrorModal({
+            isOpen: true,
+            title: 'API Configuration Required',
+            message: 'The Gemini API key needs to be configured to generate meal plans.',
+            details: errorMessage,
+            onRetry: () => handleGenerateInitialPlan(members, prefs)
+          });
+        } else if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
+          showToast('Rate limit reached. Please try again in a few minutes.', 'warning', 8000);
+        } else {
+          setErrorModal({
+            isOpen: true,
+            title: 'Plan Generation Failed',
+            message: 'We encountered an issue while creating your meal plan. This might be temporary.',
+            details: errorMessage,
+            onRetry: () => handleGenerateInitialPlan(members, prefs)
+          });
+        }
+      }
     }
   };
 
@@ -598,7 +709,12 @@ const App: React.FC = () => {
                           <p className="text-zinc-400 font-medium">Designing your week...</p>
                       </div>
                    ) : (
-                      <MealGrid plan={planHistory.present} previousPlan={lastDiffPlan} />
+                      <MealGrid 
+                        plan={planHistory.present} 
+                        previousPlan={lastDiffPlan} 
+                        isStreaming={isLoading}
+                        newlyReceivedCards={newlyReceivedCards}
+                      />
                    )}
                 </div>
              )}

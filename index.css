@@ -47,7 +47,16 @@
   }
 
   .animate-fade-in-up {
-    animation: fadeInUp 0.3s ease-out;
+    animation: fadeInUp 0.5s ease-out;
+  }
+
+  /* Streaming animations for meal cards */
+  .animate-stream-in {
+    animation: streamIn 0.6s ease-out;
+  }
+
+  .animate-pulse-soft {
+    animation: pulseSoft 2s ease-in-out infinite;
   }
 
   @keyframes slideInRight {
@@ -68,6 +77,30 @@
     }
     to {
       transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes streamIn {
+    from {
+      transform: translateY(30px) scale(0.9);
+      opacity: 0;
+    }
+    50% {
+      transform: translateY(-5px) scale(1.02);
+      opacity: 0.8;
+    }
+    to {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes pulseSoft {
+    0%, 100% {
+      opacity: 0.6;
+    }
+    50% {
       opacity: 1;
     }
   }
