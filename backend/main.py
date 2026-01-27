@@ -59,6 +59,11 @@ async def root():
 
 @app.post("/api/generate-plan")
 async def generate_plan(request: GeneratePlanRequest):
+    # Check if API key is available
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key or api_key == "PLACEHOLDER_API_KEY":
+        raise HTTPException(status_code=400, detail="GEMINI_API_KEY not configured. Please set a valid API key.")
+    
     try:
         # Convert your existing TypeScript logic to Python
         members_json = [member.model_dump() for member in request.members]
@@ -100,7 +105,11 @@ async def generate_plan(request: GeneratePlanRequest):
         return {"plan": plan}
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Error in generate_plan: {str(e)}")
+        print(f"Error type: {type(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.post("/api/update-plan")
 async def update_plan(request: UpdatePlanRequest):
