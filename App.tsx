@@ -306,7 +306,7 @@ const App: React.FC = () => {
         )}
 
         {viewMode === 'planning' && (
-          <div className="max-w-[1600px] mx-auto px-4 md:px-8 pb-40 pt-6 md:pt-8">
+          <div className="max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pb-40 pt-6 md:pt-8">
              
              {/* Mobile Stepper (visible only on small screens when in planning mode) */}
              {viewMode === 'planning' && (
@@ -323,7 +323,7 @@ const App: React.FC = () => {
              {currentStage === Stage.MEAL_PLANNING && (
                 <div className="animate-fade-in">
                    {/* Context Header - Desktop Only */}
-                   <div className="hidden md:flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 px-2">
+                   <div className="hidden md:flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
                       <h2 className="text-xl md:text-2xl font-bold text-zinc-900">Current Plan</h2>
                       <div className="flex gap-3">
                          {planHistory.past.length > 0 && (
