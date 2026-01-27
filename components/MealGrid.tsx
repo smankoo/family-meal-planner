@@ -18,22 +18,22 @@ const MealGrid: React.FC<MealGridProps> = ({ plan, previousPlan, onCellClick }) 
     return currentName !== prevName && currentName !== '';
   };
 
-  // --- Mobile View (Native Vertical List) ---
+  // --- Mobile View (Apple-style sticky section headers) ---
   const MobileView = () => {
     return (
-      <div className="md:hidden flex flex-col space-y-8 pb-20">
+      <div className="md:hidden flex flex-col pb-20">
         {plan.map((dayPlan, dayIdx) => (
-            <div key={dayPlan.day} className="flex flex-col gap-3">
+            <div key={dayPlan.day} className="mb-8">
                 
-                {/* Sticky Header for Day */}
-                <div className="sticky top-20 z-20 py-2 bg-zinc-50/95 backdrop-blur-sm border-b border-zinc-200/50">
-                    <h3 className="text-lg font-bold text-zinc-900 tracking-tight pl-2">
+                {/* Sticky Day Header - Apple-style section header */}
+                <div className="sticky top-0 z-20 mb-4 px-4 py-3 bg-zinc-50/95 backdrop-blur-sm border-b border-zinc-200/30">
+                    <h3 className="text-xl font-bold text-zinc-900 tracking-tight">
                         {dayPlan.day}
                     </h3>
                 </div>
 
                 {/* Cards for that day */}
-                <div className="space-y-3 px-1">
+                <div className="space-y-3 px-4">
                     {mealTimes.map((time) => {
                         const cell = dayPlan.meals[time];
                         const isChanged = hasChanged(dayIdx, time);
