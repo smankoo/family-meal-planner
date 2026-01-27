@@ -26,7 +26,7 @@ import {
   generateMealPrepPlan, 
   generateGroceryList 
 } from './services/geminiService';
-import { Undo2, Sparkles, ChefHat, Settings, ArrowLeft, ArrowRight, X, Loader2 } from 'lucide-react';
+import { Undo2, Sparkles, ChefHat, Settings, ArrowLeft, ArrowRight, X, Loader2, RotateCcw } from 'lucide-react';
 
 type ViewMode = 'planning' | 'household';
 
@@ -308,14 +308,21 @@ const App: React.FC = () => {
         {viewMode === 'planning' && (
           <div className="max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pb-40 pt-6 md:pt-8">
              
-             {/* Mobile Stepper (visible only on small screens when in planning mode) */}
+             {/* Mobile Stepper with Regenerate Button (visible only on small screens when in planning mode) */}
              {viewMode === 'planning' && (
-               <div className="md:hidden mb-6">
+               <div className="md:hidden mb-6 relative flex justify-center">
                  <StageStepper 
                     currentStage={currentStage} 
                     setStage={setCurrentStage} 
                     maxStageReached={maxStageReached} 
                  />
+                 <button 
+                    onClick={handleRegeneratePlan} 
+                    className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-zinc-50 border border-zinc-100 rounded-full flex items-center justify-center text-zinc-400 hover:bg-zinc-100 hover:text-zinc-500 transition-colors"
+                    title="Regenerate Plan"
+                 >
+                    <RotateCcw size={14} strokeWidth={1.5} />
+                 </button>
                </div>
              )}
              
@@ -324,7 +331,7 @@ const App: React.FC = () => {
                 <div className="animate-fade-in">
                    {/* Context Header - Desktop Only */}
                    <div className="hidden md:flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
-                      <h2 className="text-xl md:text-2xl font-bold text-zinc-900">Current Plan</h2>
+                      <h2 className="text-xl md:text-2xl font-bold text-zinc-900">Meal Plan</h2>
                       <div className="flex gap-3">
                          {planHistory.past.length > 0 && (
                             <button onClick={handleUndo} className="flex items-center gap-2 px-3 md:px-4 py-2 bg-white border border-zinc-200 text-zinc-600 rounded-full text-xs md:text-sm font-semibold hover:bg-zinc-50 transition-colors">
@@ -332,7 +339,7 @@ const App: React.FC = () => {
                             </button>
                          )}
                          <button onClick={handleRegeneratePlan} className="flex items-center gap-2 px-3 md:px-4 py-2 bg-zinc-100 text-zinc-600 rounded-full text-xs md:text-sm font-semibold hover:bg-zinc-200 transition-colors">
-                            <Sparkles size={12} className="md:w-[14px] md:h-[14px]" /> Regenerate
+                            <RotateCcw size={12} className="md:w-[14px] md:h-[14px]" /> Regenerate
                          </button>
                       </div>
                    </div>
@@ -346,9 +353,6 @@ const App: React.FC = () => {
                             </button>
                          )}
                       </div>
-                      <button onClick={handleRegeneratePlan} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-zinc-200 text-zinc-500 rounded-full text-xs font-medium hover:bg-zinc-50 hover:text-zinc-700 transition-colors">
-                         <Sparkles size={12} /> Regenerate
-                      </button>
                    </div>
 
                    {isLoading && planHistory.present === EMPTY_PLAN ? (

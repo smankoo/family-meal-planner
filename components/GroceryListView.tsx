@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { GroceryItem } from '../types';
-import { Check, ShoppingBag, Sparkles } from 'lucide-react';
+import { Check, ShoppingBag, RotateCcw } from 'lucide-react';
 
 interface GroceryListViewProps {
   items: GroceryItem[];
@@ -51,20 +51,14 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({ items: initialItems, 
             disabled={isLoading}
             className="flex items-center gap-2 px-3 md:px-4 py-2 bg-zinc-100 text-zinc-600 rounded-full text-xs md:text-sm font-semibold hover:bg-zinc-200 transition-colors"
           >
-            <Sparkles size={12} className="md:w-[14px] md:h-[14px]" /> Regenerate
+            <RotateCcw size={12} className="md:w-[14px] md:h-[14px]" /> Regenerate
           </button>
         </div>
       </div>
 
-      {/* Mobile Header */}
-      <div className="md:hidden flex justify-end items-center mb-6 px-4">
-        <button 
-          onClick={onRegenerate}
-          disabled={isLoading}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-zinc-200 text-zinc-500 rounded-full text-xs font-medium hover:bg-zinc-50 hover:text-zinc-700 transition-colors"
-        >
-          <Sparkles size={12} /> Regenerate
-        </button>
+      {/* Mobile Header - Removed regenerate button since it's now in the main stepper area */}
+      <div className="md:hidden mb-6 px-4">
+        {/* Mobile header content if needed in future */}
       </div>
 
       {items.length === 0 && !isLoading ? (

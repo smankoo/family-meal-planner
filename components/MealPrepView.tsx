@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { PrepTask } from '../types';
-import { Circle, Clock, ArrowRight, Sparkles } from 'lucide-react';
+import { Check, Clock, ArrowRight, RotateCcw } from 'lucide-react';
 
 interface MealPrepViewProps {
   tasks: PrepTask[];
@@ -8,7 +8,18 @@ interface MealPrepViewProps {
   isLoading: boolean;
 }
 
-const MealPrepView: React.FC<MealPrepViewProps> = ({ tasks, onRegenerate, isLoading }) => {
+const MealPrepView: React.FC<MealPrepViewProps> = ({ tasks: initialTasks, onRegenerate, isLoading }) => {
+  const [tasks, setTasks] = useState<PrepTask[]>(initialTasks);
+
+  React.useEffect(() => {
+    setTasks(initialTasks);
+  }, [initialTasks]);
+
+  const toggleTask = (id: string) => {
+    setTasks(prev => prev.map(task => 
+      task.id === id ? { ...task, completed: !task.completed } : task
+    ));
+  };
   if (isLoading && tasks.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] text-zinc-400">
@@ -39,20 +50,14 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({ tasks, onRegenerate, isLoad
             disabled={isLoading}
             className="flex items-center gap-2 px-3 md:px-4 py-2 bg-zinc-100 text-zinc-600 rounded-full text-xs md:text-sm font-semibold hover:bg-zinc-200 transition-colors"
           >
-            <Sparkles size={12} className="md:w-[14px] md:h-[14px]" /> Regenerate
+            <RotateCcw size={12} className="md:w-[14px] md:h-[14px]" /> Regenerate
           </button>
         </div>
       </div>
 
-      {/* Mobile Header */}
-      <div className="md:hidden flex justify-end items-center mb-6 px-4">
-        <button 
-          onClick={onRegenerate}
-          disabled={isLoading}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-zinc-200 text-zinc-500 rounded-full text-xs font-medium hover:bg-zinc-50 hover:text-zinc-700 transition-colors"
-        >
-          <Sparkles size={12} /> Regenerate
-        </button>
+      {/* Mobile Header - Removed regenerate button since it's now in the main stepper area */}
+      <div className="md:hidden mb-6 px-4">
+        {/* Mobile header content if needed in future */}
       </div>
 
       {tasks.length === 0 && !isLoading ? (
@@ -77,23 +82,34 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({ tasks, onRegenerate, isLoad
                 {dayTasks.map((task) => (
                   <div 
                     key={task.id}
-                    className="relative bg-white rounded-2xl p-5 shadow-sm border border-zinc-100"
+                    onClick={() => toggleTask(task.id)}
+                    className={`
+                      relative bg-white rounded-2xl p-5 shadow-sm border transition-all active:scale-[0.98] cursor-pointer
+                      ${task.completed ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-100'}
+                    `}
                   >
                     <div className="flex gap-4">
                       <div className="mt-1">
-                        <Circle size={20} strokeWidth={1.5} className="text-zinc-300" />
+                        <div className={`
+                          w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300
+                          ${task.completed 
+                              ? 'bg-zinc-400 border-zinc-400' 
+                              : 'bg-transparent border-zinc-300'}
+                        `}>
+                          {task.completed && <Check size={12} className="text-white" strokeWidth={3} />}
+                        </div>
                       </div>
                       <div className="flex-1">
-                        <p className="text-lg font-semibold mb-1 leading-snug text-zinc-800">
+                        <p className={`text-lg font-semibold mb-1 leading-snug transition-colors ${task.completed ? 'text-zinc-400 line-through' : 'text-zinc-800'}`}>
                           {task.task}
                         </p>
                         
                         {task.relatedMeals && task.relatedMeals.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-3">
                             {task.relatedMeals.map((meal, idx) => (
-                              <span key={idx} className="inline-flex items-center gap-1.5 bg-zinc-50 border border-zinc-100 px-2.5 py-1 rounded-lg">
+                              <span key={idx} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${task.completed ? 'bg-zinc-50 border-zinc-100 text-zinc-400' : 'bg-zinc-50 border-zinc-100'}`}>
                                 <ArrowRight size={10} className="text-zinc-400" />
-                                <span className="text-[10px] font-medium text-zinc-500">{meal}</span>
+                                <span className={`text-[10px] font-medium ${task.completed ? 'text-zinc-400' : 'text-zinc-500'}`}>{meal}</span>
                               </span>
                             ))}
                           </div>
@@ -124,23 +140,34 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({ tasks, onRegenerate, isLoad
               {dayTasks.map((task) => (
                 <div 
                   key={task.id}
-                  className="relative bg-white rounded-2xl p-5 shadow-sm border border-zinc-100 hover:shadow-md transition-shadow"
+                  onClick={() => toggleTask(task.id)}
+                  className={`
+                    relative bg-white rounded-2xl p-5 shadow-sm border transition-all hover:shadow-md cursor-pointer
+                    ${task.completed ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-100'}
+                  `}
                 >
                   <div className="flex gap-4">
                     <div className="mt-1">
-                      <Circle size={20} strokeWidth={1.5} className="text-zinc-300" />
+                      <div className={`
+                        w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300
+                        ${task.completed 
+                            ? 'bg-zinc-400 border-zinc-400' 
+                            : 'bg-transparent border-zinc-300 hover:border-zinc-400'}
+                      `}>
+                        {task.completed && <Check size={12} className="text-white" strokeWidth={3} />}
+                      </div>
                     </div>
                     <div className="flex-1">
-                      <p className="text-lg font-semibold mb-1 leading-snug text-zinc-800">
+                      <p className={`text-lg font-semibold mb-1 leading-snug transition-colors ${task.completed ? 'text-zinc-400 line-through' : 'text-zinc-800'}`}>
                         {task.task}
                       </p>
                       
                       {task.relatedMeals && task.relatedMeals.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-3">
                           {task.relatedMeals.map((meal, idx) => (
-                            <span key={idx} className="inline-flex items-center gap-1.5 bg-zinc-50 border border-zinc-100 px-2.5 py-1 rounded-lg">
+                            <span key={idx} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${task.completed ? 'bg-zinc-50 border-zinc-100 text-zinc-400' : 'bg-zinc-50 border-zinc-100'}`}>
                               <ArrowRight size={10} className="text-zinc-400" />
-                              <span className="text-[10px] font-medium text-zinc-500">{meal}</span>
+                              <span className={`text-[10px] font-medium ${task.completed ? 'text-zinc-400' : 'text-zinc-500'}`}>{meal}</span>
                             </span>
                           ))}
                         </div>

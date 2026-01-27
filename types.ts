@@ -47,6 +47,7 @@ export interface PrepTask {
   day: string; // When to do it (e.g., "Weekend", "Monday Night")
   task: string;
   relatedMeals: string[];
+  completed?: boolean;
 }
 
 export interface GroceryItem {
