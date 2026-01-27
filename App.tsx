@@ -7,6 +7,7 @@ import GroceryListView from './components/GroceryListView';
 import FamilySetup from './components/FamilySetup';
 import ToastContainer from './components/Toast';
 import ErrorModal from './components/ErrorModal';
+import ConfirmationModal from './components/ConfirmationModal';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import { 
   Stage, 
@@ -109,6 +110,19 @@ const App: React.FC = () => {
   }>({
     isOpen: false,
     message: ''
+  });
+
+  const [confirmationModal, setConfirmationModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
   });
 
   // --- Analytics Initialization ---
@@ -227,11 +241,12 @@ const App: React.FC = () => {
   };
 
   const handleRegeneratePlan = async () => {
-    setErrorModal({
+    setConfirmationModal({
       isOpen: true,
       title: 'Regenerate Plan?',
       message: 'This will create a completely new plan based on your current settings, overwriting any changes. Continue?',
-      onRetry: async () => {
+      confirmLabel: 'Regenerate',
+      onConfirm: async () => {
         // Track plan regeneration
         await analyticsService.trackMealPlanningEvent('plan_regenerated', {
           had_previous_plan: hasPlanGenerated,
@@ -449,6 +464,17 @@ const App: React.FC = () => {
         details={errorModal.details}
         onRetry={errorModal.onRetry}
         showSupport={true}
+      />
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={() => setConfirmationModal({ ...confirmationModal, isOpen: false })}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        confirmLabel={confirmationModal.confirmLabel}
+        onConfirm={confirmationModal.onConfirm}
+        variant="warning"
       />
       
       {/* Header - Apple-like frosted glass effect */}

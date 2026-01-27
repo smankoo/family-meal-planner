@@ -104,7 +104,7 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({ tasks: initialTasks, onRege
                           {task.task}
                         </p>
                         
-                        {task.relatedMeals && task.relatedMeals.length > 0 && (
+                        {task.relatedMeals && Array.isArray(task.relatedMeals) && task.relatedMeals.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-3">
                             {task.relatedMeals.map((meal, idx) => (
                               <span key={idx} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${task.completed ? 'bg-zinc-50 border-zinc-100 text-zinc-400' : 'bg-zinc-50 border-zinc-100'}`}>
@@ -162,7 +162,7 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({ tasks: initialTasks, onRege
                         {task.task}
                       </p>
                       
-                      {task.relatedMeals && task.relatedMeals.length > 0 && (
+                      {task.relatedMeals && Array.isArray(task.relatedMeals) && task.relatedMeals.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-3">
                           {task.relatedMeals.map((meal, idx) => (
                             <span key={idx} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${task.completed ? 'bg-zinc-50 border-zinc-100 text-zinc-400' : 'bg-zinc-50 border-zinc-100'}`}>

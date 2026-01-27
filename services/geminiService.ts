@@ -102,8 +102,13 @@ export const generateMealPrepPlan = async (mealPlan: WeekPlan): Promise<PrepTask
     });
     
     const tasks = response.tasks as PrepTask[];
-    // Ensure IDs
-    return tasks.map((t, i) => ({ ...t, id: t.id || `prep-${Date.now()}-${i}` }));
+    // Ensure IDs and validate relatedMeals structure
+    return tasks.map((t, i) => ({
+      ...t,
+      id: t.id || `prep-${Date.now()}-${i}`,
+      relatedMeals: Array.isArray(t.relatedMeals) ? t.relatedMeals : 
+                   typeof t.relatedMeals === 'string' ? [t.relatedMeals] : []
+    }));
   } catch (error) {
     console.error("Error generating prep plan:", error);
     throw error;

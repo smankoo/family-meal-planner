@@ -284,7 +284,27 @@ async def generate_prep(request: PrepPlanRequest):
         - Identify tasks that can be batched on the weekend or the night before.
         - Group similar tasks (e.g., "Chop veggies for Mon/Tue dinners").
         - Keep it simple and actionable.
-        - Return as JSON array of prep tasks with fields: day, task, relatedMeals
+        
+        IMPORTANT: Return EXACTLY this JSON structure:
+        [
+          {{
+            "day": "Weekend",
+            "task": "Chop vegetables for Monday and Tuesday dinners",
+            "relatedMeals": ["Monday Dinner", "Tuesday Dinner"]
+          }},
+          {{
+            "day": "Sunday Night",
+            "task": "Marinate chicken for week",
+            "relatedMeals": ["Wednesday Dinner", "Friday Dinner"]
+          }}
+        ]
+        
+        Each task MUST have:
+        - "day": When to do the task (e.g., "Weekend", "Sunday Night", "Monday Morning")
+        - "task": Description of what to do
+        - "relatedMeals": Array of strings indicating which meals this helps with
+        
+        The relatedMeals field MUST be an array of strings, never a single string.
         """
 
         response = client.models.generate_content(
