@@ -163,6 +163,14 @@ const App: React.FC = () => {
       setViewMode('planning');
       setCurrentStage(Stage.MEAL_PLANNING);
       
+      // Elegant scroll to top after plan generation - Apple-style smooth behavior
+      setTimeout(() => {
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      }, 100); // Small delay to ensure DOM updates are complete
+      
       // Track successful plan generation
       await analyticsService.trackMealPlanningEvent('plan_generation_completed', {
         family_size: members.length,
@@ -194,6 +202,7 @@ const App: React.FC = () => {
         setPrepTasks([]);
         setGroceryItems([]);
         await handleGenerateInitialPlan(family, preferences);
+        // Note: scroll behavior is handled in handleGenerateInitialPlan
     }
   };
 
