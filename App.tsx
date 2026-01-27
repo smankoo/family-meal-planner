@@ -245,49 +245,55 @@ const App: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-zinc-50 font-sans">
       
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-20 flex items-center justify-between px-6 md:px-10 pointer-events-none">
-        {/* Left: Brand - Cleaner, Apple-like */}
-        <div className="pointer-events-auto flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-zinc-900 rounded-xl flex items-center justify-center shadow-md shadow-zinc-900/10">
-                <ChefHat size={18} className="text-white" strokeWidth={2.5} />
-            </div>
-            <h1 className="text-lg font-semibold text-zinc-900 tracking-tight">Meal Planner</h1>
-        </div>
+      {/* Header - Apple-like frosted glass effect */}
+      <header className="frosted-header fixed top-0 left-0 right-0 z-50 h-16 md:h-20 flex items-center justify-between px-4 md:px-6 lg:px-10 pointer-events-none">
+        {/* Backdrop blur background */}
+        <div className="absolute inset-0 bg-zinc-50/80 backdrop-blur-xl border-b border-zinc-200/50"></div>
+        
+        {/* Content layer */}
+        <div className="relative w-full flex items-center justify-between">
+          {/* Left: Brand - Cleaner, Apple-like */}
+          <div className="pointer-events-auto flex items-center gap-2 md:gap-2.5">
+              <div className="w-7 h-7 md:w-8 md:h-8 bg-zinc-900 rounded-xl flex items-center justify-center shadow-md shadow-zinc-900/10">
+                  <ChefHat size={16} className="md:w-[18px] md:h-[18px] text-white" strokeWidth={2.5} />
+              </div>
+              <h1 className="text-base md:text-lg font-semibold text-zinc-900 tracking-tight">Meal Planner</h1>
+          </div>
 
-        {/* Center: Stepper (Only visible in Planning Mode) */}
-        <div className="pointer-events-auto transition-opacity duration-300" style={{ opacity: viewMode === 'planning' ? 1 : 0 }}>
-             <StageStepper 
-                currentStage={currentStage} 
-                setStage={setCurrentStage} 
-                maxStageReached={maxStageReached} 
-             />
-        </div>
+          {/* Center: Stepper (Only visible in Planning Mode on larger screens) */}
+          <div className="pointer-events-auto transition-opacity duration-300 hidden md:block" style={{ opacity: viewMode === 'planning' ? 1 : 0 }}>
+               <StageStepper 
+                  currentStage={currentStage} 
+                  setStage={setCurrentStage} 
+                  maxStageReached={maxStageReached} 
+               />
+          </div>
 
-        {/* Right: Settings */}
-        <div className="pointer-events-auto">
-            {viewMode === 'planning' ? (
-                <button 
-                    onClick={() => setViewMode('household')}
-                    className="w-10 h-10 bg-white/80 backdrop-blur-md shadow-sm border border-white/50 rounded-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 hover:bg-white transition-all"
-                    title="Household Settings"
-                >
-                    <Settings size={20} />
-                </button>
-            ) : hasPlanGenerated && (
-                <button 
-                    onClick={handleCloseSetup}
-                    className="w-10 h-10 bg-white/80 backdrop-blur-md shadow-sm border border-white/50 rounded-full flex items-center justify-center text-zinc-500 hover:text-red-600 hover:bg-white transition-all"
-                    title="Close Settings"
-                >
-                    <X size={20} />
-                </button>
-            )}
+          {/* Right: Settings */}
+          <div className="pointer-events-auto">
+              {viewMode === 'planning' ? (
+                  <button 
+                      onClick={() => setViewMode('household')}
+                      className="w-9 h-9 md:w-10 md:h-10 bg-white/60 backdrop-blur-sm shadow-sm border border-white/40 rounded-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 hover:bg-white/80 transition-all"
+                      title="Household Settings"
+                  >
+                      <Settings size={18} className="md:w-5 md:h-5" />
+                  </button>
+              ) : hasPlanGenerated && (
+                  <button 
+                      onClick={handleCloseSetup}
+                      className="w-9 h-9 md:w-10 md:h-10 bg-white/60 backdrop-blur-sm shadow-sm border border-white/40 rounded-full flex items-center justify-center text-zinc-500 hover:text-red-600 hover:bg-white/80 transition-all"
+                      title="Close Settings"
+                  >
+                      <X size={18} className="md:w-5 md:h-5" />
+                  </button>
+              )}
+          </div>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto no-scrollbar pt-28">
+      <main className="flex-1 overflow-y-auto no-scrollbar pt-16 md:pt-20">
         
         {viewMode === 'household' && (
            <FamilySetup 
@@ -300,22 +306,33 @@ const App: React.FC = () => {
         )}
 
         {viewMode === 'planning' && (
-          <div className="max-w-[1600px] mx-auto px-4 md:px-8 pb-40">
+          <div className="max-w-[1600px] mx-auto px-4 md:px-8 pb-40 pt-6 md:pt-8">
+             
+             {/* Mobile Stepper (visible only on small screens when in planning mode) */}
+             {viewMode === 'planning' && (
+               <div className="md:hidden mb-6">
+                 <StageStepper 
+                    currentStage={currentStage} 
+                    setStage={setCurrentStage} 
+                    maxStageReached={maxStageReached} 
+                 />
+               </div>
+             )}
              
              {/* Planning Stage Content */}
              {currentStage === Stage.MEAL_PLANNING && (
                 <div className="animate-fade-in">
                    {/* Context Header */}
-                   <div className="flex justify-between items-center mb-8 px-2">
-                      <h2 className="text-2xl font-bold text-zinc-900">Current Plan</h2>
+                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 px-2">
+                      <h2 className="text-xl md:text-2xl font-bold text-zinc-900">Current Plan</h2>
                       <div className="flex gap-3">
                          {planHistory.past.length > 0 && (
-                            <button onClick={handleUndo} className="flex items-center gap-2 px-4 py-2 bg-white border border-zinc-200 text-zinc-600 rounded-full text-sm font-semibold hover:bg-zinc-50 transition-colors">
-                                <Undo2 size={14} /> Undo
+                            <button onClick={handleUndo} className="flex items-center gap-2 px-3 md:px-4 py-2 bg-white border border-zinc-200 text-zinc-600 rounded-full text-xs md:text-sm font-semibold hover:bg-zinc-50 transition-colors">
+                                <Undo2 size={12} className="md:w-[14px] md:h-[14px]" /> Undo
                             </button>
                          )}
-                         <button onClick={handleRegeneratePlan} className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-600 rounded-full text-sm font-semibold hover:bg-zinc-200 transition-colors">
-                            <Sparkles size={14} /> New Plan
+                         <button onClick={handleRegeneratePlan} className="flex items-center gap-2 px-3 md:px-4 py-2 bg-zinc-100 text-zinc-600 rounded-full text-xs md:text-sm font-semibold hover:bg-zinc-200 transition-colors">
+                            <Sparkles size={12} className="md:w-[14px] md:h-[14px]" /> New Plan
                          </button>
                       </div>
                    </div>
