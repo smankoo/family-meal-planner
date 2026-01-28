@@ -71,16 +71,16 @@ export const generateInitialMealPlan = async (
   }
 };
 
-// Streaming version of meal plan generation
+// Streaming version of meal plan generation - Phase 2: Meal-by-meal streaming
 export const generateInitialMealPlanStream = async (
   members: FamilyMember[],
   preferences: FamilyPreferences,
-  onDayReceived: (day: any, dayIndex: number) => void,
+  onMealReceived: (mealData: any) => void,
   onComplete: () => void,
   onError: (error: Error) => void
 ): Promise<void> => {
   try {
-    console.log("Starting streaming meal plan generation...");
+    console.log("Starting meal-by-meal streaming generation...");
     
     const response = await fetch(`${API_BASE_URL}/api/generate-plan-stream`, {
       method: 'POST',
@@ -117,7 +117,7 @@ export const generateInitialMealPlanStream = async (
 
     const decoder = new TextDecoder();
     let buffer = '';
-    let dayIndex = 0;
+    let mealCount = 0;
 
     try {
       while (true) {
@@ -149,11 +149,11 @@ export const generateInitialMealPlanStream = async (
                 (error as any).code = data.code;
                 onError(error);
                 return;
-              } else if (data.day) {
-                // This is a day object
-                console.log(`Received day: ${data.day}`, data);
-                onDayReceived(data, dayIndex);
-                dayIndex++;
+              } else if (data.day && data.mealType && data.meal) {
+                // This is a meal object
+                console.log(`Received meal: ${data.day}-${data.mealType}`, data);
+                onMealReceived(data);
+                mealCount++;
               }
             } catch (parseError) {
               console.warn("Failed to parse SSE data:", line, parseError);
@@ -166,7 +166,7 @@ export const generateInitialMealPlanStream = async (
     }
     
   } catch (error) {
-    console.error("Error in streaming generation:", error);
+    console.error("Error in meal-by-meal streaming generation:", error);
     onError(error as Error);
   }
 };

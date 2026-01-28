@@ -214,32 +214,37 @@ const App: React.FC = () => {
     }, 100);
     
     try {
-      // Use streaming generation
+      // Use meal-by-meal streaming generation
       await generateInitialMealPlanStream(
         members,
         prefs,
-        // onDayReceived callback
-        (dayData: any, dayIndex: number) => {
-          console.log(`Received day ${dayIndex}:`, dayData);
+        // onMealReceived callback
+        (mealData: any) => {
+          console.log(`Received meal: ${mealData.day}-${mealData.mealType}`, mealData);
           
-          // Track newly received cards for this day
-          const newCards = new Set<string>();
-          const mealTimes = ['Breakfast', 'Lunch', 'Snack', 'Dinner'];
-          mealTimes.forEach(time => {
-            if (dayData.meals && dayData.meals[time] && dayData.meals[time].name) {
-              newCards.add(`${dayData.day}-${time}`);
-            }
-          });
+          // Track newly received card for this specific meal
+          const cardKey = `${mealData.day}-${mealData.mealType}`;
           
           // Update newly received cards state
-          setNewlyReceivedCards(prev => new Set([...prev, ...newCards]));
+          setNewlyReceivedCards(prev => new Set([...prev, cardKey]));
           
-          // Update plan with new day data
+          // Update plan with new meal data
           setPlanHistory(prev => {
             const newPlan = [...prev.present];
-            if (dayIndex < newPlan.length) {
-              newPlan[dayIndex] = dayData;
+            
+            // Find the day index
+            const dayIndex = newPlan.findIndex(day => day.day === mealData.day);
+            if (dayIndex !== -1) {
+              // Update the specific meal
+              newPlan[dayIndex] = {
+                ...newPlan[dayIndex],
+                meals: {
+                  ...newPlan[dayIndex].meals,
+                  [mealData.mealType]: mealData.meal
+                }
+              };
             }
+            
             return {
               ...prev,
               present: newPlan
@@ -250,7 +255,7 @@ const App: React.FC = () => {
           setTimeout(() => {
             setNewlyReceivedCards(prev => {
               const updated = new Set(prev);
-              newCards.forEach(card => updated.delete(card));
+              updated.delete(cardKey);
               return updated;
             });
           }, 600); // Match animation duration

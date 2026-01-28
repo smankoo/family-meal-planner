@@ -239,9 +239,9 @@ async def generate_plan_stream(request: GeneratePlanRequest):
             else:
                 cuisine_instruction = "Provide a balanced variety of cuisines."
 
-            # Modified prompt for streaming - request standard JSON format
+            # Modified prompt for meal-by-meal streaming
             prompt = f"""
-            Generate a 7-day meal plan (Mon-Sun) for this family.
+            Generate a 7-day meal plan (Mon-Sun) for this family. Generate each meal individually and clearly.
             
             Family Members (ages and roles included):
             {json.dumps(members_json, indent=2)}
@@ -256,31 +256,26 @@ async def generate_plan_stream(request: GeneratePlanRequest):
             4. Weekend Effort Level: {request.preferences.weekendEffort}.
             5. FAMILY LIFESTYLE CONSTRAINTS (CRITICAL): {request.preferences.generalNotes or "None provided. Assume standard family schedule."}
             
-            IMPORTANT: Return EXACTLY this JSON structure (valid JSON array):
-            [
-              {{
-                "day": "Monday",
-                "meals": {{
-                  "Breakfast": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}},
-                  "Lunch": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}},
-                  "Snack": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}},
-                  "Dinner": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}}
-                }}
-              }},
-              {{
-                "day": "Tuesday",
-                "meals": {{
-                  "Breakfast": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}},
-                  "Lunch": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}},
-                  "Snack": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}},
-                  "Dinner": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}}
-                }}
-              }},
-              ... (continue for all 7 days: Monday through Sunday)
-            ]
+            IMPORTANT: Generate each meal in this exact format, one meal at a time:
             
+            MEAL: Monday-Breakfast
+            {{"day": "Monday", "mealType": "Breakfast", "meal": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}}}}
+            
+            MEAL: Monday-Lunch  
+            {{"day": "Monday", "mealType": "Lunch", "meal": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}}}}
+            
+            MEAL: Monday-Snack
+            {{"day": "Monday", "mealType": "Snack", "meal": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}}}}
+            
+            MEAL: Monday-Dinner
+            {{"day": "Monday", "mealType": "Dinner", "meal": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}}}}
+            
+            MEAL: Tuesday-Breakfast
+            {{"day": "Tuesday", "mealType": "Breakfast", "meal": {{"name": "Meal Name", "description": "Brief description", "notes": "Any notes"}}}}
+            
+            Continue this pattern for all 7 days and 4 meal types (28 meals total).
             Each meal must have "name", "description", and "notes" fields.
-            Return only the JSON array, no other text.
+            Generate meals in order: Monday (Breakfast→Lunch→Snack→Dinner), then Tuesday (Breakfast→Lunch→Snack→Dinner), etc.
             """
 
             # Use text mode instead of JSON mode for streaming
@@ -292,78 +287,89 @@ async def generate_plan_stream(request: GeneratePlanRequest):
                 )
             )
             
-            # Parse the response and extract day objects
+            # Parse the response and extract meal objects
             response_text = response.text
-            logger.info("Received LLM response, parsing days...")
+            logger.info("Received LLM response, parsing meals...")
             logger.info(f"Response text preview: {response_text[:500]}...")
             
-            # Try multiple parsing strategies
-            days_sent = 0
+            # Try multiple parsing strategies for meal-by-meal streaming
+            meals_sent = 0
             
-            # Strategy 1: Try to parse as complete JSON array first
+            # Strategy 1: Try to parse as complete JSON array first (fallback to meal-by-meal)
             try:
                 plan = json.loads(response_text)
                 if isinstance(plan, list) and len(plan) > 0:
-                    logger.info("Parsed as complete JSON array, streaming individual days")
+                    logger.info("Parsed as complete JSON array, streaming individual meals")
+                    meal_types = ["Breakfast", "Lunch", "Snack", "Dinner"]
                     for day_data in plan:
-                        if isinstance(day_data, dict) and 'day' in day_data:
-                            logger.info(f"Streaming day: {day_data['day']}")
-                            yield f"data: {json.dumps(day_data)}\n\n"
-                            days_sent += 1
-                            await asyncio.sleep(0.8)  # Delay between days
+                        if isinstance(day_data, dict) and 'day' in day_data and 'meals' in day_data:
+                            for meal_type in meal_types:
+                                if meal_type in day_data['meals']:
+                                    meal_data = {
+                                        "day": day_data['day'],
+                                        "mealType": meal_type,
+                                        "meal": day_data['meals'][meal_type]
+                                    }
+                                    logger.info(f"Streaming meal: {day_data['day']}-{meal_type}")
+                                    yield f"data: {json.dumps(meal_data)}\n\n"
+                                    meals_sent += 1
+                                    await asyncio.sleep(0.3)  # Faster for individual meals
                 else:
                     raise ValueError("Not a valid plan array")
             except (json.JSONDecodeError, ValueError) as e:
-                logger.info(f"Complete JSON parsing failed: {e}, trying regex extraction...")
+                logger.info(f"Complete JSON parsing failed: {e}, trying meal-by-meal regex extraction...")
                 
-                # Strategy 2: Extract day objects using improved regex
-                # Look for JSON objects that contain "day" and "meals" fields
-                day_pattern = r'\{[^{}]*"day"[^{}]*"meals"[^{}]*\{[^{}]*\}[^{}]*\}'
-                potential_days = re.findall(day_pattern, response_text, re.DOTALL)
+                # Strategy 2: Extract individual meal objects using regex
+                meal_pattern = r'MEAL: ([^-]+)-([^\n]+)\s*\n(\{[^{}]*"day"[^{}]*"mealType"[^{}]*"meal"[^{}]*\{[^{}]*\}[^{}]*\})'
+                potential_meals = re.findall(meal_pattern, response_text, re.DOTALL)
                 
-                logger.info(f"Found {len(potential_days)} potential day objects")
+                logger.info(f"Found {len(potential_meals)} potential meal objects")
                 
-                for i, day_json in enumerate(potential_days):
+                for i, (day, meal_type, meal_json) in enumerate(potential_meals):
                     try:
                         # Clean up the JSON string
-                        day_json = day_json.strip()
-                        if not day_json.endswith('}'):
-                            day_json += '}'
+                        meal_json = meal_json.strip()
+                        if not meal_json.endswith('}'):
+                            meal_json += '}'
                         
-                        day_data = json.loads(day_json)
-                        if 'day' in day_data and 'meals' in day_data:
-                            logger.info(f"Successfully parsed and streaming day: {day_data['day']}")
-                            yield f"data: {json.dumps(day_data)}\n\n"
-                            days_sent += 1
-                            await asyncio.sleep(0.8)
+                        meal_data = json.loads(meal_json)
+                        if 'day' in meal_data and 'mealType' in meal_data and 'meal' in meal_data:
+                            logger.info(f"Successfully parsed and streaming meal: {meal_data['day']}-{meal_data['mealType']}")
+                            yield f"data: {json.dumps(meal_data)}\n\n"
+                            meals_sent += 1
+                            await asyncio.sleep(0.3)
                         else:
-                            logger.warning(f"Day object missing required fields: {day_data}")
+                            logger.warning(f"Meal object missing required fields: {meal_data}")
                     except json.JSONDecodeError as parse_error:
-                        logger.error(f"Failed to parse day object {i}: {parse_error}")
-                        logger.error(f"Problematic JSON: {day_json[:200]}...")
+                        logger.error(f"Failed to parse meal object {i}: {parse_error}")
+                        logger.error(f"Problematic JSON: {meal_json[:200]}...")
                         continue
                 
-                # Strategy 3: If regex fails, try line-by-line parsing
-                if days_sent == 0:
-                    logger.info("Regex parsing failed, trying line-by-line parsing...")
+                # Strategy 3: If regex fails, try line-by-line parsing for meals
+                if meals_sent == 0:
+                    logger.info("Regex parsing failed, trying line-by-line meal parsing...")
                     lines = response_text.split('\n')
-                    current_day = None
+                    current_meal = None
                     current_json = ""
                     brace_count = 0
                     
                     for line in lines:
                         line = line.strip()
-                        if '"day":' in line and brace_count == 0:
-                            # Start of a new day object
+                        if 'MEAL:' in line and brace_count == 0:
+                            # Start of a new meal object
+                            current_json = ""
+                            brace_count = 0
+                        elif '"day":' in line and '"mealType":' in line and brace_count == 0:
+                            # Start of meal JSON
                             current_json = ""
                             brace_count = 0
                         
-                        if line:
+                        if line and not line.startswith('MEAL:'):
                             current_json += line + "\n"
                             brace_count += line.count('{') - line.count('}')
                             
                             # If we have a complete object
-                            if brace_count == 0 and current_json.strip() and '"day":' in current_json:
+                            if brace_count == 0 and current_json.strip() and '"day":' in current_json and '"mealType":' in current_json:
                                 try:
                                     # Clean and parse the JSON
                                     clean_json = current_json.strip()
@@ -372,12 +378,12 @@ async def generate_plan_stream(request: GeneratePlanRequest):
                                     if not clean_json.endswith('}'):
                                         clean_json = clean_json + '}'
                                     
-                                    day_data = json.loads(clean_json)
-                                    if 'day' in day_data and 'meals' in day_data:
-                                        logger.info(f"Line-by-line parsed day: {day_data['day']}")
-                                        yield f"data: {json.dumps(day_data)}\n\n"
-                                        days_sent += 1
-                                        await asyncio.sleep(0.8)
+                                    meal_data = json.loads(clean_json)
+                                    if 'day' in meal_data and 'mealType' in meal_data and 'meal' in meal_data:
+                                        logger.info(f"Line-by-line parsed meal: {meal_data['day']}-{meal_data['mealType']}")
+                                        yield f"data: {json.dumps(meal_data)}\n\n"
+                                        meals_sent += 1
+                                        await asyncio.sleep(0.3)
                                 except json.JSONDecodeError as e:
                                     logger.error(f"Line-by-line parsing failed: {e}")
                                     logger.error(f"Problematic JSON: {clean_json[:200]}...")
@@ -385,8 +391,8 @@ async def generate_plan_stream(request: GeneratePlanRequest):
                                 current_json = ""
                                 brace_count = 0
             
-            if days_sent == 0:
-                logger.error("No days were successfully parsed and sent, falling back to batch mode")
+            if meals_sent == 0:
+                logger.error("No meals were successfully parsed and sent, falling back to batch mode")
                 # Fallback to batch generation
                 try:
                     logger.info("Attempting fallback to batch generation...")
@@ -400,13 +406,21 @@ async def generate_plan_stream(request: GeneratePlanRequest):
                     
                     plan = json.loads(batch_response.text)
                     if isinstance(plan, list) and len(plan) > 0:
-                        logger.info("Batch fallback successful, streaming individual days")
+                        logger.info("Batch fallback successful, streaming individual meals")
+                        meal_types = ["Breakfast", "Lunch", "Snack", "Dinner"]
                         for day_data in plan:
-                            if isinstance(day_data, dict) and 'day' in day_data:
-                                logger.info(f"Fallback streaming day: {day_data['day']}")
-                                yield f"data: {json.dumps(day_data)}\n\n"
-                                days_sent += 1
-                                await asyncio.sleep(0.3)  # Faster for fallback
+                            if isinstance(day_data, dict) and 'day' in day_data and 'meals' in day_data:
+                                for meal_type in meal_types:
+                                    if meal_type in day_data['meals']:
+                                        meal_data = {
+                                            "day": day_data['day'],
+                                            "mealType": meal_type,
+                                            "meal": day_data['meals'][meal_type]
+                                        }
+                                        logger.info(f"Fallback streaming meal: {day_data['day']}-{meal_type}")
+                                        yield f"data: {json.dumps(meal_data)}\n\n"
+                                        meals_sent += 1
+                                        await asyncio.sleep(0.2)  # Faster for fallback
                     else:
                         raise ValueError("Batch fallback also failed")
                         
@@ -420,7 +434,7 @@ async def generate_plan_stream(request: GeneratePlanRequest):
                     }
                     yield f"data: {json.dumps(error_response)}\n\n"
             else:
-                logger.info(f"Successfully streamed {days_sent} days")
+                logger.info(f"Successfully streamed {meals_sent} meals")
             
             # Send completion signal
             yield f"data: {json.dumps({'type': 'complete'})}\n\n"
