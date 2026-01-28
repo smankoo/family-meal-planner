@@ -1,18 +1,26 @@
 import React, { useState, useRef, useLayoutEffect } from 'react';
-import { PrepTask } from '../types';
+import { PrepTask, WeekPlan } from '../types';
 import { Check, Clock, ArrowRight, RotateCcw, Loader2 } from 'lucide-react';
 
 interface MealPrepViewProps {
   tasks: PrepTask[];
+  mealPlan?: WeekPlan; // Add meal plan to resolve meal names
   onRegenerate: () => void;
+  onGenerate: () => void;
+  onNavigateToMealPlan: () => void;
   isLoading: boolean;
+  hasMealPlan: boolean;
   newlyReceivedTasks?: Set<string>;
 }
 
 const MealPrepView: React.FC<MealPrepViewProps> = ({
   tasks: initialTasks,
+  mealPlan,
   onRegenerate,
+  onGenerate,
+  onNavigateToMealPlan,
   isLoading,
+  hasMealPlan,
   newlyReceivedTasks = new Set()
 }) => {
   const [tasks, setTasks] = useState<PrepTask[]>(initialTasks);
@@ -24,6 +32,43 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
   React.useEffect(() => {
     setTasks(initialTasks);
   }, [initialTasks]);
+
+  // Helper function to resolve meal names from generic references
+  const resolveMealName = (mealRef: string): string => {
+    if (!mealPlan) return mealRef;
+
+    // Try to parse references like "monday dinner", "Tuesday Lunch", etc.
+    const parts = mealRef.toLowerCase().split(' ');
+    if (parts.length >= 2) {
+      const dayPart = parts[0];
+      const mealPart = parts[1];
+
+      // Find the day in the meal plan
+      const dayPlan = mealPlan.find(day =>
+        day.day.toLowerCase().startsWith(dayPart) ||
+        day.day.toLowerCase() === dayPart
+      );
+
+      if (dayPlan) {
+        // Find the meal type
+        const mealTypes = ['breakfast', 'lunch', 'snack', 'dinner'];
+        const mealType = mealTypes.find(type =>
+          type.startsWith(mealPart) || mealPart.startsWith(type)
+        );
+
+        if (mealType) {
+          const mealKey = mealType.charAt(0).toUpperCase() + mealType.slice(1);
+          const meal = dayPlan.meals[mealKey as keyof typeof dayPlan.meals];
+          if (meal && meal.name && meal.name.trim()) {
+            return meal.name;
+          }
+        }
+      }
+    }
+
+    // If we can't resolve it, return the original reference
+    return mealRef;
+  };
 
   // Handle new tasks that should animate using direct DOM manipulation
   useLayoutEffect(() => {
@@ -161,26 +206,70 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
       {/* Header - Desktop Only */}
       <div className="hidden md:flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 max-w-4xl mx-auto px-4 md:px-8">
         <h2 className="text-xl md:text-2xl font-bold text-zinc-900">Prep Strategy</h2>
-        <div className="flex gap-3">
-          <button
-            onClick={onRegenerate}
-            disabled={isLoading}
-            className="flex items-center gap-2 px-3 md:px-4 py-2 bg-zinc-100 text-zinc-600 rounded-full text-xs md:text-sm font-semibold hover:bg-zinc-200 transition-colors"
-          >
-            <RotateCcw size={12} className="md:w-[14px] md:h-[14px]" /> Regenerate
-          </button>
-        </div>
+        {tasks.length > 0 && (
+          <div className="flex gap-3">
+            <button
+              onClick={onRegenerate}
+              disabled={isLoading}
+              className="flex items-center gap-2 px-3 md:px-4 py-2 bg-zinc-100 text-zinc-600 rounded-full text-xs md:text-sm font-semibold hover:bg-zinc-200 transition-colors"
+            >
+              <RotateCcw size={12} className="md:w-[14px] md:h-[14px]" /> Regenerate
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Mobile Header - Removed regenerate button since it's now in the main stepper area */}
-      <div className="md:hidden mb-6 px-4">
-        {/* Mobile header content if needed in future */}
-      </div>
+      {/* Mobile Header - Include regenerate button for mobile users only when tasks exist */}
+      {tasks.length > 0 && (
+        <div className="md:hidden mb-6 px-4">
+          <div className="flex justify-end">
+            <button
+              onClick={onRegenerate}
+              disabled={isLoading}
+              className="flex items-center gap-2 px-3 py-2 bg-zinc-100 text-zinc-600 rounded-full text-xs font-semibold hover:bg-zinc-200 transition-colors disabled:opacity-50"
+            >
+              <RotateCcw size={12} /> Regenerate
+            </button>
+          </div>
+        </div>
+      )}
 
       {tasks.length === 0 && !isLoading ? (
-        <div className="h-[50vh] flex flex-col items-center justify-center">
-          <Clock className="animate-bounce mb-4 text-zinc-300" size={48} />
-          <p className="text-zinc-400 font-medium">No prep plan generated yet.</p>
+        <div className="h-[50vh] flex flex-col items-center justify-center px-4">
+          <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mb-6">
+            <Clock size={24} className="text-zinc-400" />
+          </div>
+
+          {!hasMealPlan ? (
+            <>
+              <h3 className="text-lg font-semibold text-zinc-800 mb-2">Create Your Meal Plan First</h3>
+              <p className="text-zinc-500 text-center mb-6 max-w-sm leading-relaxed">
+                A prep strategy is based on your weekly meal plan. Start by creating your meals for the week.
+              </p>
+              <button
+                onClick={onNavigateToMealPlan}
+                className="flex items-center gap-2 bg-zinc-900 text-white px-6 py-3 rounded-full font-semibold hover:bg-zinc-800 transition-colors"
+              >
+                <ArrowRight size={16} />
+                Go to Meal Planning
+              </button>
+            </>
+          ) : (
+            <>
+              <h3 className="text-lg font-semibold text-zinc-800 mb-2">No Prep Strategy Yet</h3>
+              <p className="text-zinc-500 text-center mb-6 max-w-sm leading-relaxed">
+                Generate a personalized prep strategy to make your week easier and more organized.
+              </p>
+              <button
+                onClick={onGenerate}
+                disabled={isLoading}
+                className="flex items-center gap-2 bg-zinc-900 text-white px-6 py-3 rounded-full font-semibold hover:bg-zinc-800 transition-colors disabled:opacity-50"
+              >
+                <Clock size={16} />
+                Generate Prep Strategy
+              </button>
+            </>
+          )}
         </div>
       ) : (
         <div className="md:hidden flex flex-col pb-20">
@@ -226,12 +315,15 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
 
                         {task.relatedMeals && Array.isArray(task.relatedMeals) && task.relatedMeals.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-3">
-                            {task.relatedMeals.map((meal, idx) => (
-                              <span key={idx} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${task.completed ? 'bg-zinc-50 border-zinc-100 text-zinc-400' : 'bg-zinc-50 border-zinc-100'}`}>
-                                <ArrowRight size={10} className="text-zinc-400" />
-                                <span className={`text-[10px] font-medium ${task.completed ? 'text-zinc-400' : 'text-zinc-500'}`}>{meal}</span>
-                              </span>
-                            ))}
+                            {task.relatedMeals.map((meal, idx) => {
+                              const resolvedMealName = resolveMealName(meal);
+                              return (
+                                <span key={idx} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${task.completed ? 'bg-zinc-50 border-zinc-100 text-zinc-400' : 'bg-zinc-50 border-zinc-100'}`}>
+                                  <ArrowRight size={10} className="text-zinc-400" />
+                                  <span className={`text-[10px] font-medium ${task.completed ? 'text-zinc-400' : 'text-zinc-500'}`}>{resolvedMealName}</span>
+                                </span>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
@@ -288,12 +380,15 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
 
                       {task.relatedMeals && Array.isArray(task.relatedMeals) && task.relatedMeals.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-3">
-                          {task.relatedMeals.map((meal, idx) => (
-                            <span key={idx} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${task.completed ? 'bg-zinc-50 border-zinc-100 text-zinc-400' : 'bg-zinc-50 border-zinc-100'}`}>
-                              <ArrowRight size={10} className="text-zinc-400" />
-                              <span className={`text-[10px] font-medium ${task.completed ? 'text-zinc-400' : 'text-zinc-500'}`}>{meal}</span>
-                            </span>
-                          ))}
+                          {task.relatedMeals.map((meal, idx) => {
+                            const resolvedMealName = resolveMealName(meal);
+                            return (
+                              <span key={idx} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${task.completed ? 'bg-zinc-50 border-zinc-100 text-zinc-400' : 'bg-zinc-50 border-zinc-100'}`}>
+                                <ArrowRight size={10} className="text-zinc-400" />
+                                <span className={`text-[10px] font-medium ${task.completed ? 'text-zinc-400' : 'text-zinc-500'}`}>{resolvedMealName}</span>
+                              </span>
+                            );
+                          })}
                         </div>
                       )}
                     </div>

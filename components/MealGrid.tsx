@@ -225,7 +225,7 @@ const MealGrid: React.FC<MealGridProps> = ({
                                 {/* Meal Time Label inside card for context */}
                                 <div className="flex justify-between items-start mb-2">
                                     <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-wider">
-                                        {time.slice(0, 3)}
+                                        {time}
                                     </span>
                                     {isChanged && <Sparkles size={14} className="text-indigo-400 animate-pulse" />}
                                 </div>

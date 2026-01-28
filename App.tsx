@@ -40,11 +40,80 @@ import { Undo2, Sparkles, ChefHat, Settings, ArrowLeft, ArrowRight, X, Loader2, 
 
 // Helper function to handle API errors consistently
 const handleApiError = (error: any, showToast: any, setErrorModal: any, onRetry?: () => void) => {
-  const errorCode = (error as any)?.code;
-  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+  // Better error extraction and serialization
+  let errorCode = (error as any)?.code;
+  let errorMessage = 'Unknown error occurred';
+  let errorDetails = '';
+
+  // Handle different error types
+  if (error instanceof Error) {
+    errorMessage = error.message;
+    errorDetails = error.stack || error.message;
+  } else if (typeof error === 'string') {
+    errorMessage = error;
+    errorDetails = error;
+  } else if (error && typeof error === 'object') {
+    // Handle API response errors
+    if (error.response?.data?.detail) {
+      const detail = error.response.data.detail;
+      errorCode = error.response?.status;
+
+      // Handle validation errors (arrays of error objects)
+      if (Array.isArray(detail)) {
+        errorMessage = 'Validation error occurred';
+        errorDetails = detail.map(err => {
+          const location = Array.isArray(err.loc) ? err.loc.join('.') : 'unknown';
+          return `${location}: ${err.msg || 'Validation failed'}`;
+        }).join('\n');
+      } else if (typeof detail === 'string') {
+        errorMessage = detail;
+        errorDetails = JSON.stringify(error.response.data, null, 2);
+      } else {
+        errorMessage = 'API error occurred';
+        errorDetails = JSON.stringify(error.response.data, null, 2);
+      }
+    } else if (error.message) {
+      errorMessage = error.message;
+      errorDetails = error.stack || JSON.stringify(error, null, 2);
+    } else if (error.detail) {
+      // Handle direct detail property
+      if (Array.isArray(error.detail)) {
+        errorMessage = 'Validation error occurred';
+        errorDetails = error.detail.map(err => {
+          const location = Array.isArray(err.loc) ? err.loc.join('.') : 'unknown';
+          return `${location}: ${err.msg || 'Validation failed'}`;
+        }).join('\n');
+      } else if (typeof error.detail === 'string') {
+        errorMessage = error.detail;
+        errorDetails = JSON.stringify(error, null, 2);
+      } else {
+        errorMessage = 'API error occurred';
+        errorDetails = JSON.stringify(error, null, 2);
+      }
+    } else {
+      // Fallback: try to serialize the error object
+      try {
+        const serialized = JSON.stringify(error, null, 2);
+        errorMessage = 'An unexpected error occurred';
+        errorDetails = serialized;
+      } catch {
+        errorMessage = 'An unexpected error occurred';
+        errorDetails = 'Error details could not be serialized';
+      }
+    }
+
+    // Extract additional error properties
+    errorCode = errorCode || error.code || error.status || error.response?.status;
+  }
+
   const retryAfter = (error as any)?.retryAfter;
 
-  console.error('API Error:', { code: errorCode, message: errorMessage, retryAfter });
+  console.error('API Error:', {
+    code: errorCode,
+    message: errorMessage,
+    retryAfter,
+    originalError: error
+  });
 
   switch (errorCode) {
     case 'MISSING_API_KEY':
@@ -53,12 +122,13 @@ const handleApiError = (error: any, showToast: any, setErrorModal: any, onRetry?
         isOpen: true,
         title: 'API Configuration Required',
         message: 'The Gemini API key needs to be configured to generate meal plans.',
-        details: errorMessage,
+        details: errorDetails,
         onRetry
       });
       break;
 
     case 'RATE_LIMIT_EXCEEDED':
+    case 429:
       const retryMessage = retryAfter
         ? `Rate limit reached. Please try again in ${Math.ceil(retryAfter / 60)} minutes.`
         : 'Rate limit reached. Please try again in a few minutes.';
@@ -66,10 +136,12 @@ const handleApiError = (error: any, showToast: any, setErrorModal: any, onRetry?
       break;
 
     case 'TIMEOUT':
+    case 408:
       showToast('Request timed out. Please try again.', 'warning', 6000);
       break;
 
     case 'SERVICE_UNAVAILABLE':
+    case 503:
       const serviceRetryMessage = retryAfter
         ? `AI service temporarily unavailable. Please try again in ${Math.ceil(retryAfter / 60)} minutes.`
         : 'AI service temporarily unavailable. Please try again later.';
@@ -77,21 +149,36 @@ const handleApiError = (error: any, showToast: any, setErrorModal: any, onRetry?
       break;
 
     case 'PERMISSION_DENIED':
+    case 403:
       setErrorModal({
         isOpen: true,
         title: 'Permission Denied',
         message: 'Your API key doesn\'t have permission to access this resource.',
-        details: errorMessage,
+        details: errorDetails,
         onRetry
       });
       break;
 
     case 'INVALID_REQUEST':
+    case 400:
+    case 422:
       setErrorModal({
         isOpen: true,
-        title: 'Invalid Request',
-        message: 'There was an issue with the request format. Please try again.',
-        details: errorMessage,
+        title: 'Request Error',
+        message: 'There was an issue with the request. Please try again.',
+        details: errorDetails,
+        onRetry
+      });
+      break;
+
+    case 500:
+    case 502:
+    case 504:
+      setErrorModal({
+        isOpen: true,
+        title: 'Server Error',
+        message: 'The server encountered an error. This might be temporary.',
+        details: errorDetails,
         onRetry
       });
       break;
@@ -100,12 +187,14 @@ const handleApiError = (error: any, showToast: any, setErrorModal: any, onRetry?
       // Fallback to string matching for backwards compatibility
       if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
         showToast('Rate limit reached. Please try again in a few minutes.', 'warning', 8000);
+      } else if (errorMessage.includes('timeout')) {
+        showToast('Request timed out. Please try again.', 'warning', 6000);
       } else {
         setErrorModal({
           isOpen: true,
           title: 'Generation Failed',
           message: 'We encountered an issue while processing your request. This might be temporary.',
-          details: errorMessage,
+          details: errorDetails,
           onRetry
         });
       }
@@ -361,28 +450,8 @@ const App: React.FC = () => {
             streaming: true
           });
 
-          const errorMessage = error.message;
-
-          // Show elegant error instead of alert
-          if (errorMessage.includes('GEMINI_API_KEY')) {
-            setErrorModal({
-              isOpen: true,
-              title: 'API Configuration Required',
-              message: 'The Gemini API key needs to be configured to generate meal plans.',
-              details: errorMessage,
-              onRetry: () => handleGenerateInitialPlan(members, prefs)
-            });
-          } else if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
-            showToast('Rate limit reached. Please try again in a few minutes.', 'warning', 8000);
-          } else {
-            setErrorModal({
-              isOpen: true,
-              title: 'Plan Generation Failed',
-              message: 'We encountered an issue while creating your meal plan. This might be temporary.',
-              details: errorMessage,
-              onRetry: () => handleGenerateInitialPlan(members, prefs)
-            });
-          }
+          // Use the centralized error handler for consistent error display
+          handleApiError(error, showToast, setErrorModal, () => handleGenerateInitialPlan(members, prefs));
         }
       );
 
@@ -429,8 +498,14 @@ const App: React.FC = () => {
           family_size: family.length
         });
 
+        // Reset all states for fresh regeneration with skeleton loading
         setPrepTasks([]);
         setGroceryItems([]);
+        setNewlyReceivedCards(new Set());
+        setAnimatedCards(new Set());
+        setNewlyReceivedTasks(new Set());
+        setNewlyReceivedItems(new Set());
+
         await handleGenerateInitialPlan(family, preferences);
         // Note: scroll behavior is handled in handleGenerateInitialPlan
       }
@@ -549,6 +624,17 @@ const App: React.FC = () => {
       from_stage: currentStage,
       to_stage: newStage
     });
+
+    // Immediate UI update - switch to the new stage first for responsive feel
+    setCurrentStage(newStage);
+
+    // Elegant scroll to top - Apple-style smooth behavior
+    setTimeout(() => {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }, 100);
 
     // If switching to prep and we don't have prep tasks, generate them
     if (newStage === Stage.MEAL_PREP && prepTasks.length === 0) {
@@ -753,8 +839,6 @@ const App: React.FC = () => {
         }
       }
     }
-
-    setCurrentStage(newStage);
   };
 
   // Helper functions for regenerating prep and grocery lists
@@ -764,6 +848,165 @@ const App: React.FC = () => {
 
   const handleProceedToGrocery = async () => {
     await handleStageChange(Stage.GROCERY_LIST);
+  };
+
+  // Dedicated regeneration functions that properly handle loading states
+  const handleRegeneratePrep = async () => {
+    setIsLoading(true);
+    setPrepTasks([]);
+    setNewlyReceivedTasks(new Set());
+
+    // Elegant scroll to top - Apple-style smooth behavior
+    setTimeout(() => {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }, 100);
+
+    await analyticsService.trackMealPlanningEvent('prep_generation_started');
+
+    try {
+      // Use task-by-task streaming generation
+      await generateMealPrepPlanStream(
+        planHistory.present,
+        // onTaskReceived callback
+        (taskData: any) => {
+          // Create task with proper ID and structure
+          const newTask: PrepTask = {
+            id: `prep-${Date.now()}-${Math.random()}`,
+            day: taskData.day,
+            task: taskData.task,
+            relatedMeals: Array.isArray(taskData.relatedMeals) ? taskData.relatedMeals :
+                         typeof taskData.relatedMeals === 'string' ? [taskData.relatedMeals] : [],
+            completed: false
+          };
+
+          // Track newly received task for animation
+          const taskKey = `${taskData.day}-${newTask.id}`;
+          setNewlyReceivedTasks(prev => new Set([...prev, taskKey]));
+
+          // Add task to the list
+          setPrepTasks(prev => [...prev, newTask]);
+
+          // Clear the animation state after animation completes
+          setTimeout(() => {
+            setNewlyReceivedTasks(prev => {
+              const updated = new Set(prev);
+              updated.delete(taskKey);
+              return updated;
+            });
+          }, 600);
+        },
+        // onComplete callback
+        async () => {
+          setIsLoading(false);
+          await analyticsService.trackMealPlanningEvent('prep_generation_completed', {
+            streaming: true,
+            regenerated: true
+          });
+        },
+        // onError callback
+        async (error: Error) => {
+          setIsLoading(false);
+          await analyticsService.trackMealPlanningEvent('prep_generation_failed', {
+            error_message: error.message,
+            streaming: true,
+            regenerated: true
+          });
+
+          const errorMessage = error.message;
+          if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
+            showToast('Rate limit reached. Prep tasks will be generated later.', 'warning', 6000);
+          } else {
+            showToast('Failed to generate prep tasks. You can try again later.', 'error', 6000);
+          }
+        }
+      );
+    } catch (error) {
+      setIsLoading(false);
+      // Fallback error handling
+      showToast('Failed to regenerate prep tasks. Please try again.', 'error', 6000);
+    }
+  };
+
+  const handleRegenerateGrocery = async () => {
+    setIsLoading(true);
+    setGroceryItems([]);
+    setNewlyReceivedItems(new Set());
+
+    // Elegant scroll to top - Apple-style smooth behavior
+    setTimeout(() => {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }, 100);
+
+    await analyticsService.trackMealPlanningEvent('grocery_generation_started');
+
+    try {
+      // Use item-by-item streaming generation
+      await generateGroceryListStream(
+        planHistory.present,
+        prepTasks,
+        // onItemReceived callback
+        (itemData: any) => {
+          // Create item with proper ID and structure
+          const newItem: GroceryItem = {
+            id: `groc-${Date.now()}-${Math.random()}`,
+            name: itemData.name,
+            category: itemData.category,
+            quantity: itemData.quantity,
+            checked: false
+          };
+
+          // Track newly received item for animation
+          const itemKey = `${itemData.category}-${itemData.name}-${newItem.id}`;
+          setNewlyReceivedItems(prev => new Set([...prev, itemKey]));
+
+          // Add item to the list
+          setGroceryItems(prev => [...prev, newItem]);
+
+          // Clear the animation state after animation completes
+          setTimeout(() => {
+            setNewlyReceivedItems(prev => {
+              const updated = new Set(prev);
+              updated.delete(itemKey);
+              return updated;
+            });
+          }, 600);
+        },
+        // onComplete callback
+        async () => {
+          setIsLoading(false);
+          await analyticsService.trackMealPlanningEvent('grocery_generation_completed', {
+            streaming: true,
+            regenerated: true
+          });
+        },
+        // onError callback
+        async (error: Error) => {
+          setIsLoading(false);
+          await analyticsService.trackMealPlanningEvent('grocery_generation_failed', {
+            error_message: error.message,
+            streaming: true,
+            regenerated: true
+          });
+
+          const errorMessage = error.message;
+          if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
+            showToast('Rate limit reached. Grocery list will be generated later.', 'warning', 6000);
+          } else {
+            showToast('Failed to generate grocery list. You can try again later.', 'error', 6000);
+          }
+        }
+      );
+    } catch (error) {
+      setIsLoading(false);
+      // Fallback error handling
+      showToast('Failed to regenerate grocery list. Please try again.', 'error', 6000);
+    }
   };
 
   // --- Render ---
@@ -926,8 +1169,14 @@ const App: React.FC = () => {
              {currentStage === Stage.MEAL_PREP && (
                <MealPrepView
                     tasks={prepTasks}
-                    onRegenerate={() => { setPrepTasks([]); handleProceedToPrep(); }}
+                    mealPlan={planHistory.present}
+                    onRegenerate={handleRegeneratePrep}
+                    onGenerate={handleRegeneratePrep}
+                    onNavigateToMealPlan={() => setCurrentStage(Stage.MEAL_PLANNING)}
                     isLoading={isLoading}
+                    hasMealPlan={hasPlanGenerated && planHistory.present.some(day =>
+                      Object.values(day.meals).some(meal => meal.name && meal.name.trim() !== '')
+                    )}
                     newlyReceivedTasks={newlyReceivedTasks}
                />
              )}
@@ -935,8 +1184,13 @@ const App: React.FC = () => {
              {currentStage === Stage.GROCERY_LIST && (
                 <GroceryListView
                     items={groceryItems}
-                    onRegenerate={() => { setGroceryItems([]); handleProceedToGrocery(); }}
+                    onRegenerate={handleRegenerateGrocery}
+                    onGenerate={handleRegenerateGrocery}
+                    onNavigateToMealPlan={() => setCurrentStage(Stage.MEAL_PLANNING)}
                     isLoading={isLoading}
+                    hasMealPlan={hasPlanGenerated && planHistory.present.some(day =>
+                      Object.values(day.meals).some(meal => meal.name && meal.name.trim() !== '')
+                    )}
                     newlyReceivedItems={newlyReceivedItems}
                 />
              )}

@@ -1,18 +1,24 @@
 import React, { useState, useRef, useLayoutEffect } from 'react';
 import { GroceryItem } from '../types';
-import { Check, ShoppingBag, RotateCcw, Loader2 } from 'lucide-react';
+import { Check, ShoppingBag, RotateCcw, Loader2, ArrowRight } from 'lucide-react';
 
 interface GroceryListViewProps {
   items: GroceryItem[];
   onRegenerate: () => void;
+  onGenerate: () => void;
+  onNavigateToMealPlan: () => void;
   isLoading: boolean;
+  hasMealPlan: boolean;
   newlyReceivedItems?: Set<string>;
 }
 
 const GroceryListView: React.FC<GroceryListViewProps> = ({
   items: initialItems,
   onRegenerate,
+  onGenerate,
+  onNavigateToMealPlan,
   isLoading,
+  hasMealPlan,
   newlyReceivedItems = new Set()
 }) => {
   const [items, setItems] = useState<GroceryItem[]>(initialItems);
@@ -186,26 +192,70 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
       {/* Header - Desktop Only */}
       <div className="hidden md:flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 max-w-4xl mx-auto px-4 md:px-8">
         <h2 className="text-xl md:text-2xl font-bold text-zinc-900">Shopping List</h2>
-        <div className="flex gap-3">
-          <button
-            onClick={onRegenerate}
-            disabled={isLoading}
-            className="flex items-center gap-2 px-3 md:px-4 py-2 bg-zinc-100 text-zinc-600 rounded-full text-xs md:text-sm font-semibold hover:bg-zinc-200 transition-colors"
-          >
-            <RotateCcw size={12} className="md:w-[14px] md:h-[14px]" /> Regenerate
-          </button>
-        </div>
+        {items.length > 0 && (
+          <div className="flex gap-3">
+            <button
+              onClick={onRegenerate}
+              disabled={isLoading}
+              className="flex items-center gap-2 px-3 md:px-4 py-2 bg-zinc-100 text-zinc-600 rounded-full text-xs md:text-sm font-semibold hover:bg-zinc-200 transition-colors"
+            >
+              <RotateCcw size={12} className="md:w-[14px] md:h-[14px]" /> Regenerate
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Mobile Header - Removed regenerate button since it's now in the main stepper area */}
-      <div className="md:hidden mb-6 px-4">
-        {/* Mobile header content if needed in future */}
-      </div>
+      {/* Mobile Header - Include regenerate button for mobile users only when items exist */}
+      {items.length > 0 && (
+        <div className="md:hidden mb-6 px-4">
+          <div className="flex justify-end">
+            <button
+              onClick={onRegenerate}
+              disabled={isLoading}
+              className="flex items-center gap-2 px-3 py-2 bg-zinc-100 text-zinc-600 rounded-full text-xs font-semibold hover:bg-zinc-200 transition-colors disabled:opacity-50"
+            >
+              <RotateCcw size={12} /> Regenerate
+            </button>
+          </div>
+        </div>
+      )}
 
       {items.length === 0 && !isLoading ? (
-        <div className="h-[50vh] flex flex-col items-center justify-center">
-          <ShoppingBag className="animate-bounce mb-4 text-zinc-300" size={48} />
-          <p className="text-zinc-400 font-medium">No shopping list generated yet.</p>
+        <div className="h-[50vh] flex flex-col items-center justify-center px-4">
+          <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mb-6">
+            <ShoppingBag size={24} className="text-zinc-400" />
+          </div>
+
+          {!hasMealPlan ? (
+            <>
+              <h3 className="text-lg font-semibold text-zinc-800 mb-2">Create Your Meal Plan First</h3>
+              <p className="text-zinc-500 text-center mb-6 max-w-sm leading-relaxed">
+                Your shopping list is generated from your weekly meal plan. Start by creating your meals for the week.
+              </p>
+              <button
+                onClick={onNavigateToMealPlan}
+                className="flex items-center gap-2 bg-zinc-900 text-white px-6 py-3 rounded-full font-semibold hover:bg-zinc-800 transition-colors"
+              >
+                <ArrowRight size={16} />
+                Go to Meal Planning
+              </button>
+            </>
+          ) : (
+            <>
+              <h3 className="text-lg font-semibold text-zinc-800 mb-2">No Shopping List Yet</h3>
+              <p className="text-zinc-500 text-center mb-6 max-w-sm leading-relaxed">
+                Generate a personalized shopping list based on your meal plan to make grocery shopping effortless.
+              </p>
+              <button
+                onClick={onGenerate}
+                disabled={isLoading}
+                className="flex items-center gap-2 bg-zinc-900 text-white px-6 py-3 rounded-full font-semibold hover:bg-zinc-800 transition-colors disabled:opacity-50"
+              >
+                <ShoppingBag size={16} />
+                Generate Shopping List
+              </button>
+            </>
+          )}
         </div>
       ) : (
         <>

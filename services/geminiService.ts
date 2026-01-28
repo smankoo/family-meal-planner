@@ -27,11 +27,15 @@ const apiCall = async (endpoint: string, data: any) => {
 
     console.error("API error response:", errorData);
 
-    // Create a structured error
+    // Create a structured error that includes the response data
     const error = new Error(errorData.message || errorData.detail || 'Unknown error');
-    (error as any).code = errorData.code;
+    (error as any).code = errorData.code || response.status;
     (error as any).retryAfter = errorData.retry_after;
     (error as any).details = errorData.details;
+    (error as any).response = {
+      status: response.status,
+      data: errorData
+    };
 
     throw error;
   }
@@ -95,8 +99,28 @@ export const generateInitialMealPlanStream = async (
         };
       }
 
-      const error = new Error(errorData.message || errorData.detail || 'Unknown error');
-      (error as any).code = errorData.code;
+      // Create initial error message
+      let errorMessage = errorData.message ||
+                        (typeof errorData.detail === 'string' ? errorData.detail : 'Request failed');
+
+      // If it's a validation error, create a more user-friendly message
+      if (Array.isArray(errorData.detail)) {
+        const validationErrors = errorData.detail.map(err => {
+          const location = Array.isArray(err.loc) ? err.loc.join('.') : 'unknown';
+          return `${location}: ${err.msg || 'Validation failed'}`;
+        }).join(', ');
+        errorMessage = `Validation failed: ${validationErrors}`;
+      }
+
+      const error = new Error(errorMessage);
+      (error as any).code = errorData.code || response.status;
+
+      // Properly serialize the response data to avoid [object Object] issues
+      (error as any).response = {
+        status: response.status,
+        data: errorData
+      };
+
       throw error;
     }
 
