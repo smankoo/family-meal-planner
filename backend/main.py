@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 from google import genai
 from google.genai import types
+from google.api_core import exceptions as google_exceptions
 import os
 import json
 import logging
@@ -36,31 +37,113 @@ class ErrorResponse(BaseModel):
     retry_after: Optional[int] = None
     details: Optional[str] = None
 
+def handle_gemini_exception(exc: Exception) -> tuple[int, ErrorResponse]:
+    """
+    Handle Gemini API exceptions and return appropriate HTTP status and error response.
+    Returns tuple of (status_code, ErrorResponse)
+    """
+    logger.error(f"Gemini API exception: {type(exc).__name__}: {str(exc)}", exc_info=True)
+
+    # Handle specific Google API exceptions
+    if isinstance(exc, google_exceptions.ResourceExhausted):
+        # Rate limit or quota exceeded (429)
+        return 429, ErrorResponse(
+            error="Rate Limit Exceeded",
+            message="API rate limit or quota exceeded. Please try again in a few minutes.",
+            code="RATE_LIMIT_EXCEEDED",
+            retry_after=300,  # 5 minutes - could be extracted from exc.details if available
+            details=str(exc) if os.getenv("DEBUG") == "true" else None
+        )
+    elif isinstance(exc, google_exceptions.Unauthenticated):
+        # Invalid or expired API key (401)
+        return 401, ErrorResponse(
+            error="Authentication Error",
+            message="API key is invalid or expired. Please check your configuration.",
+            code="AUTH_ERROR",
+            details=str(exc) if os.getenv("DEBUG") == "true" else None
+        )
+    elif isinstance(exc, google_exceptions.PermissionDenied):
+        # API key doesn't have permission (403)
+        return 403, ErrorResponse(
+            error="Permission Denied",
+            message="API key doesn't have permission to access this resource.",
+            code="PERMISSION_DENIED",
+            details=str(exc) if os.getenv("DEBUG") == "true" else None
+        )
+    elif isinstance(exc, google_exceptions.InvalidArgument):
+        # Bad request format (400)
+        return 400, ErrorResponse(
+            error="Invalid Request",
+            message="The request format is invalid. Please check your input.",
+            code="INVALID_REQUEST",
+            details=str(exc) if os.getenv("DEBUG") == "true" else None
+        )
+    elif isinstance(exc, google_exceptions.DeadlineExceeded):
+        # Request timeout (504)
+        return 504, ErrorResponse(
+            error="Request Timeout",
+            message="The request took too long to complete. Please try again.",
+            code="TIMEOUT",
+            retry_after=60,  # 1 minute
+            details=str(exc) if os.getenv("DEBUG") == "true" else None
+        )
+    elif isinstance(exc, google_exceptions.NotFound):
+        # Model or resource not found (404)
+        return 404, ErrorResponse(
+            error="Resource Not Found",
+            message="The requested model or resource was not found.",
+            code="NOT_FOUND",
+            details=str(exc) if os.getenv("DEBUG") == "true" else None
+        )
+    elif isinstance(exc, google_exceptions.ServiceUnavailable):
+        # Service temporarily unavailable (503)
+        return 503, ErrorResponse(
+            error="Service Unavailable",
+            message="The AI service is temporarily unavailable. Please try again later.",
+            code="SERVICE_UNAVAILABLE",
+            retry_after=120,  # 2 minutes
+            details=str(exc) if os.getenv("DEBUG") == "true" else None
+        )
+    else:
+        # Generic Google API error or other exception
+        return 500, ErrorResponse(
+            error="AI Service Error",
+            message="An error occurred while processing your request. Please try again.",
+            code="AI_SERVICE_ERROR",
+            details=str(exc) if os.getenv("DEBUG") == "true" else None
+        )
+
 # Custom exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
 
-    # Handle specific error types
-    if "rate limit" in str(exc).lower() or "quota" in str(exc).lower():
+    # Handle Google API exceptions specifically
+    if isinstance(exc, google_exceptions.GoogleAPICallError):
+        status_code, error_response = handle_gemini_exception(exc)
+        return JSONResponse(status_code=status_code, content=error_response.model_dump())
+
+    # Fallback to string matching for other exceptions that might contain API errors
+    exc_str = str(exc).lower()
+    if "rate limit" in exc_str or "quota" in exc_str or "resource exhausted" in exc_str:
         return JSONResponse(
             status_code=429,
             content=ErrorResponse(
                 error="Rate Limit Exceeded",
                 message="API rate limit reached. Please try again in a few minutes.",
                 code="RATE_LIMIT_EXCEEDED",
-                retry_after=300,  # 5 minutes
-                details=str(exc)
+                retry_after=300,
+                details=str(exc) if os.getenv("DEBUG") == "true" else None
             ).model_dump()
         )
-    elif "api key" in str(exc).lower() or "authentication" in str(exc).lower():
+    elif "api key" in exc_str or "authentication" in exc_str or "unauthenticated" in exc_str:
         return JSONResponse(
             status_code=401,
             content=ErrorResponse(
                 error="Authentication Error",
                 message="API key is missing or invalid. Please check your configuration.",
                 code="AUTH_ERROR",
-                details=str(exc)
+                details=str(exc) if os.getenv("DEBUG") == "true" else None
             ).model_dump()
         )
     else:
@@ -209,9 +292,13 @@ async def generate_plan(request: GeneratePlanRequest):
                 error="Response Parsing Error",
                 message="Failed to parse the generated meal plan. Please try again.",
                 code="PARSE_ERROR",
-                details=str(e)
+                details=str(e) if os.getenv("DEBUG") == "true" else None
             ).model_dump()
         )
+    except google_exceptions.GoogleAPICallError as e:
+        # Handle Gemini API errors specifically
+        status_code, error_response = handle_gemini_exception(e)
+        raise HTTPException(status_code=status_code, detail=error_response.model_dump())
     except Exception as e:
         logger.error(f"Error in generate_plan: {str(e)}")
         # Let the global exception handler deal with it
@@ -431,6 +518,17 @@ async def generate_plan_stream(request: GeneratePlanRequest):
                     else:
                         raise ValueError("Batch fallback also failed")
 
+                except google_exceptions.GoogleAPICallError as fallback_error:
+                    logger.error(f"Batch fallback failed with Gemini API error: {fallback_error}")
+                    status_code, error_response_obj = handle_gemini_exception(fallback_error)
+                    error_response = {
+                        "type": "error",
+                        "error": error_response_obj.error,
+                        "message": error_response_obj.message,
+                        "code": error_response_obj.code,
+                        "retry_after": error_response_obj.retry_after
+                    }
+                    yield f"data: {json.dumps(error_response)}\n\n"
                 except Exception as fallback_error:
                     logger.error(f"Batch fallback failed: {fallback_error}")
                     error_response = {
@@ -447,6 +545,17 @@ async def generate_plan_stream(request: GeneratePlanRequest):
             yield f"data: {json.dumps({'type': 'complete'})}\n\n"
             logger.info("Successfully completed streaming meal plan generation")
 
+        except google_exceptions.GoogleAPICallError as e:
+            logger.error(f"Gemini API error in streaming generation: {str(e)}")
+            status_code, error_response_obj = handle_gemini_exception(e)
+            error_response = {
+                "type": "error",
+                "error": error_response_obj.error,
+                "message": error_response_obj.message,
+                "code": error_response_obj.code,
+                "retry_after": error_response_obj.retry_after
+            }
+            yield f"data: {json.dumps(error_response)}\n\n"
         except Exception as e:
             logger.error(f"Error in streaming generation: {str(e)}")
             error_response = {
@@ -559,9 +668,13 @@ async def update_plan(request: UpdatePlanRequest):
                 error="Response Parsing Error",
                 message="Failed to parse the updated meal plan. Please try again.",
                 code="PARSE_ERROR",
-                details=str(e)
+                details=str(e) if os.getenv("DEBUG") == "true" else None
             ).model_dump()
         )
+    except google_exceptions.GoogleAPICallError as e:
+        # Handle Gemini API errors specifically
+        status_code, error_response = handle_gemini_exception(e)
+        raise HTTPException(status_code=status_code, detail=error_response.model_dump())
     except Exception as e:
         logger.error(f"Error in update_plan: {str(e)}")
         raise e
@@ -624,9 +737,13 @@ async def generate_prep(request: PrepPlanRequest):
                 error="Response Parsing Error",
                 message="Failed to parse the prep plan. Please try again.",
                 code="PARSE_ERROR",
-                details=str(e)
+                details=str(e) if os.getenv("DEBUG") == "true" else None
             ).model_dump()
         )
+    except google_exceptions.GoogleAPICallError as e:
+        # Handle Gemini API errors specifically
+        status_code, error_response = handle_gemini_exception(e)
+        raise HTTPException(status_code=status_code, detail=error_response.model_dump())
     except Exception as e:
         logger.error(f"Error in generate_prep: {str(e)}")
         raise e
@@ -758,6 +875,17 @@ async def generate_prep_stream(request: PrepPlanRequest):
                     else:
                         raise ValueError("Batch fallback also failed")
 
+                except google_exceptions.GoogleAPICallError as fallback_error:
+                    logger.error(f"Batch fallback failed with Gemini API error: {fallback_error}")
+                    status_code, error_response_obj = handle_gemini_exception(fallback_error)
+                    error_response = {
+                        "type": "error",
+                        "error": error_response_obj.error,
+                        "message": error_response_obj.message,
+                        "code": error_response_obj.code,
+                        "retry_after": error_response_obj.retry_after
+                    }
+                    yield f"data: {json.dumps(error_response)}\n\n"
                 except Exception as fallback_error:
                     logger.error(f"Batch fallback failed: {fallback_error}")
                     error_response = {
@@ -774,6 +902,17 @@ async def generate_prep_stream(request: PrepPlanRequest):
             yield f"data: {json.dumps({'type': 'complete'})}\n\n"
             logger.info("Successfully completed streaming prep plan generation")
 
+        except google_exceptions.GoogleAPICallError as e:
+            logger.error(f"Gemini API error in streaming prep generation: {str(e)}")
+            status_code, error_response_obj = handle_gemini_exception(e)
+            error_response = {
+                "type": "error",
+                "error": error_response_obj.error,
+                "message": error_response_obj.message,
+                "code": error_response_obj.code,
+                "retry_after": error_response_obj.retry_after
+            }
+            yield f"data: {json.dumps(error_response)}\n\n"
         except Exception as e:
             logger.error(f"Error in streaming prep generation: {str(e)}")
             error_response = {
@@ -857,9 +996,13 @@ async def generate_grocery(request: GroceryListRequest):
                 error="Response Parsing Error",
                 message="Failed to parse the grocery list. Please try again.",
                 code="PARSE_ERROR",
-                details=str(e)
+                details=str(e) if os.getenv("DEBUG") == "true" else None
             ).model_dump()
         )
+    except google_exceptions.GoogleAPICallError as e:
+        # Handle Gemini API errors specifically
+        status_code, error_response = handle_gemini_exception(e)
+        raise HTTPException(status_code=status_code, detail=error_response.model_dump())
     except Exception as e:
         logger.error(f"Error in generate_grocery: {str(e)}")
         raise e
@@ -995,6 +1138,17 @@ async def generate_grocery_stream(request: GroceryListRequest):
                     else:
                         raise ValueError("Batch fallback also failed")
 
+                except google_exceptions.GoogleAPICallError as fallback_error:
+                    logger.error(f"Batch fallback failed with Gemini API error: {fallback_error}")
+                    status_code, error_response_obj = handle_gemini_exception(fallback_error)
+                    error_response = {
+                        "type": "error",
+                        "error": error_response_obj.error,
+                        "message": error_response_obj.message,
+                        "code": error_response_obj.code,
+                        "retry_after": error_response_obj.retry_after
+                    }
+                    yield f"data: {json.dumps(error_response)}\n\n"
                 except Exception as fallback_error:
                     logger.error(f"Batch fallback failed: {fallback_error}")
                     error_response = {
@@ -1011,6 +1165,17 @@ async def generate_grocery_stream(request: GroceryListRequest):
             yield f"data: {json.dumps({'type': 'complete'})}\n\n"
             logger.info("Successfully completed streaming grocery list generation")
 
+        except google_exceptions.GoogleAPICallError as e:
+            logger.error(f"Gemini API error in streaming grocery generation: {str(e)}")
+            status_code, error_response_obj = handle_gemini_exception(e)
+            error_response = {
+                "type": "error",
+                "error": error_response_obj.error,
+                "message": error_response_obj.message,
+                "code": error_response_obj.code,
+                "retry_after": error_response_obj.retry_after
+            }
+            yield f"data: {json.dumps(error_response)}\n\n"
         except Exception as e:
             logger.error(f"Error in streaming grocery generation: {str(e)}")
             error_response = {

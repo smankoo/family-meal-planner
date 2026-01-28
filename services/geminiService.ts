@@ -134,6 +134,7 @@ export const generateInitialMealPlanStream = async (
               } else if (data.type === 'error') {
                 const error = new Error(data.message || 'Streaming error');
                 (error as any).code = data.code;
+                (error as any).retryAfter = data.retry_after;
                 onError(error);
                 return;
               } else if (data.day && data.mealType && data.meal) {
@@ -269,6 +270,7 @@ export const generateMealPrepPlanStream = async (
               } else if (data.type === 'error') {
                 const error = new Error(data.message || 'Streaming error');
                 (error as any).code = data.code;
+                (error as any).retryAfter = data.retry_after;
                 onError(error);
                 return;
               } else if (data.day && data.task) {
@@ -381,6 +383,7 @@ export const generateGroceryListStream = async (
               } else if (data.type === 'error') {
                 const error = new Error(data.message || 'Streaming error');
                 (error as any).code = data.code;
+                (error as any).retryAfter = data.retry_after;
                 onError(error);
                 return;
               } else if (data.name && data.category) {

@@ -38,6 +38,80 @@ import { analyticsService } from './services/analyticsService';
 import { getAnalyticsConfig, validateAnalyticsConfig } from './config/analytics';
 import { Undo2, Sparkles, ChefHat, Settings, ArrowLeft, ArrowRight, X, Loader2, RotateCcw } from 'lucide-react';
 
+// Helper function to handle API errors consistently
+const handleApiError = (error: any, showToast: any, setErrorModal: any, onRetry?: () => void) => {
+  const errorCode = (error as any)?.code;
+  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+  const retryAfter = (error as any)?.retryAfter;
+
+  console.error('API Error:', { code: errorCode, message: errorMessage, retryAfter });
+
+  switch (errorCode) {
+    case 'MISSING_API_KEY':
+    case 'AUTH_ERROR':
+      setErrorModal({
+        isOpen: true,
+        title: 'API Configuration Required',
+        message: 'The Gemini API key needs to be configured to generate meal plans.',
+        details: errorMessage,
+        onRetry
+      });
+      break;
+
+    case 'RATE_LIMIT_EXCEEDED':
+      const retryMessage = retryAfter
+        ? `Rate limit reached. Please try again in ${Math.ceil(retryAfter / 60)} minutes.`
+        : 'Rate limit reached. Please try again in a few minutes.';
+      showToast(retryMessage, 'warning', 8000);
+      break;
+
+    case 'TIMEOUT':
+      showToast('Request timed out. Please try again.', 'warning', 6000);
+      break;
+
+    case 'SERVICE_UNAVAILABLE':
+      const serviceRetryMessage = retryAfter
+        ? `AI service temporarily unavailable. Please try again in ${Math.ceil(retryAfter / 60)} minutes.`
+        : 'AI service temporarily unavailable. Please try again later.';
+      showToast(serviceRetryMessage, 'warning', 8000);
+      break;
+
+    case 'PERMISSION_DENIED':
+      setErrorModal({
+        isOpen: true,
+        title: 'Permission Denied',
+        message: 'Your API key doesn\'t have permission to access this resource.',
+        details: errorMessage,
+        onRetry
+      });
+      break;
+
+    case 'INVALID_REQUEST':
+      setErrorModal({
+        isOpen: true,
+        title: 'Invalid Request',
+        message: 'There was an issue with the request format. Please try again.',
+        details: errorMessage,
+        onRetry
+      });
+      break;
+
+    default:
+      // Fallback to string matching for backwards compatibility
+      if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
+        showToast('Rate limit reached. Please try again in a few minutes.', 'warning', 8000);
+      } else {
+        setErrorModal({
+          isOpen: true,
+          title: 'Generation Failed',
+          message: 'We encountered an issue while processing your request. This might be temporary.',
+          details: errorMessage,
+          onRetry
+        });
+      }
+  }
+};
+
 type ViewMode = 'planning' | 'household';
 
 // --- Local Storage Helpers ---
@@ -337,25 +411,7 @@ const App: React.FC = () => {
           fallback: true
         });
 
-        if (errorMessage.includes('GEMINI_API_KEY')) {
-          setErrorModal({
-            isOpen: true,
-            title: 'API Configuration Required',
-            message: 'The Gemini API key needs to be configured to generate meal plans.',
-            details: errorMessage,
-            onRetry: () => handleGenerateInitialPlan(members, prefs)
-          });
-        } else if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
-          showToast('Rate limit reached. Please try again in a few minutes.', 'warning', 8000);
-        } else {
-          setErrorModal({
-            isOpen: true,
-            title: 'Plan Generation Failed',
-            message: 'We encountered an issue while creating your meal plan. This might be temporary.',
-            details: errorMessage,
-            onRetry: () => handleGenerateInitialPlan(members, prefs)
-          });
-        }
+        handleApiError(fallbackError, showToast, setErrorModal, () => handleGenerateInitialPlan(members, prefs));
       }
     }
   };
@@ -447,11 +503,13 @@ const App: React.FC = () => {
         error_message: error instanceof Error ? error.message : 'Unknown error'
       });
 
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorCode = (error as any)?.code;
 
-      if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
-        showToast('Rate limit reached. Please try again in a few minutes.', 'warning', 8000);
+      if (errorCode === 'RATE_LIMIT_EXCEEDED' || errorCode === 'SERVICE_UNAVAILABLE') {
+        // For rate limits, just show a toast
+        handleApiError(error, showToast, () => {}, undefined);
       } else {
+        // For other errors, show system message in chat
         const errorMsg: ChatMessage = {
           id: (Date.now() + 1).toString(),
           role: 'system',
@@ -580,8 +638,13 @@ const App: React.FC = () => {
             fallback: true
           });
 
-          if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
-            showToast('Rate limit reached. Prep tasks will be generated later.', 'warning', 6000);
+          const errorCode = (fallbackError as any)?.code;
+          if (errorCode === 'RATE_LIMIT_EXCEEDED') {
+            const retryAfter = (fallbackError as any)?.retryAfter;
+            const retryMessage = retryAfter
+              ? `Rate limit reached. Prep tasks will be generated in ${Math.ceil(retryAfter / 60)} minutes.`
+              : 'Rate limit reached. Prep tasks will be generated later.';
+            showToast(retryMessage, 'warning', 6000);
           } else {
             showToast('Failed to generate prep tasks. You can try again later.', 'error', 6000);
           }
@@ -677,8 +740,13 @@ const App: React.FC = () => {
             fallback: true
           });
 
-          if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
-            showToast('Rate limit reached. Grocery list will be generated later.', 'warning', 6000);
+          const errorCode = (fallbackError as any)?.code;
+          if (errorCode === 'RATE_LIMIT_EXCEEDED') {
+            const retryAfter = (fallbackError as any)?.retryAfter;
+            const retryMessage = retryAfter
+              ? `Rate limit reached. Grocery list will be generated in ${Math.ceil(retryAfter / 60)} minutes.`
+              : 'Rate limit reached. Grocery list will be generated later.';
+            showToast(retryMessage, 'warning', 6000);
           } else {
             showToast('Failed to generate grocery list. You can try again later.', 'error', 6000);
           }
