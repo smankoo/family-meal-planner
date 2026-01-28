@@ -37,7 +37,7 @@ import {
 } from './services/geminiService';
 import { analyticsService } from './services/analyticsService';
 import { getAnalyticsConfig, validateAnalyticsConfig } from './config/analytics';
-import { Undo2, Sparkles, ChefHat, Settings, ArrowLeft, ArrowRight, X, Loader2, RotateCcw } from 'lucide-react';
+import { Undo2, Sparkles, ChefHat, Settings, ArrowLeft, ArrowRight, X, Loader2, RotateCcw, LogOut } from 'lucide-react';
 
 // Helper function to handle API errors consistently
 const handleApiError = (error: any, showToast: any, setErrorModal: any, onRetry?: () => void) => {
@@ -204,54 +204,99 @@ const handleApiError = (error: any, showToast: any, setErrorModal: any, onRetry?
 
 type ViewMode = 'planning' | 'household';
 
-import { loadState, saveState, validateFamily, validatePreferences, validatePlanHistory } from './utils/localStorage';
+import { useAuth } from './contexts/AuthContext';
+import { dataService } from './services/dataService';
+import { usePersistedState } from './hooks/usePersistedState';
+import { validateFamily, validatePreferences, validatePlanHistory } from './utils/localStorage';
+
+// Stable default values to prevent infinite re-renders
+const DEFAULT_PLAN_HISTORY = {
+  past: [],
+  present: EMPTY_PLAN,
+  future: []
+};
+
+const DEFAULT_INVALIDATION_STATE = {
+  currentPlanVersion: 'initial'
+};
 
 const App: React.FC = () => {
   const { showToast } = useToast();
+  const { user, profile, signOut } = useAuth();
+
+  // Initialize data service when user changes
+  React.useEffect(() => {
+    dataService.setUserId(user?.id || null);
+
+    // Migrate from localStorage when user first signs in
+    if (user?.id) {
+      dataService.migrateFromLocalStorage().catch(error => {
+        console.error('Migration failed:', error);
+      });
+    }
+  }, [user?.id]);
+
   // --- Initialization with Persistence ---
 
-  const [family, setFamily] = useState<FamilyMember[]>(() =>
-    loadState('fmp_family', INITIAL_FAMILY, validateFamily)
+  const [family, setFamily, familyLoading] = usePersistedState(
+    'fmp_family',
+    'family',
+    INITIAL_FAMILY,
+    validateFamily
   );
 
-  const [preferences, setPreferences] = useState<FamilyPreferences>(() =>
-    loadState('fmp_preferences', INITIAL_PREFERENCES, validatePreferences)
+  const [preferences, setPreferences, preferencesLoading] = usePersistedState(
+    'fmp_preferences',
+    'preferences',
+    INITIAL_PREFERENCES,
+    validatePreferences
   );
 
-  const [hasPlanGenerated, setHasPlanGenerated] = useState<boolean>(() =>
-    loadState('fmp_has_plan', false)
+  const [hasPlanGenerated, setHasPlanGenerated, hasPlanLoading] = usePersistedState(
+    'fmp_has_plan',
+    'has_plan',
+    false
   );
+
+  const [currentStage, setCurrentStage, stageLoading] = usePersistedState(
+    'fmp_current_stage',
+    'current_stage',
+    Stage.MEAL_PLANNING
+  );
+
+  const [planHistory, setPlanHistory, planHistoryLoading] = usePersistedState(
+    'fmp_plan_history',
+    'meal_plan',
+    DEFAULT_PLAN_HISTORY,
+    validatePlanHistory
+  );
+
+  const [prepTasks, setPrepTasks, prepTasksLoading] = usePersistedState(
+    'fmp_prep_tasks',
+    'prep_tasks',
+    []
+  );
+
+  const [groceryItems, setGroceryItems, groceryItemsLoading] = usePersistedState(
+    'fmp_grocery_items',
+    'grocery_items',
+    []
+  );
+
+  const [invalidationState, setInvalidationState, invalidationLoading] = usePersistedState(
+    'fmp_invalidation_state',
+    'invalidation_state',
+    DEFAULT_INVALIDATION_STATE
+  );
+
+  // Check if any data is still loading
+  const isDataLoading = familyLoading || preferencesLoading || hasPlanLoading ||
+                       stageLoading || planHistoryLoading || prepTasksLoading ||
+                       groceryItemsLoading || invalidationLoading;
 
   const [viewMode, setViewMode] = useState<ViewMode>(() =>
      // If we have a plan generated, default to planning view
-     loadState('fmp_has_plan', false) ? 'planning' : 'household'
-  );
-
-  const [currentStage, setCurrentStage] = useState<Stage>(() =>
-    loadState('fmp_current_stage', Stage.MEAL_PLANNING)
-  );
-
-  const [planHistory, setPlanHistory] = useState<PlanHistory>(() =>
-    loadState('fmp_plan_history', {
-      past: [],
-      present: EMPTY_PLAN,
-      future: []
-    }, validatePlanHistory)
-  );
-
-  const [prepTasks, setPrepTasks] = useState<PrepTask[]>(() =>
-    loadState('fmp_prep_tasks', [])
-  );
-
-  const [groceryItems, setGroceryItems] = useState<GroceryItem[]>(() =>
-    loadState('fmp_grocery_items', [])
-  );
-
-  // Invalidation state for tracking when prep/grocery lists need updates
-  const [invalidationState, setInvalidationState] = useState<InvalidationState>(() =>
-    loadState('fmp_invalidation_state', {
-      currentPlanVersion: Date.now().toString()
-    })
+     hasPlanGenerated ? 'planning' : 'household'
   );
 
   // Runtime UI state (not persisted)
@@ -319,15 +364,14 @@ const App: React.FC = () => {
 
 
   // --- Persistence Effects ---
+  // Note: Persistence is now handled by usePersistedState hook
 
-  useEffect(() => saveState('fmp_family', family), [family]);
-  useEffect(() => saveState('fmp_preferences', preferences), [preferences]);
-  useEffect(() => saveState('fmp_has_plan', hasPlanGenerated), [hasPlanGenerated]);
-  useEffect(() => saveState('fmp_current_stage', currentStage), [currentStage]);
-  useEffect(() => saveState('fmp_plan_history', planHistory), [planHistory]);
-  useEffect(() => saveState('fmp_prep_tasks', prepTasks), [prepTasks]);
-  useEffect(() => saveState('fmp_grocery_items', groceryItems), [groceryItems]);
-  useEffect(() => saveState('fmp_invalidation_state', invalidationState), [invalidationState]);
+  // Update viewMode when hasPlanGenerated changes
+  useEffect(() => {
+    if (!isDataLoading) {
+      setViewMode(hasPlanGenerated ? 'planning' : 'household');
+    }
+  }, [hasPlanGenerated, isDataLoading]);
 
 
   // --- Actions ---
@@ -1113,6 +1157,23 @@ const App: React.FC = () => {
 
   // --- Render ---
 
+  // Show loading state while data is being loaded
+  if (isDataLoading) {
+    return (
+      <div className="flex flex-col h-full bg-zinc-50 font-sans items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 bg-zinc-900 rounded-2xl flex items-center justify-center shadow-lg">
+            <ChefHat size={24} className="text-white" strokeWidth={2.5} />
+          </div>
+          <div className="space-y-2">
+            <Loader2 size={24} className="animate-spin text-zinc-400 mx-auto" />
+            <p className="text-zinc-600 font-medium">Loading your meal planner...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full bg-zinc-50 font-sans">
 
@@ -1162,8 +1223,26 @@ const App: React.FC = () => {
                />
           </div>
 
-          {/* Right: Settings */}
-          <div className="pointer-events-auto">
+          {/* Right: Settings and User Actions */}
+          <div className="pointer-events-auto flex items-center gap-2">
+              {/* Show logout button only during first run (before plan is generated) */}
+              {user && !hasPlanGenerated && (
+                  <button
+                      onClick={async () => {
+                        try {
+                          await signOut();
+                          showToast('Signed out successfully', 'success');
+                        } catch (error: any) {
+                          console.error('Sign out error:', error);
+                          showToast(error.message || 'Failed to sign out', 'error');
+                        }
+                      }}
+                      className="w-9 h-9 md:w-10 md:h-10 bg-white/60 backdrop-blur-sm shadow-sm border border-white/40 rounded-full flex items-center justify-center text-zinc-500 hover:text-red-600 hover:bg-white/80 transition-all"
+                      title="Sign Out"
+                  >
+                      <LogOut size={16} className="md:w-[18px] md:h-[18px]" />
+                  </button>
+              )}
               {viewMode === 'planning' ? (
                   <button
                       onClick={() => setViewMode('household')}

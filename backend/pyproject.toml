@@ -11,6 +11,14 @@ dependencies = [
     "google-genai>=1.51.0",
     "google-api-core>=2.0.0",
     "python-dotenv>=1.0.1",
+    "sqlalchemy>=2.0.46",
+    "alembic>=1.18.1",
+    "psycopg2-binary>=2.9.11",
+    "python-jose[cryptography]>=3.5.0",
+    "passlib[bcrypt]>=1.7.4",
+    "python-multipart>=0.0.22",
+    "email-validator>=2.3.0",
+    "bcrypt>=4.0.0,<4.1.0",
 ]
 requires-python = ">=3.11"
 

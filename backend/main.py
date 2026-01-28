@@ -13,12 +13,19 @@ import asyncio
 import re
 from dotenv import load_dotenv
 
+# Import database and authentication
+from database import engine, Base
+from routers import auth, user_data
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Load environment variables from .env file, but don't override existing shell env vars
 load_dotenv(override=False)
+
+# Create database tables
+Base.metadata.create_all(bind=engine)
 
 # Debug: Log what API key we're actually using (first 10 chars only for security)
 api_key = os.getenv("GEMINI_API_KEY")
@@ -27,7 +34,15 @@ if api_key:
 else:
     logger.warning("No GEMINI_API_KEY found in environment")
 
-app = FastAPI(title="Family Meal Planner API")
+app = FastAPI(
+    title="Family Meal Planner API",
+    description="Production-grade API for family meal planning with authentication",
+    version="2.0.0"
+)
+
+# Include routers
+app.include_router(auth.router)
+app.include_router(user_data.router)
 
 # Error response model
 class ErrorResponse(BaseModel):

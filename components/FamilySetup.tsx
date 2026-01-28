@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FamilyMember, FamilyPreferences } from '../types';
 import { Plus, Trash2, ThumbsUp, ThumbsDown, ArrowRight, Sparkles, Loader2 } from 'lucide-react';
+import UserProfile from './UserProfile';
 
 interface FamilySetupProps {
   family: FamilyMember[];
@@ -81,6 +82,16 @@ const FamilySetup: React.FC<FamilySetupProps> = ({
       </div>
 
       <div className="space-y-16">
+
+        {/* User Profile Section - Only show when not first run */}
+        {!isFirstRun && (
+          <section>
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-widest">Your Account</h2>
+            </div>
+            <UserProfile />
+          </section>
+        )}
 
         {/* Family Section */}
         <section>
