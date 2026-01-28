@@ -1,4 +1,5 @@
 import { FamilyMember, FamilyPreferences, WeekPlan, PrepTask, GroceryItem, PlanHistory, InvalidationState } from '../types';
+import { supabase } from '../config/supabase';
 
 export type DataType = 'family' | 'preferences' | 'meal_plan' | 'prep_tasks' | 'grocery_items' | 'invalidation_state' | 'has_plan' | 'current_stage';
 
@@ -31,7 +32,10 @@ class DataService {
   }
 
   private async getAuthHeaders(): Promise<HeadersInit> {
-    const token = localStorage.getItem('auth_token');
+    // Get Supabase session token
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
     return {
       'Content-Type': 'application/json',
       ...(token && { 'Authorization': `Bearer ${token}` })

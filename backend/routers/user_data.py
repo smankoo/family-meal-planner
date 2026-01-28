@@ -1,14 +1,16 @@
 """
 User data routes - handles meal plans, preferences, etc.
+Uses Supabase authentication.
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
+from datetime import datetime
 
 from database import get_db
-from models import User, UserData, VALID_DATA_TYPES
+from models import Profile, UserData, VALID_DATA_TYPES
 from schemas import UserDataCreate, UserDataUpdate, UserDataResponse
-from auth import get_current_user
+from supabase_auth import get_current_user_id
 
 router = APIRouter(prefix="/user-data", tags=["user-data"])
 
@@ -16,11 +18,11 @@ router = APIRouter(prefix="/user-data", tags=["user-data"])
 @router.get("/", response_model=List[UserDataResponse])
 async def get_user_data(
     data_type: str = None,
-    current_user: User = Depends(get_current_user),
+    user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
     """Get user data, optionally filtered by data_type"""
-    query = db.query(UserData).filter(UserData.user_id == current_user.id)
+    query = db.query(UserData).filter(UserData.user_id == user_id)
 
     if data_type:
         if data_type not in VALID_DATA_TYPES:
@@ -37,7 +39,7 @@ async def get_user_data(
 @router.get("/{data_type}", response_model=UserDataResponse)
 async def get_user_data_by_type(
     data_type: str,
-    current_user: User = Depends(get_current_user),
+    user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
     """Get specific user data by type"""
@@ -48,7 +50,7 @@ async def get_user_data_by_type(
         )
 
     user_data = db.query(UserData).filter(
-        UserData.user_id == current_user.id,
+        UserData.user_id == user_id,
         UserData.data_type == data_type
     ).first()
 
@@ -64,7 +66,7 @@ async def get_user_data_by_type(
 @router.post("/", response_model=UserDataResponse)
 async def create_user_data(
     data: UserDataCreate,
-    current_user: User = Depends(get_current_user),
+    user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
     """Create new user data"""
@@ -76,7 +78,7 @@ async def create_user_data(
 
     # Check if data already exists for this type
     existing_data = db.query(UserData).filter(
-        UserData.user_id == current_user.id,
+        UserData.user_id == user_id,
         UserData.data_type == data.data_type
     ).first()
 
@@ -87,7 +89,7 @@ async def create_user_data(
         )
 
     user_data = UserData(
-        user_id=current_user.id,
+        user_id=user_id,
         data_type=data.data_type,
         data=data.data
     )
@@ -103,7 +105,7 @@ async def create_user_data(
 async def update_user_data(
     data_type: str,
     data: UserDataUpdate,
-    current_user: User = Depends(get_current_user),
+    user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
     """Update user data by type (upsert)"""
@@ -115,7 +117,7 @@ async def update_user_data(
 
     # Try to find existing data
     user_data = db.query(UserData).filter(
-        UserData.user_id == current_user.id,
+        UserData.user_id == user_id,
         UserData.data_type == data_type
     ).first()
 
@@ -125,7 +127,7 @@ async def update_user_data(
     else:
         # Create new data
         user_data = UserData(
-            user_id=current_user.id,
+            user_id=user_id,
             data_type=data_type,
             data=data.data
         )
@@ -140,7 +142,7 @@ async def update_user_data(
 @router.delete("/{data_type}")
 async def delete_user_data(
     data_type: str,
-    current_user: User = Depends(get_current_user),
+    user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
     """Delete user data by type"""
@@ -151,7 +153,7 @@ async def delete_user_data(
         )
 
     user_data = db.query(UserData).filter(
-        UserData.user_id == current_user.id,
+        UserData.user_id == user_id,
         UserData.data_type == data_type
     ).first()
 
@@ -169,14 +171,14 @@ async def delete_user_data(
 
 @router.get("/export/all")
 async def export_all_user_data(
-    current_user: User = Depends(get_current_user),
+    user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """Export all user data for backup/migration"""
-    user_data = db.query(UserData).filter(UserData.user_id == current_user.id).all()
+    user_data = db.query(UserData).filter(UserData.user_id == user_id).all()
 
     export_data = {
-        "user_id": current_user.id,
+        "user_id": user_id,
         "exported_at": datetime.utcnow().isoformat(),
         "data": {}
     }
@@ -190,7 +192,7 @@ async def export_all_user_data(
 @router.post("/import/all")
 async def import_all_user_data(
     import_data: Dict[str, Any],
-    current_user: User = Depends(get_current_user),
+    user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
     """Import user data from backup/migration"""
@@ -208,7 +210,7 @@ async def import_all_user_data(
 
         # Upsert data
         user_data = db.query(UserData).filter(
-            UserData.user_id == current_user.id,
+            UserData.user_id == user_id,
             UserData.data_type == data_type
         ).first()
 
@@ -216,7 +218,7 @@ async def import_all_user_data(
             user_data.data = data_content
         else:
             user_data = UserData(
-                user_id=current_user.id,
+                user_id=user_id,
                 data_type=data_type,
                 data=data_content
             )

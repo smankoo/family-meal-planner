@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { apiService, User, AuthResponse } from '../services/apiService';
+import { supabase } from '../config/supabase';
+import type { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
   loading: boolean;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string, name?: string) => Promise<void>;
@@ -26,51 +28,80 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Initialize auth state
+  // Initialize auth state and listen for changes
   useEffect(() => {
     let mounted = true;
 
-    const initializeAuth = async () => {
-      try {
-        if (apiService.isAuthenticated()) {
-          // Verify token and get user info
-          const currentUser = await apiService.getCurrentUser();
-          if (mounted) {
-            setUser(currentUser);
-          }
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-        // Token might be invalid, clear it
-        apiService.clearToken();
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (mounted) {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
       }
-    };
+    });
 
-    initializeAuth();
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (mounted) {
+        setSession(session);
+        setUser(session?.user ?? null);
+      }
+    });
 
     return () => {
       mounted = false;
+      subscription.unsubscribe();
     };
   }, []);
 
   const signInWithEmail = async (email: string, password: string) => {
-    const authResponse = await apiService.login(email, password);
-    setUser(authResponse.user);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    setSession(data.session);
+    setUser(data.user);
   };
 
   const signUpWithEmail = async (email: string, password: string, name?: string) => {
-    const authResponse = await apiService.register(email, password, name);
-    setUser(authResponse.user);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name: name || email.split('@')[0],
+        },
+      },
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    // Note: User might need to verify email depending on Supabase settings
+    setSession(data.session);
+    setUser(data.user);
   };
 
   const signOut = async () => {
-    await apiService.logout();
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      throw error;
+    }
+
+    setSession(null);
     setUser(null);
   };
 
@@ -79,17 +110,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       throw new Error('No user logged in');
     }
 
-    const updatedUser = await apiService.updateUser(updates);
-    setUser(updatedUser);
+    const { data, error } = await supabase.auth.updateUser({
+      data: updates,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    setUser(data.user);
   };
 
   const value: AuthContextType = {
     user,
+    session,
     loading,
     signInWithEmail,
     signUpWithEmail,
     signOut,
-    updateProfile
+    updateProfile,
   };
 
   return (
