@@ -1,6 +1,7 @@
 import React, { useState, useRef, useLayoutEffect } from 'react';
 import { GroceryItem } from '../types';
 import { Check, ShoppingBag, RotateCcw, Loader2, ArrowRight } from 'lucide-react';
+import InvalidationBanner from './InvalidationBanner';
 
 interface GroceryListViewProps {
   items: GroceryItem[];
@@ -10,6 +11,7 @@ interface GroceryListViewProps {
   isLoading: boolean;
   hasMealPlan: boolean;
   newlyReceivedItems?: Set<string>;
+  isInvalidated?: boolean; // New prop to show invalidation banner
 }
 
 const GroceryListView: React.FC<GroceryListViewProps> = ({
@@ -19,7 +21,8 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
   onNavigateToMealPlan,
   isLoading,
   hasMealPlan,
-  newlyReceivedItems = new Set()
+  newlyReceivedItems = new Set(),
+  isInvalidated = false
 }) => {
   const [items, setItems] = useState<GroceryItem[]>(initialItems);
 
@@ -217,6 +220,18 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
               <RotateCcw size={12} /> Regenerate
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Invalidation Banner */}
+      {isInvalidated && items.length > 0 && (
+        <div className="px-4 md:px-8 max-w-4xl mx-auto">
+          <InvalidationBanner
+            type="grocery"
+            onRegenerate={onRegenerate}
+            isLoading={isLoading}
+            className="animate-fade-in"
+          />
         </div>
       )}
 

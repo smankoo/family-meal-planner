@@ -18,7 +18,8 @@ import {
   GroceryItem,
   PlanHistory,
   FamilyMember,
-  FamilyPreferences
+  FamilyPreferences,
+  InvalidationState
 } from './types';
 import {
   INITIAL_FAMILY,
@@ -263,6 +264,13 @@ const App: React.FC = () => {
     loadState('fmp_grocery_items', [])
   );
 
+  // Invalidation state for tracking when prep/grocery lists need updates
+  const [invalidationState, setInvalidationState] = useState<InvalidationState>(() =>
+    loadState('fmp_invalidation_state', {
+      currentPlanVersion: Date.now().toString()
+    })
+  );
+
   // Runtime UI state (not persisted)
   const [isLoading, setIsLoading] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -336,9 +344,32 @@ const App: React.FC = () => {
   useEffect(() => saveState('fmp_plan_history', planHistory), [planHistory]);
   useEffect(() => saveState('fmp_prep_tasks', prepTasks), [prepTasks]);
   useEffect(() => saveState('fmp_grocery_items', groceryItems), [groceryItems]);
+  useEffect(() => saveState('fmp_invalidation_state', invalidationState), [invalidationState]);
 
 
   // --- Actions ---
+
+  // Helper functions to check invalidation status
+  const isPrepPlanInvalidated = (): boolean => {
+    return !!(
+      prepTasks.length > 0 &&
+      invalidationState.prepPlanVersion &&
+      invalidationState.prepPlanVersion !== invalidationState.currentPlanVersion
+    );
+  };
+
+  const isGroceryListInvalidated = (): boolean => {
+    return !!(
+      groceryItems.length > 0 &&
+      invalidationState.groceryListVersion &&
+      invalidationState.groceryListVersion !== invalidationState.currentPlanVersion
+    );
+  };
+
+  // Helper function to generate new plan version
+  const generatePlanVersion = (): string => {
+    return Date.now().toString();
+  };
 
   const handleGenerateInitialPlan = async (members: FamilyMember[], prefs: FamilyPreferences) => {
     setIsLoading(true);
@@ -365,6 +396,15 @@ const App: React.FC = () => {
     // Clear previously received cards and set initial empty plan
     setNewlyReceivedCards(new Set());
     setAnimatedCards(new Set()); // Reset animated cards for new generation
+
+    // Generate new plan version and invalidate downstream data
+    const newPlanVersion = generatePlanVersion();
+    setInvalidationState({
+      currentPlanVersion: newPlanVersion,
+      prepPlanVersion: undefined,
+      groceryListVersion: undefined
+    });
+
     setPlanHistory({
       past: [],
       present: emptyPlan,
@@ -506,6 +546,14 @@ const App: React.FC = () => {
         setNewlyReceivedTasks(new Set());
         setNewlyReceivedItems(new Set());
 
+        // Reset invalidation state for fresh plan
+        const newPlanVersion = generatePlanVersion();
+        setInvalidationState({
+          currentPlanVersion: newPlanVersion,
+          prepPlanVersion: undefined,
+          groceryListVersion: undefined
+        });
+
         await handleGenerateInitialPlan(family, preferences);
         // Note: scroll behavior is handled in handleGenerateInitialPlan
       }
@@ -549,6 +597,14 @@ const App: React.FC = () => {
       );
 
       setLastDiffPlan(planHistory.present);
+
+      // Generate new plan version to invalidate downstream data
+      const newPlanVersion = generatePlanVersion();
+      setInvalidationState(prev => ({
+        ...prev,
+        currentPlanVersion: newPlanVersion
+      }));
+
       setPlanHistory(prev => ({
         past: [...prev.past, prev.present],
         present: newPlan,
@@ -682,6 +738,12 @@ const App: React.FC = () => {
           async () => {
             setIsLoading(false);
 
+            // Mark prep plan as current with the meal plan version
+            setInvalidationState(prev => ({
+              ...prev,
+              prepPlanVersion: prev.currentPlanVersion
+            }));
+
             await analyticsService.trackMealPlanningEvent('prep_generation_completed', {
               streaming: true
             });
@@ -711,6 +773,12 @@ const App: React.FC = () => {
         try {
           const tasks = await generateMealPrepPlan(planHistory.present);
           setPrepTasks(tasks);
+
+          // Mark prep plan as current with the meal plan version
+          setInvalidationState(prev => ({
+            ...prev,
+            prepPlanVersion: prev.currentPlanVersion
+          }));
 
           await analyticsService.trackMealPlanningEvent('prep_generation_completed', {
             fallback: true
@@ -784,6 +852,12 @@ const App: React.FC = () => {
           async () => {
             setIsLoading(false);
 
+            // Mark grocery list as current with the meal plan version
+            setInvalidationState(prev => ({
+              ...prev,
+              groceryListVersion: prev.currentPlanVersion
+            }));
+
             await analyticsService.trackMealPlanningEvent('grocery_generation_completed', {
               streaming: true
             });
@@ -813,6 +887,12 @@ const App: React.FC = () => {
         try {
           const items = await generateGroceryList(planHistory.present, prepTasks);
           setGroceryItems(items);
+
+          // Mark grocery list as current with the meal plan version
+          setInvalidationState(prev => ({
+            ...prev,
+            groceryListVersion: prev.currentPlanVersion
+          }));
 
           await analyticsService.trackMealPlanningEvent('grocery_generation_completed', {
             fallback: true
@@ -850,21 +930,14 @@ const App: React.FC = () => {
     await handleStageChange(Stage.GROCERY_LIST);
   };
 
-  // Dedicated regeneration functions that properly handle loading states
   const handleRegeneratePrep = async () => {
     setIsLoading(true);
-    setPrepTasks([]);
+
+    await analyticsService.trackMealPlanningEvent('prep_regeneration_started');
+
+    // Clear existing prep tasks and reset animation state
     setNewlyReceivedTasks(new Set());
-
-    // Elegant scroll to top - Apple-style smooth behavior
-    setTimeout(() => {
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-      });
-    }, 100);
-
-    await analyticsService.trackMealPlanningEvent('prep_generation_started');
+    setPrepTasks([]);
 
     try {
       // Use task-by-task streaming generation
@@ -901,49 +974,69 @@ const App: React.FC = () => {
         // onComplete callback
         async () => {
           setIsLoading(false);
-          await analyticsService.trackMealPlanningEvent('prep_generation_completed', {
-            streaming: true,
-            regenerated: true
+
+          // Mark prep plan as current with the meal plan version
+          setInvalidationState(prev => ({
+            ...prev,
+            prepPlanVersion: prev.currentPlanVersion
+          }));
+
+          await analyticsService.trackMealPlanningEvent('prep_regeneration_completed', {
+            streaming: true
           });
         },
         // onError callback
         async (error: Error) => {
           setIsLoading(false);
-          await analyticsService.trackMealPlanningEvent('prep_generation_failed', {
+
+          await analyticsService.trackMealPlanningEvent('prep_regeneration_failed', {
             error_message: error.message,
-            streaming: true,
-            regenerated: true
+            streaming: true
           });
 
-          const errorMessage = error.message;
-          if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
-            showToast('Rate limit reached. Prep tasks will be generated later.', 'warning', 6000);
-          } else {
-            showToast('Failed to generate prep tasks. You can try again later.', 'error', 6000);
-          }
+          handleApiError(error, showToast, setErrorModal, handleRegeneratePrep);
         }
       );
+
     } catch (error) {
       setIsLoading(false);
-      // Fallback error handling
-      showToast('Failed to regenerate prep tasks. Please try again.', 'error', 6000);
+
+      // Fallback to batch generation if streaming fails
+      try {
+        const tasks = await generateMealPrepPlan(planHistory.present);
+        setPrepTasks(tasks);
+
+        // Mark prep plan as current with the meal plan version
+        setInvalidationState(prev => ({
+          ...prev,
+          prepPlanVersion: prev.currentPlanVersion
+        }));
+
+        await analyticsService.trackMealPlanningEvent('prep_regeneration_completed', {
+          fallback: true
+        });
+
+      } catch (fallbackError) {
+        const errorMessage = fallbackError instanceof Error ? fallbackError.message : 'Unknown error';
+
+        await analyticsService.trackMealPlanningEvent('prep_regeneration_failed', {
+          error_message: errorMessage,
+          fallback: true
+        });
+
+        handleApiError(fallbackError, showToast, setErrorModal, handleRegeneratePrep);
+      }
     }
   };
 
   const handleRegenerateGrocery = async () => {
     setIsLoading(true);
-    setGroceryItems([]);
+
+    await analyticsService.trackMealPlanningEvent('grocery_regeneration_started');
+
+    // Clear existing grocery items and reset animation state
     setNewlyReceivedItems(new Set());
-
-    // Elegant scroll to top - Apple-style smooth behavior
-    setTimeout(() => {
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-      });
-    }, 100);
-
-    await analyticsService.trackMealPlanningEvent('grocery_generation_started');
+    setGroceryItems([]);
 
     try {
       // Use item-by-item streaming generation
@@ -980,32 +1073,58 @@ const App: React.FC = () => {
         // onComplete callback
         async () => {
           setIsLoading(false);
-          await analyticsService.trackMealPlanningEvent('grocery_generation_completed', {
-            streaming: true,
-            regenerated: true
+
+          // Mark grocery list as current with the meal plan version
+          setInvalidationState(prev => ({
+            ...prev,
+            groceryListVersion: prev.currentPlanVersion
+          }));
+
+          await analyticsService.trackMealPlanningEvent('grocery_regeneration_completed', {
+            streaming: true
           });
         },
         // onError callback
         async (error: Error) => {
           setIsLoading(false);
-          await analyticsService.trackMealPlanningEvent('grocery_generation_failed', {
+
+          await analyticsService.trackMealPlanningEvent('grocery_regeneration_failed', {
             error_message: error.message,
-            streaming: true,
-            regenerated: true
+            streaming: true
           });
 
-          const errorMessage = error.message;
-          if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
-            showToast('Rate limit reached. Grocery list will be generated later.', 'warning', 6000);
-          } else {
-            showToast('Failed to generate grocery list. You can try again later.', 'error', 6000);
-          }
+          handleApiError(error, showToast, setErrorModal, handleRegenerateGrocery);
         }
       );
+
     } catch (error) {
       setIsLoading(false);
-      // Fallback error handling
-      showToast('Failed to regenerate grocery list. Please try again.', 'error', 6000);
+
+      // Fallback to batch generation if streaming fails
+      try {
+        const items = await generateGroceryList(planHistory.present, prepTasks);
+        setGroceryItems(items);
+
+        // Mark grocery list as current with the meal plan version
+        setInvalidationState(prev => ({
+          ...prev,
+          groceryListVersion: prev.currentPlanVersion
+        }));
+
+        await analyticsService.trackMealPlanningEvent('grocery_regeneration_completed', {
+          fallback: true
+        });
+
+      } catch (fallbackError) {
+        const errorMessage = fallbackError instanceof Error ? fallbackError.message : 'Unknown error';
+
+        await analyticsService.trackMealPlanningEvent('grocery_regeneration_failed', {
+          error_message: errorMessage,
+          fallback: true
+        });
+
+        handleApiError(fallbackError, showToast, setErrorModal, handleRegenerateGrocery);
+      }
     }
   };
 
@@ -1178,6 +1297,7 @@ const App: React.FC = () => {
                       Object.values(day.meals).some(meal => meal.name && meal.name.trim() !== '')
                     )}
                     newlyReceivedTasks={newlyReceivedTasks}
+                    isInvalidated={isPrepPlanInvalidated()}
                />
              )}
 
@@ -1192,6 +1312,7 @@ const App: React.FC = () => {
                       Object.values(day.meals).some(meal => meal.name && meal.name.trim() !== '')
                     )}
                     newlyReceivedItems={newlyReceivedItems}
+                    isInvalidated={isGroceryListInvalidated()}
                 />
              )}
              <Footer className="mt-16" />

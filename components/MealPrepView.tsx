@@ -1,6 +1,7 @@
 import React, { useState, useRef, useLayoutEffect } from 'react';
 import { PrepTask, WeekPlan } from '../types';
 import { Check, Clock, ArrowRight, RotateCcw, Loader2 } from 'lucide-react';
+import InvalidationBanner from './InvalidationBanner';
 
 interface MealPrepViewProps {
   tasks: PrepTask[];
@@ -11,6 +12,7 @@ interface MealPrepViewProps {
   isLoading: boolean;
   hasMealPlan: boolean;
   newlyReceivedTasks?: Set<string>;
+  isInvalidated?: boolean; // New prop to show invalidation banner
 }
 
 const MealPrepView: React.FC<MealPrepViewProps> = ({
@@ -21,7 +23,8 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
   onNavigateToMealPlan,
   isLoading,
   hasMealPlan,
-  newlyReceivedTasks = new Set()
+  newlyReceivedTasks = new Set(),
+  isInvalidated = false
 }) => {
   const [tasks, setTasks] = useState<PrepTask[]>(initialTasks);
 
@@ -231,6 +234,18 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
               <RotateCcw size={12} /> Regenerate
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Invalidation Banner */}
+      {isInvalidated && tasks.length > 0 && (
+        <div className="px-4 md:px-8 max-w-4xl mx-auto">
+          <InvalidationBanner
+            type="prep"
+            onRegenerate={onRegenerate}
+            isLoading={isLoading}
+            className="animate-fade-in"
+          />
         </div>
       )}
 

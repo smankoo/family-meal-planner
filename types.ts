@@ -71,3 +71,9 @@ export interface PlanHistory {
   present: WeekPlan;
   future: WeekPlan[];
 }
+
+export interface InvalidationState {
+  prepPlanVersion?: string; // Version when prep plan was generated
+  groceryListVersion?: string; // Version when grocery list was generated
+  currentPlanVersion: string; // Current meal plan version
+}
