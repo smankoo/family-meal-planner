@@ -163,9 +163,9 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:3001",
+        "https://mealplan.mankoo.ca",
         "https://meal-planner-frontend-v2.onrender.com",
         "https://meal-planner-api-v2.onrender.com",
-        "https://mealplan.mankoo.ca",
         "https://www.mankoo.ca",
         "https://mankoo.ca"
     ],
