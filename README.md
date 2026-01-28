@@ -91,8 +91,8 @@ If you prefer to set up manually:
    ```bash
    # Terminal 1 - Backend
    cd backend && source .venv/bin/activate && python main.py
-   
-   # Terminal 2 - Frontend  
+
+   # Terminal 2 - Frontend
    npm run dev
    ```
 
@@ -100,7 +100,7 @@ If you prefer to set up manually:
 
 When running:
 - **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8000  
+- **Backend API**: http://localhost:8000
 - **API Documentation**: http://localhost:8000/docs
 
 ## 🛠️ Troubleshooting

@@ -69,8 +69,8 @@ const Toast: React.FC<ToastProps> = ({ toast }) => {
       className={`
         fixed top-20 right-4 z-50 max-w-sm w-full
         transform transition-all duration-300 ease-out
-        ${isVisible && !isExiting 
-          ? 'translate-x-0 opacity-100 scale-100' 
+        ${isVisible && !isExiting
+          ? 'translate-x-0 opacity-100 scale-100'
           : 'translate-x-full opacity-0 scale-95'
         }
       `}

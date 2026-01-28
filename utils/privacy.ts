@@ -39,12 +39,12 @@ export const saveConsentPreferences = (preferences: ConsentPreferences): void =>
  */
 export const isAnalyticsAllowed = (): boolean => {
   const preferences = getConsentPreferences();
-  
+
   // If no preferences stored, assume consent in development, require consent in production
   if (!preferences) {
     return import.meta.env.DEV;
   }
-  
+
   return preferences.analytics;
 };
 
@@ -68,12 +68,12 @@ export const clearUserData = (): void => {
 export const getSessionId = (): string => {
   const key = 'fmp_session_id';
   let sessionId = sessionStorage.getItem(key);
-  
+
   if (!sessionId) {
     sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     sessionStorage.setItem(key, sessionId);
   }
-  
+
   return sessionId;
 };
 
@@ -82,19 +82,19 @@ export const getSessionId = (): string => {
  */
 export const anonymizeData = (data: Record<string, any>): Record<string, any> => {
   const anonymized = { ...data };
-  
+
   // Remove or hash sensitive fields
   const sensitiveFields = ['email', 'name', 'phone', 'address', 'ip'];
-  
+
   sensitiveFields.forEach(field => {
     if (anonymized[field]) {
       delete anonymized[field];
     }
   });
-  
+
   // Add session ID instead of persistent user ID
   anonymized.session_id = getSessionId();
-  
+
   return anonymized;
 };
 

@@ -23,24 +23,24 @@
           -ms-overflow-style: none;  /* IE and Edge */
           scrollbar-width: none;  /* Firefox */
       }
-      
+
       /* Enhanced backdrop blur support for Apple-like frosted glass effect */
       .backdrop-blur-xl {
         -webkit-backdrop-filter: blur(20px);
         backdrop-filter: blur(20px);
       }
-      
+
       .backdrop-blur-sm {
         -webkit-backdrop-filter: blur(4px);
         backdrop-filter: blur(4px);
       }
-      
+
       /* Ensure proper layering and performance */
       .frosted-header {
         transform: translateZ(0);
         will-change: transform;
       }
-      
+
       /* Prevent mobile zoom on input focus */
       input, textarea, select {
         font-size: 16px !important;
@@ -48,31 +48,31 @@
         -webkit-border-radius: 0;
         border-radius: 0;
       }
-      
+
       /* Ensure inputs maintain their designed appearance while preventing zoom */
-      input[type="text"], 
-      input[type="number"], 
-      input[type="email"], 
-      input[type="password"], 
+      input[type="text"],
+      input[type="number"],
+      input[type="email"],
+      input[type="password"],
       textarea {
         font-size: 16px !important;
         transform: scale(1);
         -webkit-text-size-adjust: 100%;
       }
-      
+
       /* Maintain visual hierarchy while preventing zoom */
       @media (max-width: 768px) {
         input, textarea {
           font-size: 16px !important;
         }
-        
+
         /* Adjust visual font sizes for mobile while keeping actual font-size at 16px */
         .mobile-text-sm input, .mobile-text-sm textarea {
           font-size: 16px !important;
           transform: scale(0.875); /* Visually smaller but technically 16px */
           transform-origin: left center;
         }
-        
+
         .mobile-text-lg input, .mobile-text-lg textarea {
           font-size: 16px !important;
           font-weight: 600;

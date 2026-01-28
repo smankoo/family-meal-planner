@@ -7,7 +7,7 @@ services:
     envVars:
       - key: GEMINI_API_KEY
         sync: false  # You'll set this in Render dashboard
-  
+
   - type: static
     name: meal-planner-frontend
     buildCommand: "npm install && npm run build"

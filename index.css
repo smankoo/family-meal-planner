@@ -17,24 +17,24 @@
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
-  
+
   /* Hide scrollbar for IE, Edge and Firefox */
   .no-scrollbar {
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
   }
-  
+
   /* Enhanced backdrop blur support for Apple-like frosted glass effect */
   .backdrop-blur-xl {
     -webkit-backdrop-filter: blur(20px);
     backdrop-filter: blur(20px);
   }
-  
+
   .backdrop-blur-sm {
     -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
   }
-  
+
   /* Ensure proper layering and performance */
   .frosted-header {
     transform: translateZ(0);

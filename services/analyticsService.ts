@@ -42,7 +42,7 @@ class AnalyticsService {
   private async performInitialization(config: AnalyticsConfig): Promise<void> {
     try {
       this.config = config;
-      
+
       // Initialize ReactGA with configuration
       ReactGA.initialize(config.measurementId, {
         testMode: config.testMode || false,
@@ -56,7 +56,7 @@ class AnalyticsService {
       });
 
       this.isInitialized = true;
-      
+
       if (config.debug) {
         console.log('Google Analytics initialized successfully', {
           measurementId: config.measurementId,
@@ -131,7 +131,7 @@ class AnalyticsService {
 
     try {
       // Anonymize sensitive data
-      const anonymizedParams = eventData.custom_parameters 
+      const anonymizedParams = eventData.custom_parameters
         ? anonymizeData(eventData.custom_parameters)
         : {};
 

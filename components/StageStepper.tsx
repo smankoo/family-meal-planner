@@ -22,7 +22,7 @@ const StageStepper: React.FC<StageStepperProps> = ({ currentStage, setStage, has
           // All stages are clickable if we have a meal plan
           // Meal planning is always clickable
           const isClickable = step.id === Stage.MEAL_PLANNING || hasMealPlan;
-          
+
           return (
             <button
               key={step.id}
@@ -30,10 +30,10 @@ const StageStepper: React.FC<StageStepperProps> = ({ currentStage, setStage, has
               disabled={!isClickable}
               className={`
                 flex items-center gap-2 px-6 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition-all duration-300
-                ${isActive 
-                  ? 'bg-white text-zinc-900 shadow-sm' 
-                  : isClickable 
-                    ? 'text-zinc-500 hover:text-zinc-700' 
+                ${isActive
+                  ? 'bg-white text-zinc-900 shadow-sm'
+                  : isClickable
+                    ? 'text-zinc-500 hover:text-zinc-700'
                     : 'text-zinc-300 cursor-not-allowed'}
               `}
             >

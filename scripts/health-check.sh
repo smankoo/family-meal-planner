@@ -37,7 +37,7 @@ warning() {
 check_port() {
     local port=$1
     local service=$2
-    
+
     if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
         success "$service is running on port $port"
         return 0
@@ -52,7 +52,7 @@ check_http_health() {
     local url=$1
     local service=$2
     local timeout=${3:-5}
-    
+
     if curl -s -f --max-time $timeout "$url" >/dev/null 2>&1; then
         success "$service HTTP endpoint is healthy"
         return 0
@@ -66,14 +66,14 @@ check_http_health() {
 get_service_info() {
     local port=$1
     local service=$2
-    
+
     local pid=$(lsof -ti :$port 2>/dev/null || true)
-    
+
     if [ ! -z "$pid" ]; then
         local cmd=$(ps -p $pid -o command= 2>/dev/null || true)
         local memory=$(ps -p $pid -o rss= 2>/dev/null || true)
         local cpu=$(ps -p $pid -o %cpu= 2>/dev/null || true)
-        
+
         echo "  PID: $pid"
         echo "  Memory: ${memory}KB"
         echo "  CPU: ${cpu}%"
@@ -84,16 +84,16 @@ get_service_info() {
 # Check backend API endpoints
 check_backend_endpoints() {
     log "Checking backend API endpoints..."
-    
+
     local base_url="http://localhost:$BACKEND_PORT"
     local endpoints=(
         "/"
         "/docs"
     )
-    
+
     local healthy=0
     local total=${#endpoints[@]}
-    
+
     for endpoint in "${endpoints[@]}"; do
         local url="$base_url$endpoint"
         if curl -s -f --max-time 5 "$url" >/dev/null 2>&1; then
@@ -103,27 +103,27 @@ check_backend_endpoints() {
             error "Endpoint $endpoint is not responding"
         fi
     done
-    
+
     echo "  Healthy endpoints: $healthy/$total"
 }
 
 # Check system resources
 check_system_resources() {
     log "Checking system resources..."
-    
+
     # Check available memory
     local available_memory=$(vm_stat | grep "Pages free" | awk '{print $3}' | sed 's/\.//')
     local memory_mb=$((available_memory * 4096 / 1024 / 1024))
-    
+
     if [ $memory_mb -gt 500 ]; then
         success "Available memory: ${memory_mb}MB"
     else
         warning "Low available memory: ${memory_mb}MB"
     fi
-    
+
     # Check disk space
     local disk_usage=$(df -h . | tail -1 | awk '{print $5}' | sed 's/%//')
-    
+
     if [ $disk_usage -lt 90 ]; then
         success "Disk usage: ${disk_usage}%"
     else
@@ -134,20 +134,20 @@ check_system_resources() {
 # Check log files
 check_logs() {
     log "Checking log files..."
-    
+
     local log_files=(
         "logs/frontend.log"
         "logs/backend.log"
         "logs/frontend-dev.log"
         "logs/backend-dev.log"
     )
-    
+
     for log_file in "${log_files[@]}"; do
         if [ -f "$log_file" ]; then
             local size=$(du -h "$log_file" | cut -f1)
             local lines=$(wc -l < "$log_file")
             success "$log_file exists (${size}, ${lines} lines)"
-            
+
             # Check for recent errors
             local recent_errors=$(tail -100 "$log_file" | grep -i "error\|exception\|failed" | wc -l)
             if [ $recent_errors -gt 0 ]; then
@@ -163,7 +163,7 @@ check_logs() {
 main() {
     local detailed=false
     local json_output=false
-    
+
     # Parse arguments
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -193,30 +193,30 @@ main() {
                 ;;
         esac
     done
-    
+
     if [ "$json_output" = true ]; then
         # JSON output for monitoring systems
         local backend_running=false
         local frontend_running=false
         local backend_healthy=false
         local frontend_healthy=false
-        
+
         if check_port $BACKEND_PORT "Backend" >/dev/null 2>&1; then
             backend_running=true
         fi
-        
+
         if check_port $FRONTEND_PORT "Frontend" >/dev/null 2>&1; then
             frontend_running=true
         fi
-        
+
         if check_http_health "http://localhost:$BACKEND_PORT/" "Backend" >/dev/null 2>&1; then
             backend_healthy=true
         fi
-        
+
         if check_http_health "http://localhost:$FRONTEND_PORT/" "Frontend" >/dev/null 2>&1; then
             frontend_healthy=true
         fi
-        
+
         cat << EOF
 {
   "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
@@ -237,19 +237,19 @@ main() {
 EOF
         return 0
     fi
-    
+
     # Regular output
     echo ""
     echo "🏥 Family Meal Planner Health Check"
     echo "=================================="
-    
+
     local overall_healthy=true
-    
+
     # Check backend
     log "Backend Service"
     if check_port $BACKEND_PORT "Backend"; then
         check_http_health "http://localhost:$BACKEND_PORT/" "Backend"
-        
+
         if [ "$detailed" = true ]; then
             get_service_info $BACKEND_PORT "Backend"
             check_backend_endpoints
@@ -257,31 +257,31 @@ EOF
     else
         overall_healthy=false
     fi
-    
+
     echo ""
-    
+
     # Check frontend
     log "Frontend Service"
     if check_port $FRONTEND_PORT "Frontend"; then
         check_http_health "http://localhost:$FRONTEND_PORT/" "Frontend"
-        
+
         if [ "$detailed" = true ]; then
             get_service_info $FRONTEND_PORT "Frontend"
         fi
     else
         overall_healthy=false
     fi
-    
+
     if [ "$detailed" = true ]; then
         echo ""
         check_system_resources
         echo ""
         check_logs
     fi
-    
+
     echo ""
     echo "=================================="
-    
+
     if [ "$overall_healthy" = true ]; then
         success "Overall Status: HEALTHY"
         echo ""

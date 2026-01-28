@@ -18,7 +18,7 @@ BACKEND_PORT=8000
 check_service() {
     local port=$1
     local name=$2
-    
+
     if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
         local pid=$(lsof -ti :$port)
         echo -e "${GREEN}●${NC} $name is running (PID: $pid, Port: $port)"

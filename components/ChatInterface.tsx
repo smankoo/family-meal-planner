@@ -10,12 +10,12 @@ interface ChatInterfaceProps {
   onToggle: () => void;
 }
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ 
-  messages, 
-  onSendMessage, 
-  isLoading, 
-  isOpen, 
-  onToggle 
+const ChatInterface: React.FC<ChatInterfaceProps> = ({
+  messages,
+  onSendMessage,
+  isLoading,
+  isOpen,
+  onToggle
 }) => {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -36,10 +36,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   return (
     <div className="fixed bottom-24 right-4 md:right-10 w-[90vw] md:w-[400px] h-[600px] max-h-[70vh] flex flex-col z-40 animate-fade-in-up origin-bottom-right">
-      
+
       {/* Main Container with Apple-style Glassmorphism */}
       <div className="flex-1 flex flex-col bg-white/90 backdrop-blur-2xl rounded-[2rem] shadow-2xl border border-white/40 overflow-hidden ring-1 ring-black/5">
-        
+
         {/* Header */}
         <div className="px-6 py-4 border-b border-zinc-100/50 flex justify-between items-center bg-white/50 backdrop-blur-md sticky top-0 z-10">
           <div className="flex items-center gap-3">
@@ -51,8 +51,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 <p className="text-[10px] font-medium text-zinc-500">Always active</p>
             </div>
           </div>
-          <button 
-            onClick={onToggle} 
+          <button
+            onClick={onToggle}
             className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-600 transition-colors"
           >
             <X size={16} />
@@ -75,7 +75,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               </div>
             </div>
           )}
-          
+
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -90,7 +90,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               >
                 {msg.content}
               </div>
-              
+
               {/* Context Label for Assistant Actions */}
               {msg.relatedAction && (
                 <div className="mt-1.5 ml-2 flex items-center gap-1.5">
@@ -116,8 +116,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
         {/* Input Area */}
         <div className="p-4 bg-white/80 backdrop-blur-md border-t border-zinc-100">
-          <form 
-            onSubmit={handleSubmit} 
+          <form
+            onSubmit={handleSubmit}
             className="relative flex items-center bg-zinc-100/70 rounded-[24px] border border-zinc-200/50 focus-within:bg-white focus-within:ring-2 focus-within:ring-zinc-900/5 transition-all"
           >
             <input

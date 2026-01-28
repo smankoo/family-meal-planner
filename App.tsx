@@ -10,27 +10,29 @@ import ErrorModal from './components/ErrorModal';
 import ConfirmationModal from './components/ConfirmationModal';
 import Footer from './components/Footer';
 import { ToastProvider, useToast } from './contexts/ToastContext';
-import { 
-  Stage, 
-  WeekPlan, 
-  ChatMessage, 
-  PrepTask, 
-  GroceryItem, 
+import {
+  Stage,
+  WeekPlan,
+  ChatMessage,
+  PrepTask,
+  GroceryItem,
   PlanHistory,
   FamilyMember,
   FamilyPreferences
 } from './types';
-import { 
-  INITIAL_FAMILY, 
-  INITIAL_PREFERENCES, 
-  EMPTY_PLAN 
+import {
+  INITIAL_FAMILY,
+  INITIAL_PREFERENCES,
+  EMPTY_PLAN
 } from './constants';
-import { 
-  generateInitialMealPlan, 
+import {
+  generateInitialMealPlan,
   generateInitialMealPlanStream,
-  updateMealPlanWithAgent, 
-  generateMealPrepPlan, 
-  generateGroceryList 
+  updateMealPlanWithAgent,
+  generateMealPrepPlan,
+  generateMealPrepPlanStream,
+  generateGroceryList,
+  generateGroceryListStream
 } from './services/geminiService';
 import { analyticsService } from './services/analyticsService';
 import { getAnalyticsConfig, validateAnalyticsConfig } from './config/analytics';
@@ -60,29 +62,29 @@ const saveState = (key: string, value: any) => {
 const App: React.FC = () => {
   const { showToast } = useToast();
   // --- Initialization with Persistence ---
-  
-  const [family, setFamily] = useState<FamilyMember[]>(() => 
+
+  const [family, setFamily] = useState<FamilyMember[]>(() =>
     loadState('fmp_family', INITIAL_FAMILY)
   );
-  
-  const [preferences, setPreferences] = useState<FamilyPreferences>(() => 
+
+  const [preferences, setPreferences] = useState<FamilyPreferences>(() =>
     loadState('fmp_preferences', INITIAL_PREFERENCES)
   );
 
-  const [hasPlanGenerated, setHasPlanGenerated] = useState<boolean>(() => 
+  const [hasPlanGenerated, setHasPlanGenerated] = useState<boolean>(() =>
     loadState('fmp_has_plan', false)
   );
 
-  const [viewMode, setViewMode] = useState<ViewMode>(() => 
+  const [viewMode, setViewMode] = useState<ViewMode>(() =>
      // If we have a plan generated, default to planning view
      loadState('fmp_has_plan', false) ? 'planning' : 'household'
-  ); 
+  );
 
-  const [currentStage, setCurrentStage] = useState<Stage>(() => 
+  const [currentStage, setCurrentStage] = useState<Stage>(() =>
     loadState('fmp_current_stage', Stage.MEAL_PLANNING)
   );
 
-  const [planHistory, setPlanHistory] = useState<PlanHistory>(() => 
+  const [planHistory, setPlanHistory] = useState<PlanHistory>(() =>
     loadState('fmp_plan_history', {
       past: [],
       present: EMPTY_PLAN,
@@ -90,11 +92,11 @@ const App: React.FC = () => {
     })
   );
 
-  const [prepTasks, setPrepTasks] = useState<PrepTask[]>(() => 
+  const [prepTasks, setPrepTasks] = useState<PrepTask[]>(() =>
     loadState('fmp_prep_tasks', [])
   );
 
-  const [groceryItems, setGroceryItems] = useState<GroceryItem[]>(() => 
+  const [groceryItems, setGroceryItems] = useState<GroceryItem[]>(() =>
     loadState('fmp_grocery_items', [])
   );
 
@@ -104,6 +106,8 @@ const App: React.FC = () => {
   const [lastDiffPlan, setLastDiffPlan] = useState<WeekPlan | undefined>(undefined);
   const [newlyReceivedCards, setNewlyReceivedCards] = useState<Set<string>>(new Set());
   const [animatedCards, setAnimatedCards] = useState<Set<string>>(new Set()); // Track cards that have already animated
+  const [newlyReceivedTasks, setNewlyReceivedTasks] = useState<Set<string>>(new Set());
+  const [newlyReceivedItems, setNewlyReceivedItems] = useState<Set<string>>(new Set());
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [errorModal, setErrorModal] = useState<{
     isOpen: boolean;
@@ -133,7 +137,7 @@ const App: React.FC = () => {
   useEffect(() => {
     const initializeAnalytics = async () => {
       const config = getAnalyticsConfig();
-      
+
       if (validateAnalyticsConfig(config)) {
         try {
           await analyticsService.initialize({
@@ -141,12 +145,12 @@ const App: React.FC = () => {
             debug: config.debug,
             testMode: config.testMode
           });
-          
+
           // Track initial page view
           await analyticsService.trackPageView({
             page_title: 'Family Meal Planner - Home'
           });
-          
+
           if (config.debug) {
             console.log('Analytics initialized successfully');
           }
@@ -175,7 +179,7 @@ const App: React.FC = () => {
 
   const handleGenerateInitialPlan = async (members: FamilyMember[], prefs: FamilyPreferences) => {
     setIsLoading(true);
-    
+
     // Track plan generation start
     await analyticsService.trackMealPlanningEvent('plan_generation_started', {
       family_size: members.length,
@@ -183,7 +187,7 @@ const App: React.FC = () => {
       cooking_time: prefs.cookingTime,
       budget: prefs.budget
     });
-    
+
     // Initialize empty plan for streaming updates
     const emptyPlan: WeekPlan = Array.from({ length: 7 }, (_, index) => ({
       day: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][index],
@@ -194,7 +198,7 @@ const App: React.FC = () => {
         Dinner: { name: '', description: '', notes: '' }
       }
     }));
-    
+
     // Clear previously received cards and set initial empty plan
     setNewlyReceivedCards(new Set());
     setAnimatedCards(new Set()); // Reset animated cards for new generation
@@ -206,7 +210,7 @@ const App: React.FC = () => {
     setHasPlanGenerated(true);
     setViewMode('planning');
     setCurrentStage(Stage.MEAL_PLANNING);
-    
+
     // Elegant scroll to top - Apple-style smooth behavior
     setTimeout(() => {
       window.scrollTo({
@@ -214,7 +218,7 @@ const App: React.FC = () => {
         behavior: 'smooth'
       });
     }, 100);
-    
+
     try {
       // Use meal-by-meal streaming generation
       await generateInitialMealPlanStream(
@@ -223,15 +227,15 @@ const App: React.FC = () => {
         // onMealReceived callback
         (mealData: any) => {
           console.log(`Received meal: ${mealData.day}-${mealData.mealType}`, mealData);
-          
+
           // Track newly received card for this specific meal
           const cardKey = `${mealData.day}-${mealData.mealType}`;
-          
+
           // Only animate if this card hasn't been animated before
           if (!animatedCards.has(cardKey)) {
             setNewlyReceivedCards(prev => new Set([...prev, cardKey]));
             setAnimatedCards(prev => new Set([...prev, cardKey]));
-            
+
             // Clear the animation state after animation completes
             setTimeout(() => {
               setNewlyReceivedCards(prev => {
@@ -241,11 +245,11 @@ const App: React.FC = () => {
               });
             }, 600); // Match animation duration
           }
-          
+
           // Update plan with new meal data
           setPlanHistory(prev => {
             const newPlan = [...prev.present];
-            
+
             // Find the day index
             const dayIndex = newPlan.findIndex(day => day.day === mealData.day);
             if (dayIndex !== -1) {
@@ -258,7 +262,7 @@ const App: React.FC = () => {
                 }
               };
             }
-            
+
             return {
               ...prev,
               present: newPlan
@@ -269,7 +273,7 @@ const App: React.FC = () => {
         async () => {
           console.log("Streaming plan generation completed");
           setIsLoading(false);
-          
+
           // Track successful plan generation
           await analyticsService.trackMealPlanningEvent('plan_generation_completed', {
             family_size: members.length,
@@ -280,15 +284,15 @@ const App: React.FC = () => {
         async (error: Error) => {
           console.error("Streaming error:", error);
           setIsLoading(false);
-          
+
           // Track plan generation failure
           await analyticsService.trackMealPlanningEvent('plan_generation_failed', {
             error_message: error.message,
             streaming: true
           });
-          
+
           const errorMessage = error.message;
-          
+
           // Show elegant error instead of alert
           if (errorMessage.includes('GEMINI_API_KEY')) {
             setErrorModal({
@@ -311,11 +315,11 @@ const App: React.FC = () => {
           }
         }
       );
-      
+
     } catch (error) {
       console.error("Error starting streaming generation:", error);
       setIsLoading(false);
-      
+
       // Fallback to batch generation if streaming fails
       console.log("Falling back to batch generation...");
       try {
@@ -325,20 +329,20 @@ const App: React.FC = () => {
           present: plan,
           future: []
         });
-        
+
         await analyticsService.trackMealPlanningEvent('plan_generation_completed', {
           family_size: members.length,
           fallback: true
         });
-        
+
       } catch (fallbackError) {
         const errorMessage = fallbackError instanceof Error ? fallbackError.message : 'Unknown error occurred';
-        
+
         await analyticsService.trackMealPlanningEvent('plan_generation_failed', {
           error_message: errorMessage,
           fallback: true
         });
-        
+
         if (errorMessage.includes('GEMINI_API_KEY')) {
           setErrorModal({
             isOpen: true,
@@ -374,7 +378,7 @@ const App: React.FC = () => {
           had_previous_plan: hasPlanGenerated,
           family_size: family.length
         });
-        
+
         setPrepTasks([]);
         setGroceryItems([]);
         await handleGenerateInitialPlan(family, preferences);
@@ -419,38 +423,38 @@ const App: React.FC = () => {
         preferences
       );
 
-      setLastDiffPlan(planHistory.present); 
+      setLastDiffPlan(planHistory.present);
       setPlanHistory(prev => ({
         past: [...prev.past, prev.present],
         present: newPlan,
         future: []
       }));
 
-      const botMsg: ChatMessage = { 
-        id: (Date.now() + 1).toString(), 
-        role: 'assistant', 
-        content: explanation, 
+      const botMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: explanation,
         timestamp: Date.now(),
         relatedAction: 'Plan Updated'
       };
       setMessages(prev => [...prev, botMsg]);
-      
+
       // Track successful LLM interaction
       await analyticsService.trackLLMEvent('plan_update_completed', {
         response_length: explanation.length,
         changes_made: true
       });
-      
+
     } catch (error) {
       console.error(error);
-      
+
       // Track LLM interaction failure
       await analyticsService.trackLLMEvent('plan_update_failed', {
         error_message: error instanceof Error ? error.message : 'Unknown error'
       });
-      
+
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+
       if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
         showToast('Rate limit reached. Please try again in a few minutes.', 'warning', 8000);
       } else {
@@ -461,7 +465,7 @@ const App: React.FC = () => {
           timestamp: Date.now()
         };
         setMessages(prev => [...prev, errorMsg]);
-        
+
         showToast('Failed to update plan. Please try again.', 'error');
       }
     } finally {
@@ -471,12 +475,12 @@ const App: React.FC = () => {
 
   const handleUndo = () => {
     if (planHistory.past.length === 0) return;
-    
+
     // Track undo action
     analyticsService.trackEngagement('plan_undo', {
       undo_depth: planHistory.past.length
     });
-    
+
     const previous = planHistory.past[planHistory.past.length - 1];
     const newPast = planHistory.past.slice(0, -1);
     setLastDiffPlan(undefined);
@@ -493,73 +497,213 @@ const App: React.FC = () => {
       from_stage: currentStage,
       to_stage: newStage
     });
-    
+
     // If switching to prep and we don't have prep tasks, generate them
     if (newStage === Stage.MEAL_PREP && prepTasks.length === 0) {
       setIsLoading(true);
-      
+
       await analyticsService.trackMealPlanningEvent('prep_generation_started');
-      
+
+      // Clear previously received tasks and set initial empty state
+      setNewlyReceivedTasks(new Set());
+      setPrepTasks([]);
+
       try {
-        const tasks = await generateMealPrepPlan(planHistory.present);
-        setPrepTasks(tasks);
-        
-        await analyticsService.trackMealPlanningEvent('prep_generation_completed', {
-          task_count: tasks.length
-        });
-      } catch (e) { 
-        console.error(e);
-        
-        await analyticsService.trackMealPlanningEvent('prep_generation_failed', {
-          error_message: e instanceof Error ? e.message : 'Unknown error'
-        });
-        
-        const errorMessage = e instanceof Error ? e.message : 'Unknown error';
-        if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
-          showToast('Rate limit reached. Prep tasks will be generated later.', 'warning', 6000);
-        } else {
-          showToast('Failed to generate prep tasks. You can try again later.', 'error', 6000);
+        // Use task-by-task streaming generation
+        await generateMealPrepPlanStream(
+          planHistory.present,
+          // onTaskReceived callback
+          (taskData: any) => {
+            console.log(`Received task: ${taskData.day} - ${taskData.task.substring(0, 50)}...`, taskData);
+
+            // Create task with proper ID and structure
+            const newTask: PrepTask = {
+              id: `prep-${Date.now()}-${Math.random()}`,
+              day: taskData.day,
+              task: taskData.task,
+              relatedMeals: Array.isArray(taskData.relatedMeals) ? taskData.relatedMeals :
+                           typeof taskData.relatedMeals === 'string' ? [taskData.relatedMeals] : [],
+              completed: false
+            };
+
+            // Track newly received task for animation
+            const taskKey = `${taskData.day}-${Date.now()}`;
+            setNewlyReceivedTasks(prev => new Set([...prev, taskKey]));
+
+            // Add task to the list
+            setPrepTasks(prev => [...prev, newTask]);
+
+            // Clear the animation state after animation completes
+            setTimeout(() => {
+              setNewlyReceivedTasks(prev => {
+                const updated = new Set(prev);
+                updated.delete(taskKey);
+                return updated;
+              });
+            }, 600); // Match animation duration
+          },
+          // onComplete callback
+          async () => {
+            console.log("Streaming prep generation completed");
+            setIsLoading(false);
+
+            await analyticsService.trackMealPlanningEvent('prep_generation_completed', {
+              streaming: true
+            });
+          },
+          // onError callback
+          async (error: Error) => {
+            console.error("Streaming prep error:", error);
+            setIsLoading(false);
+
+            await analyticsService.trackMealPlanningEvent('prep_generation_failed', {
+              error_message: error.message,
+              streaming: true
+            });
+
+            const errorMessage = error.message;
+            if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
+              showToast('Rate limit reached. Prep tasks will be generated later.', 'warning', 6000);
+            } else {
+              showToast('Failed to generate prep tasks. You can try again later.', 'error', 6000);
+            }
+          }
+        );
+
+      } catch (error) {
+        console.error("Error starting streaming prep generation:", error);
+        setIsLoading(false);
+
+        // Fallback to batch generation if streaming fails
+        console.log("Falling back to batch prep generation...");
+        try {
+          const tasks = await generateMealPrepPlan(planHistory.present);
+          setPrepTasks(tasks);
+
+          await analyticsService.trackMealPlanningEvent('prep_generation_completed', {
+            fallback: true
+          });
+
+        } catch (fallbackError) {
+          const errorMessage = fallbackError instanceof Error ? fallbackError.message : 'Unknown error';
+
+          await analyticsService.trackMealPlanningEvent('prep_generation_failed', {
+            error_message: errorMessage,
+            fallback: true
+          });
+
+          if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
+            showToast('Rate limit reached. Prep tasks will be generated later.', 'warning', 6000);
+          } else {
+            showToast('Failed to generate prep tasks. You can try again later.', 'error', 6000);
+          }
         }
-        
-        // Still allow navigation even if generation fails
-      } finally { 
-        setIsLoading(false); 
       }
     }
-    
+
     // If switching to grocery list and we don't have grocery items, generate them
     if (newStage === Stage.GROCERY_LIST && groceryItems.length === 0) {
       setIsLoading(true);
-      
+
       await analyticsService.trackMealPlanningEvent('grocery_generation_started');
-      
+
+      // Clear previously received items and set initial empty state
+      setNewlyReceivedItems(new Set());
+      setGroceryItems([]);
+
       try {
-        const items = await generateGroceryList(planHistory.present, prepTasks);
-        setGroceryItems(items);
-        
-        await analyticsService.trackMealPlanningEvent('grocery_generation_completed', {
-          item_count: items.length
-        });
-      } catch (e) { 
-        console.error(e);
-        
-        await analyticsService.trackMealPlanningEvent('grocery_generation_failed', {
-          error_message: e instanceof Error ? e.message : 'Unknown error'
-        });
-        
-        const errorMessage = e instanceof Error ? e.message : 'Unknown error';
-        if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
-          showToast('Rate limit reached. Grocery list will be generated later.', 'warning', 6000);
-        } else {
-          showToast('Failed to generate grocery list. You can try again later.', 'error', 6000);
+        // Use item-by-item streaming generation
+        await generateGroceryListStream(
+          planHistory.present,
+          prepTasks,
+          // onItemReceived callback
+          (itemData: any) => {
+            console.log(`Received item: ${itemData.category} - ${itemData.name}`, itemData);
+
+            // Create item with proper ID and structure
+            const newItem: GroceryItem = {
+              id: `groc-${Date.now()}-${Math.random()}`,
+              name: itemData.name,
+              category: itemData.category,
+              quantity: itemData.quantity,
+              checked: false
+            };
+
+            // Track newly received item for animation
+            const itemKey = `${itemData.category}-${itemData.name}-${Date.now()}`;
+            setNewlyReceivedItems(prev => new Set([...prev, itemKey]));
+
+            // Add item to the list
+            setGroceryItems(prev => [...prev, newItem]);
+
+            // Clear the animation state after animation completes
+            setTimeout(() => {
+              setNewlyReceivedItems(prev => {
+                const updated = new Set(prev);
+                updated.delete(itemKey);
+                return updated;
+              });
+            }, 600); // Match animation duration
+          },
+          // onComplete callback
+          async () => {
+            console.log("Streaming grocery generation completed");
+            setIsLoading(false);
+
+            await analyticsService.trackMealPlanningEvent('grocery_generation_completed', {
+              streaming: true
+            });
+          },
+          // onError callback
+          async (error: Error) => {
+            console.error("Streaming grocery error:", error);
+            setIsLoading(false);
+
+            await analyticsService.trackMealPlanningEvent('grocery_generation_failed', {
+              error_message: error.message,
+              streaming: true
+            });
+
+            const errorMessage = error.message;
+            if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
+              showToast('Rate limit reached. Grocery list will be generated later.', 'warning', 6000);
+            } else {
+              showToast('Failed to generate grocery list. You can try again later.', 'error', 6000);
+            }
+          }
+        );
+
+      } catch (error) {
+        console.error("Error starting streaming grocery generation:", error);
+        setIsLoading(false);
+
+        // Fallback to batch generation if streaming fails
+        console.log("Falling back to batch grocery generation...");
+        try {
+          const items = await generateGroceryList(planHistory.present, prepTasks);
+          setGroceryItems(items);
+
+          await analyticsService.trackMealPlanningEvent('grocery_generation_completed', {
+            fallback: true
+          });
+
+        } catch (fallbackError) {
+          const errorMessage = fallbackError instanceof Error ? fallbackError.message : 'Unknown error';
+
+          await analyticsService.trackMealPlanningEvent('grocery_generation_failed', {
+            error_message: errorMessage,
+            fallback: true
+          });
+
+          if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
+            showToast('Rate limit reached. Grocery list will be generated later.', 'warning', 6000);
+          } else {
+            showToast('Failed to generate grocery list. You can try again later.', 'error', 6000);
+          }
         }
-        
-        // Still allow navigation even if generation fails
-      } finally { 
-        setIsLoading(false); 
       }
     }
-    
+
     setCurrentStage(newStage);
   };
 
@@ -576,7 +720,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-zinc-50 font-sans">
-      
+
       {/* Error Modal */}
       <ErrorModal
         isOpen={errorModal.isOpen}
@@ -598,12 +742,12 @@ const App: React.FC = () => {
         onConfirm={confirmationModal.onConfirm}
         variant="warning"
       />
-      
+
       {/* Header - Apple-like frosted glass effect */}
       <header className="frosted-header fixed top-0 left-0 right-0 z-50 h-16 md:h-20 flex items-center justify-between px-4 md:px-6 lg:px-10 pointer-events-none">
         {/* Backdrop blur background */}
         <div className="absolute inset-0 bg-zinc-50/80 backdrop-blur-xl border-b border-zinc-200/50"></div>
-        
+
         {/* Content layer */}
         <div className="relative w-full flex items-center justify-between">
           {/* Left: Brand - Cleaner, Apple-like */}
@@ -616,17 +760,17 @@ const App: React.FC = () => {
 
           {/* Center: Stepper (Only visible in Planning Mode on larger screens) */}
           <div className="pointer-events-auto transition-opacity duration-300 hidden md:block" style={{ opacity: viewMode === 'planning' ? 1 : 0 }}>
-               <StageStepper 
-                  currentStage={currentStage} 
-                  setStage={handleStageChange} 
-                  hasMealPlan={hasPlanGenerated} 
+               <StageStepper
+                  currentStage={currentStage}
+                  setStage={handleStageChange}
+                  hasMealPlan={hasPlanGenerated}
                />
           </div>
 
           {/* Right: Settings */}
           <div className="pointer-events-auto">
               {viewMode === 'planning' ? (
-                  <button 
+                  <button
                       onClick={() => setViewMode('household')}
                       className="w-9 h-9 md:w-10 md:h-10 bg-white/60 backdrop-blur-sm shadow-sm border border-white/40 rounded-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 hover:bg-white/80 transition-all"
                       title="Household Settings"
@@ -634,7 +778,7 @@ const App: React.FC = () => {
                       <Settings size={18} className="md:w-5 md:h-5" />
                   </button>
               ) : hasPlanGenerated && (
-                  <button 
+                  <button
                       onClick={handleCloseSetup}
                       className="w-9 h-9 md:w-10 md:h-10 bg-white/60 backdrop-blur-sm shadow-sm border border-white/40 rounded-full flex items-center justify-center text-zinc-500 hover:text-red-600 hover:bg-white/80 transition-all"
                       title="Close Settings"
@@ -648,34 +792,34 @@ const App: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto no-scrollbar pt-16 md:pt-20">
-        
+
         {viewMode === 'household' && (
            <div>
-             <FamilySetup 
-               family={family} 
-               preferences={preferences} 
-               onSave={handleSaveSetup} 
+             <FamilySetup
+               family={family}
+               preferences={preferences}
+               onSave={handleSaveSetup}
                isFirstRun={!hasPlanGenerated}
                isLoading={isLoading}
              />
-             
+
              <Footer className="mt-12" />
            </div>
         )}
 
         {viewMode === 'planning' && (
           <div className="max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pb-40 pt-6 md:pt-8">
-             
+
              {/* Mobile Stepper with Regenerate Button (visible only on small screens when in planning mode) */}
              {viewMode === 'planning' && (
                <div className="md:hidden mb-6 relative flex justify-center">
-                 <StageStepper 
-                    currentStage={currentStage} 
-                    setStage={handleStageChange} 
-                    hasMealPlan={hasPlanGenerated} 
+                 <StageStepper
+                    currentStage={currentStage}
+                    setStage={handleStageChange}
+                    hasMealPlan={hasPlanGenerated}
                  />
-                 <button 
-                    onClick={handleRegeneratePlan} 
+                 <button
+                    onClick={handleRegeneratePlan}
                     className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-zinc-50 border border-zinc-100 rounded-full flex items-center justify-center text-zinc-400 hover:bg-zinc-100 hover:text-zinc-500 transition-colors"
                     title="Regenerate Plan"
                  >
@@ -683,7 +827,7 @@ const App: React.FC = () => {
                  </button>
                </div>
              )}
-             
+
              {/* Planning Stage Content */}
              {currentStage === Stage.MEAL_PLANNING && (
                 <div className="animate-fade-in">
@@ -719,9 +863,9 @@ const App: React.FC = () => {
                           <p className="text-zinc-400 font-medium">Designing your week...</p>
                       </div>
                    ) : (
-                      <MealGrid 
-                        plan={planHistory.present} 
-                        previousPlan={lastDiffPlan} 
+                      <MealGrid
+                        plan={planHistory.present}
+                        previousPlan={lastDiffPlan}
                         isStreaming={isLoading}
                         newlyReceivedCards={newlyReceivedCards}
                       />
@@ -730,18 +874,20 @@ const App: React.FC = () => {
              )}
 
              {currentStage === Stage.MEAL_PREP && (
-               <MealPrepView 
-                    tasks={prepTasks} 
+               <MealPrepView
+                    tasks={prepTasks}
                     onRegenerate={() => { setPrepTasks([]); handleProceedToPrep(); }}
                     isLoading={isLoading}
+                    newlyReceivedTasks={newlyReceivedTasks}
                />
              )}
 
              {currentStage === Stage.GROCERY_LIST && (
-                <GroceryListView 
-                    items={groceryItems} 
+                <GroceryListView
+                    items={groceryItems}
                     onRegenerate={() => { setGroceryItems([]); handleProceedToGrocery(); }}
                     isLoading={isLoading}
+                    newlyReceivedItems={newlyReceivedItems}
                 />
              )}
              <Footer className="mt-16" />
@@ -751,29 +897,29 @@ const App: React.FC = () => {
 
       </main>
 
-      {/* 
-        Bottom Floating Controls 
+      {/*
+        Bottom Floating Controls
       */}
       {viewMode === 'planning' && (
           <div className="fixed bottom-8 w-full px-6 flex items-center justify-between pointer-events-none z-50 max-w-[1600px] mx-auto left-0 right-0">
-             
+
              {/* Left: Back / Spacer */}
              <div className="pointer-events-auto">
                 {currentStage !== Stage.MEAL_PLANNING ? (
-                     <button 
+                     <button
                         onClick={() => handleStageChange(currentStage - 1)}
                         className="w-12 h-12 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-md shadow-lg border border-white/50 text-zinc-600 hover:bg-white hover:text-zinc-900 transition-all active:scale-95"
                         title="Back"
                     >
                         <ArrowLeft size={20} />
                     </button>
-                ) : <div className="w-12" />} 
+                ) : <div className="w-12" />}
              </div>
 
              {/* Center: Primary Stage Action */}
              <div className="pointer-events-auto">
                 {currentStage === Stage.MEAL_PLANNING && (
-                    <button 
+                    <button
                         onClick={() => handleStageChange(Stage.MEAL_PREP)}
                         disabled={isLoading}
                         className="group flex items-center gap-3 bg-zinc-900 text-white px-8 py-4 rounded-full shadow-xl shadow-zinc-900/20 hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-80 disabled:hover:scale-100 disabled:cursor-wait"
@@ -789,7 +935,7 @@ const App: React.FC = () => {
                     </button>
                 )}
                 {currentStage === Stage.MEAL_PREP && (
-                    <button 
+                    <button
                         onClick={() => handleStageChange(Stage.GROCERY_LIST)}
                         disabled={isLoading}
                         className="group flex items-center gap-3 bg-zinc-900 text-white px-8 py-4 rounded-full shadow-xl shadow-zinc-900/20 hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-80 disabled:hover:scale-100 disabled:cursor-wait"
@@ -817,7 +963,7 @@ const App: React.FC = () => {
                     onClick={() => {
                       const newState = !isChatOpen;
                       setIsChatOpen(newState);
-                      
+
                       // Track chat interactions
                       analyticsService.trackEngagement(newState ? 'chat_opened' : 'chat_closed', {
                         current_stage: currentStage
@@ -825,8 +971,8 @@ const App: React.FC = () => {
                     }}
                     className={`
                         w-14 h-14 flex items-center justify-center rounded-full shadow-xl transition-all duration-300
-                        ${isChatOpen 
-                            ? 'bg-zinc-800 text-white shadow-inner scale-95 ring-4 ring-white/20' 
+                        ${isChatOpen
+                            ? 'bg-zinc-800 text-white shadow-inner scale-95 ring-4 ring-white/20'
                             : 'bg-zinc-900 text-white hover:scale-110 active:scale-95 shadow-zinc-900/30'}
                     `}
                     title={isChatOpen ? "Minimize Assistant" : "Open Assistant"}
@@ -839,8 +985,8 @@ const App: React.FC = () => {
 
       {/* Chat Window */}
       {viewMode === 'planning' && (
-        <ChatInterface 
-            messages={messages} 
+        <ChatInterface
+            messages={messages}
             onSendMessage={handlePlanUpdate}
             isLoading={isLoading}
             isOpen={isChatOpen}

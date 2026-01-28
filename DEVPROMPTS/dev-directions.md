@@ -13,7 +13,7 @@ General Development Practices:
 - When implementing a functionality, lookup the internet for reputed and reliable sources on best practices and examples of the implementation, also look up documentation of the authoritative sources for the technologies about to be used.
 - You have chrome-devtools tool available. Use it to test or verify functionality as needed.
 - There will be no synchronous calls anywhere in the application. Everything will be asynchronous by design and fault tolerant.
-- The app is a delecate dance between LLM calls and parsing the responses. Whenever we change the format of response we request from an LLM, make sure we cascade that change everywhere in the app. 
+- The app is a delecate dance between LLM calls and parsing the responses. Whenever we change the format of response we request from an LLM, make sure we cascade that change everywhere in the app.
 - Follow the DRY principle as much as possible. Where possible, use common elements and heirarchies (inheritance) instead of creating duplicates
 - Use scripts/start.sh and stop.sh to start and stop the app. There are more scripts in the scripts directory to diagnose and manage the app state.
 - When there are errors, they must be clearly communicated to the user right to the backend. Wherever the error occurs, it should be cleanly caught, logged, transported, and shown to the user elegantly. This is an LLM-driven app, we fully expect to run into token-per-minute limits etc. So when that happens, the app should degrade gracefuly, not fall flat on its face.

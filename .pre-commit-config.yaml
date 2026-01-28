@@ -1,4 +1,5 @@
 repos:
+  # UV dependency management
   - repo: https://github.com/astral-sh/uv-pre-commit
     rev: 0.5.14
     hooks:
@@ -7,3 +8,61 @@ repos:
         args: [--output-file, backend/requirements.txt, --no-hashes, --directory, backend]
         files: ^backend/(pyproject\.toml|uv\.lock)$
         pass_filenames: false
+
+  # Basic code quality and security checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: detect-private-key
+        name: Detect Private Keys
+        description: Detects presence of private keys
+      - id: check-added-large-files
+        name: Check for Large Files
+        description: Prevents giant files from being committed
+        args: ['--maxkb=1000']
+      - id: check-yaml
+        name: Check YAML Syntax
+        description: Checks yaml files for parseable syntax
+      - id: check-json
+        name: Check JSON Syntax
+        description: Checks json files for parseable syntax
+      - id: trailing-whitespace
+        name: Trim Trailing Whitespace
+        description: Trims trailing whitespace
+      - id: end-of-file-fixer
+        name: Fix End of Files
+        description: Makes sure files end in a newline and only a newline
+
+  # Advanced secret detection using detect-secrets
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        name: Detect Secrets
+        description: Detects high entropy strings and other potential secrets
+        args:
+          - '--baseline'
+          - '.secrets.baseline'
+        exclude: |
+          (?x)^(
+            .*\.lock$|
+            .*\.log$|
+            package-lock\.json$|
+            .*\.min\.js$|
+            .*\.min\.css$|
+            node_modules/.*|
+            dist/.*|
+            \.git/.*
+          )$
+
+  # Custom secret detection hook for API keys and tokens
+  - repo: local
+    hooks:
+      - id: detect-api-keys
+        name: Detect API Keys and Tokens
+        description: Custom detection for common API key patterns
+        entry: python3
+        language: system
+        args: ['.git/hooks/detect-api-keys.py']
+        files: '\.(js|ts|tsx|py|yaml|yml|json|env.*|.*\.env)$'
+        exclude: 'package-lock\.json$|.*\.lock$|node_modules/.*|dist/.*'

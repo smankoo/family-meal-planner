@@ -42,25 +42,25 @@ info() {
 # Cleanup function for graceful shutdown
 cleanup() {
     log "Shutting down development servers..."
-    
+
     # Kill all background jobs
     jobs -p | xargs -r kill 2>/dev/null || true
-    
+
     # Wait a moment for graceful shutdown
     sleep 2
-    
+
     # Force kill any remaining processes on our ports
     local backend_pid=$(lsof -ti :$BACKEND_PORT 2>/dev/null || true)
     local frontend_pid=$(lsof -ti :$FRONTEND_PORT 2>/dev/null || true)
-    
+
     if [ ! -z "$backend_pid" ]; then
         kill -9 $backend_pid 2>/dev/null || true
     fi
-    
+
     if [ ! -z "$frontend_pid" ]; then
         kill -9 $frontend_pid 2>/dev/null || true
     fi
-    
+
     success "Development servers stopped"
     exit 0
 }
@@ -71,55 +71,55 @@ trap cleanup SIGINT SIGTERM
 # Check prerequisites for development
 check_dev_prerequisites() {
     log "Checking development prerequisites..."
-    
+
     # Check if ports are available
     if lsof -Pi :$BACKEND_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
         error "Backend port $BACKEND_PORT is already in use"
         info "Run './scripts/stop.sh' to stop any running instances"
         exit 1
     fi
-    
+
     if lsof -Pi :$FRONTEND_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
         error "Frontend port $FRONTEND_PORT is already in use"
         info "Run './scripts/stop.sh' to stop any running instances"
         exit 1
     fi
-    
+
     # Check if dependencies are installed
     if [ ! -d "node_modules" ]; then
         warning "Installing Node.js dependencies..."
         npm install
     fi
-    
+
     if [ ! -d "backend/.venv" ]; then
         warning "Creating Python virtual environment with uv..."
         cd backend
         uv sync
         cd ..
     fi
-    
+
     # Check Python dependencies
     cd backend
     source .venv/bin/activate
-    
+
     # Check if FastAPI is installed
     if ! python -c "import fastapi" 2>/dev/null; then
         warning "Installing Python dependencies with uv..."
         uv sync
     fi
-    
+
     cd ..
-    
+
     success "Development prerequisites ready"
 }
 
 # Setup development environment
 setup_dev_env() {
     log "Setting up development environment..."
-    
+
     # Create logs directory
     mkdir -p logs
-    
+
     # Setup backend .env if not exists
     if [ ! -f "backend/.env" ]; then
         warning "Creating backend .env file..."
@@ -131,7 +131,7 @@ DEBUG=true
 EOF
         warning "Please update backend/.env with your actual API keys"
     fi
-    
+
     # Setup frontend .env.local if not exists
     if [ ! -f ".env.local" ]; then
         warning "Creating frontend .env.local file..."
@@ -140,37 +140,37 @@ VITE_API_URL=http://localhost:8000
 VITE_ENVIRONMENT=development
 EOF
     fi
-    
+
     success "Development environment configured"
 }
 
 # Start backend in development mode
 start_backend_dev() {
     log "Starting backend in development mode..."
-    
+
     cd backend
     source .venv/bin/activate
-    
+
     # Start with auto-reload enabled
     uvicorn main:app --host 0.0.0.0 --port $BACKEND_PORT --reload --log-level debug > ../logs/backend-dev.log 2>&1 &
-    
+
     cd ..
-    
+
     # Wait for backend to start
     local attempts=0
     local max_attempts=15
-    
+
     while [ $attempts -lt $max_attempts ]; do
         if curl -s -f "http://localhost:$BACKEND_PORT/" >/dev/null 2>&1; then
             success "Backend development server started"
             return 0
         fi
-        
+
         attempts=$((attempts + 1))
         log "Waiting for backend... ($attempts/$max_attempts)"
         sleep 2
     done
-    
+
     error "Backend failed to start. Check logs/backend-dev.log"
     return 1
 }
@@ -178,26 +178,26 @@ start_backend_dev() {
 # Start frontend in development mode
 start_frontend_dev() {
     log "Starting frontend in development mode..."
-    
+
     # Start Vite dev server
     npm run dev > logs/frontend-dev.log 2>&1 &
-    
+
     # Wait for frontend to start
     local attempts=0
     local max_attempts=15
-    
+
     while [ $attempts -lt $max_attempts ]; do
         # Check if Vite dev server is listening on the port
         if lsof -Pi :$FRONTEND_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
             success "Frontend development server started"
             return 0
         fi
-        
+
         attempts=$((attempts + 1))
         log "Waiting for frontend... ($attempts/$max_attempts)"
         sleep 2
     done
-    
+
     error "Frontend failed to start. Check logs/frontend-dev.log"
     return 1
 }
@@ -229,23 +229,23 @@ show_dev_info() {
 # Monitor logs in real-time
 monitor_logs() {
     log "Starting log monitoring..."
-    
+
     # Create a function to colorize logs
     colorize_logs() {
         local service=$1
         local color=$2
         local logfile=$3
-        
+
         tail -f "$logfile" 2>/dev/null | while IFS= read -r line; do
             echo -e "${color}[$service]${NC} $line"
         done &
     }
-    
+
     # Start log monitoring for both services
     if [ -f "logs/backend-dev.log" ]; then
         colorize_logs "BACKEND" "$YELLOW" "logs/backend-dev.log"
     fi
-    
+
     if [ -f "logs/frontend-dev.log" ]; then
         colorize_logs "FRONTEND" "$CYAN" "logs/frontend-dev.log"
     fi
@@ -254,7 +254,7 @@ monitor_logs() {
 # Main execution
 main() {
     local show_logs=false
-    
+
     # Parse arguments
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -279,27 +279,27 @@ main() {
                 ;;
         esac
     done
-    
+
     log "Starting Family Meal Planner in development mode..."
-    
+
     # Setup
     check_dev_prerequisites
     setup_dev_env
-    
+
     # Start services
     if ! start_backend_dev; then
         cleanup
         exit 1
     fi
-    
+
     if ! start_frontend_dev; then
         cleanup
         exit 1
     fi
-    
+
     # Show development information
     show_dev_info
-    
+
     # Start log monitoring if requested
     if [ "$show_logs" = true ]; then
         log "Starting log monitoring (Press Ctrl+C to stop log monitoring only)..."
