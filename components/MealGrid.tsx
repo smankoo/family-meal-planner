@@ -181,20 +181,20 @@ const MealGrid: React.FC<MealGridProps> = ({
     return (
       <div className="hidden md:flex flex-col gap-10">
 
-        {/* Render each MealTime as a Row */}
-        {mealTimes.map((time) => (
-            <div key={time} className="w-full">
-                {/* Row Header */}
-                <div className="flex items-center gap-4 mb-4">
-                    <span className="text-sm font-bold text-zinc-400 uppercase tracking-widest">{time}</span>
-                    <div className="h-[1px] flex-1 bg-zinc-100"></div>
+        {/* Render each Day as a Row */}
+        {plan.map((dayPlan, dayIdx) => (
+            <div key={dayPlan.day} className="w-full">
+                {/* Sticky Row Header */}
+                <div className="sticky top-0 z-20 flex items-center gap-4 mb-4 px-4 py-3 bg-zinc-50/95 backdrop-blur-sm border-b border-zinc-200/30 -mx-4">
+                    <span className="text-sm font-bold text-zinc-900 uppercase tracking-widest">{dayPlan.day}</span>
+                    <div className="h-[1px] flex-1 bg-zinc-200/50"></div>
                 </div>
 
                 {/* Adaptive Grid - Apple-like responsive behavior */}
                 <div className="grid gap-4
-                    grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7
-                    2xl:grid-cols-7">
-                    {plan.map((dayPlan, dayIdx) => {
+                    grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4
+                    2xl:grid-cols-4">
+                    {mealTimes.map((time) => {
                         const cell = dayPlan.meals[time] || { name: '', description: '', notes: '' };
                         const isChanged = hasChanged(dayIdx, time);
                         const isEmpty = !cell.name || cell.name.trim() === '';
@@ -222,10 +222,10 @@ const MealGrid: React.FC<MealGridProps> = ({
                                         : 'border-zinc-100 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.03)]'}
                                 `}
                             >
-                                {/* Day Label inside card for context */}
+                                {/* Meal Time Label inside card for context */}
                                 <div className="flex justify-between items-start mb-2">
                                     <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-wider">
-                                        {dayPlan.day.slice(0, 3)}
+                                        {time.slice(0, 3)}
                                     </span>
                                     {isChanged && <Sparkles size={14} className="text-indigo-400 animate-pulse" />}
                                 </div>
