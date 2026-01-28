@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { WeekPlan, MealTime } from '../types';
 import { Users, Sparkles, ChevronRight, ChevronLeft, Loader2 } from 'lucide-react';
 
@@ -21,7 +21,7 @@ const MealGrid: React.FC<MealGridProps> = ({
   
   // Use ref to track which cards have already been animated to prevent re-animation
   const animatedCardsRef = useRef<Set<string>>(new Set());
-  const [currentlyAnimatingCards, setCurrentlyAnimatingCards] = useState<Set<string>>(new Set());
+  const cardRefsRef = useRef<Map<string, HTMLDivElement>>(new Map());
   
   // Reset animated cards when starting a new plan generation
   useEffect(() => {
@@ -30,33 +30,35 @@ const MealGrid: React.FC<MealGridProps> = ({
     )) {
       // This is a fresh plan generation, reset animated cards
       animatedCardsRef.current = new Set();
-      setCurrentlyAnimatingCards(new Set());
+      cardRefsRef.current.clear();
     }
   }, [isStreaming, plan]);
   
-  // Handle new cards that should animate
-  useEffect(() => {
-    const newAnimations = new Set<string>();
-    
+  // Handle new cards that should animate using direct DOM manipulation
+  useLayoutEffect(() => {
     newlyReceivedCards.forEach(cardKey => {
       if (!animatedCardsRef.current.has(cardKey)) {
         animatedCardsRef.current.add(cardKey);
-        newAnimations.add(cardKey);
+        
+        // Find the card element and animate it directly
+        const cardElement = cardRefsRef.current.get(cardKey);
+        if (cardElement) {
+          // Remove any existing animation classes
+          cardElement.classList.remove('animate-fade-in-up', 'animate-stream-in');
+          
+          // Force a reflow to ensure the class removal takes effect
+          cardElement.offsetHeight;
+          
+          // Add the animation class
+          cardElement.classList.add('animate-stream-in');
+          
+          // Remove the animation class after it completes to prevent re-triggering
+          setTimeout(() => {
+            cardElement.classList.remove('animate-stream-in');
+          }, 600); // Match animation duration
+        }
       }
     });
-    
-    if (newAnimations.size > 0) {
-      setCurrentlyAnimatingCards(prev => new Set([...prev, ...newAnimations]));
-      
-      // Remove from animating set after animation completes
-      setTimeout(() => {
-        setCurrentlyAnimatingCards(prev => {
-          const updated = new Set(prev);
-          newAnimations.forEach(cardKey => updated.delete(cardKey));
-          return updated;
-        });
-      }, 600); // Match animation duration
-    }
   }, [newlyReceivedCards]);
   
   const hasChanged = (dayIndex: number, time: MealTime): boolean => {
@@ -72,9 +74,13 @@ const MealGrid: React.FC<MealGridProps> = ({
     return !meal || !meal.name || meal.name.trim() === '';
   };
 
-  const shouldAnimate = (dayIndex: number, time: MealTime): boolean => {
-    const cardKey = `${plan[dayIndex]?.day}-${time}`;
-    return currentlyAnimatingCards.has(cardKey);
+  // Helper function to register card refs
+  const registerCardRef = (cardKey: string, element: HTMLDivElement | null) => {
+    if (element) {
+      cardRefsRef.current.set(cardKey, element);
+    } else {
+      cardRefsRef.current.delete(cardKey);
+    }
   };
 
   // Skeleton component for loading states
@@ -118,7 +124,7 @@ const MealGrid: React.FC<MealGridProps> = ({
                         const isChanged = hasChanged(dayIdx, time);
                         const isEmpty = !cell.name || cell.name.trim() === '';
                         const isLoadingThisMeal = isStreaming && isEmpty;
-                        const isNewCard = shouldAnimate(dayIdx, time);
+                        const cardKey = `${dayPlan.day}-${time}`;
 
                         // Show skeleton for empty meals during streaming
                         if (isLoadingThisMeal) {
@@ -130,19 +136,18 @@ const MealGrid: React.FC<MealGridProps> = ({
                         return (
                              <div 
                                 key={time}
+                                ref={(el) => registerCardRef(cardKey, el)}
                                 onClick={() => onCellClick && onCellClick(dayPlan.day, time)}
                                 className={`
                                   relative bg-white rounded-2xl p-5 shadow-sm border transition-all duration-500 active:scale-[0.98]
                                   ${isChanged 
                                     ? 'border-indigo-100 bg-indigo-50/20' 
                                     : 'border-zinc-100'}
-                                  ${isNewCard ? 'animate-fade-in-up' : ''}
                                 `}
                               >
                                 <div className="flex justify-between items-start mb-2">
                                   <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{time}</span>
                                   {isChanged && <Sparkles size={14} className="text-indigo-500 animate-pulse" />}
-                                  {isNewCard && <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>}
                                 </div>
                                 
                                 <h4 className={`text-lg font-semibold mb-1 leading-snug ${isEmpty ? 'text-zinc-300 italic' : 'text-zinc-800'}`}>
@@ -194,7 +199,7 @@ const MealGrid: React.FC<MealGridProps> = ({
                         const isChanged = hasChanged(dayIdx, time);
                         const isEmpty = !cell.name || cell.name.trim() === '';
                         const isLoadingThisMeal = isStreaming && isEmpty;
-                        const isNewCard = shouldAnimate(dayIdx, time);
+                        const cardKey = `${dayPlan.day}-${time}`;
 
                         // Show skeleton for empty meals during streaming
                         if (isLoadingThisMeal) {
@@ -206,6 +211,7 @@ const MealGrid: React.FC<MealGridProps> = ({
                         return (
                             <div
                                 key={`${dayPlan.day}-${time}`}
+                                ref={(el) => registerCardRef(cardKey, el)}
                                 onClick={() => onCellClick && onCellClick(dayPlan.day, time)}
                                 className={`
                                     relative p-4 xl:p-5 bg-white rounded-2xl border transition-all duration-500 group
@@ -214,7 +220,6 @@ const MealGrid: React.FC<MealGridProps> = ({
                                     ${isChanged 
                                         ? 'border-indigo-100 bg-gradient-to-br from-indigo-50/30 to-white' 
                                         : 'border-zinc-100 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.03)]'}
-                                    ${isNewCard ? 'animate-fade-in-up' : ''}
                                 `}
                             >
                                 {/* Day Label inside card for context */}
@@ -223,7 +228,6 @@ const MealGrid: React.FC<MealGridProps> = ({
                                         {dayPlan.day.slice(0, 3)}
                                     </span>
                                     {isChanged && <Sparkles size={14} className="text-indigo-400 animate-pulse" />}
-                                    {isNewCard && <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>}
                                 </div>
 
                                 <div className="flex-1">
