@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { WeekPlan, MealTime } from '../types';
 import { Users, Sparkles, ChevronRight, ChevronLeft, Loader2 } from 'lucide-react';
 
@@ -19,6 +19,46 @@ const MealGrid: React.FC<MealGridProps> = ({
 }) => {
   const mealTimes = [MealTime.BREAKFAST, MealTime.LUNCH, MealTime.SNACK, MealTime.DINNER];
   
+  // Use ref to track which cards have already been animated to prevent re-animation
+  const animatedCardsRef = useRef<Set<string>>(new Set());
+  const [currentlyAnimatingCards, setCurrentlyAnimatingCards] = useState<Set<string>>(new Set());
+  
+  // Reset animated cards when starting a new plan generation
+  useEffect(() => {
+    if (isStreaming && plan.every(day => 
+      Object.values(day.meals).every(meal => !meal.name || meal.name.trim() === '')
+    )) {
+      // This is a fresh plan generation, reset animated cards
+      animatedCardsRef.current = new Set();
+      setCurrentlyAnimatingCards(new Set());
+    }
+  }, [isStreaming, plan]);
+  
+  // Handle new cards that should animate
+  useEffect(() => {
+    const newAnimations = new Set<string>();
+    
+    newlyReceivedCards.forEach(cardKey => {
+      if (!animatedCardsRef.current.has(cardKey)) {
+        animatedCardsRef.current.add(cardKey);
+        newAnimations.add(cardKey);
+      }
+    });
+    
+    if (newAnimations.size > 0) {
+      setCurrentlyAnimatingCards(prev => new Set([...prev, ...newAnimations]));
+      
+      // Remove from animating set after animation completes
+      setTimeout(() => {
+        setCurrentlyAnimatingCards(prev => {
+          const updated = new Set(prev);
+          newAnimations.forEach(cardKey => updated.delete(cardKey));
+          return updated;
+        });
+      }, 600); // Match animation duration
+    }
+  }, [newlyReceivedCards]);
+  
   const hasChanged = (dayIndex: number, time: MealTime): boolean => {
     if (!previousPlan) return false;
     const currentMeal = plan[dayIndex]?.meals[time];
@@ -32,9 +72,9 @@ const MealGrid: React.FC<MealGridProps> = ({
     return !meal || !meal.name || meal.name.trim() === '';
   };
 
-  const isNewlyReceived = (dayIndex: number, time: MealTime): boolean => {
+  const shouldAnimate = (dayIndex: number, time: MealTime): boolean => {
     const cardKey = `${plan[dayIndex]?.day}-${time}`;
-    return newlyReceivedCards.has(cardKey);
+    return currentlyAnimatingCards.has(cardKey);
   };
 
   // Skeleton component for loading states
@@ -78,7 +118,7 @@ const MealGrid: React.FC<MealGridProps> = ({
                         const isChanged = hasChanged(dayIdx, time);
                         const isEmpty = !cell.name || cell.name.trim() === '';
                         const isLoadingThisMeal = isStreaming && isEmpty;
-                        const isNewCard = isNewlyReceived(dayIdx, time);
+                        const isNewCard = shouldAnimate(dayIdx, time);
 
                         // Show skeleton for empty meals during streaming
                         if (isLoadingThisMeal) {
@@ -154,7 +194,7 @@ const MealGrid: React.FC<MealGridProps> = ({
                         const isChanged = hasChanged(dayIdx, time);
                         const isEmpty = !cell.name || cell.name.trim() === '';
                         const isLoadingThisMeal = isStreaming && isEmpty;
-                        const isNewCard = isNewlyReceived(dayIdx, time);
+                        const isNewCard = shouldAnimate(dayIdx, time);
 
                         // Show skeleton for empty meals during streaming
                         if (isLoadingThisMeal) {

@@ -103,6 +103,7 @@ const App: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [lastDiffPlan, setLastDiffPlan] = useState<WeekPlan | undefined>(undefined);
   const [newlyReceivedCards, setNewlyReceivedCards] = useState<Set<string>>(new Set());
+  const [animatedCards, setAnimatedCards] = useState<Set<string>>(new Set()); // Track cards that have already animated
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [errorModal, setErrorModal] = useState<{
     isOpen: boolean;
@@ -196,6 +197,7 @@ const App: React.FC = () => {
     
     // Clear previously received cards and set initial empty plan
     setNewlyReceivedCards(new Set());
+    setAnimatedCards(new Set()); // Reset animated cards for new generation
     setPlanHistory({
       past: [],
       present: emptyPlan,
@@ -225,8 +227,20 @@ const App: React.FC = () => {
           // Track newly received card for this specific meal
           const cardKey = `${mealData.day}-${mealData.mealType}`;
           
-          // Update newly received cards state
-          setNewlyReceivedCards(prev => new Set([...prev, cardKey]));
+          // Only animate if this card hasn't been animated before
+          if (!animatedCards.has(cardKey)) {
+            setNewlyReceivedCards(prev => new Set([...prev, cardKey]));
+            setAnimatedCards(prev => new Set([...prev, cardKey]));
+            
+            // Clear the animation state after animation completes
+            setTimeout(() => {
+              setNewlyReceivedCards(prev => {
+                const updated = new Set(prev);
+                updated.delete(cardKey);
+                return updated;
+              });
+            }, 600); // Match animation duration
+          }
           
           // Update plan with new meal data
           setPlanHistory(prev => {
@@ -250,15 +264,6 @@ const App: React.FC = () => {
               present: newPlan
             };
           });
-          
-          // Clear the animation state after animation completes
-          setTimeout(() => {
-            setNewlyReceivedCards(prev => {
-              const updated = new Set(prev);
-              updated.delete(cardKey);
-              return updated;
-            });
-          }, 600); // Match animation duration
         },
         // onComplete callback
         async () => {
