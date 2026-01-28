@@ -226,8 +226,6 @@ const App: React.FC = () => {
         prefs,
         // onMealReceived callback
         (mealData: any) => {
-          console.log(`Received meal: ${mealData.day}-${mealData.mealType}`, mealData);
-
           // Track newly received card for this specific meal
           const cardKey = `${mealData.day}-${mealData.mealType}`;
 
@@ -271,7 +269,6 @@ const App: React.FC = () => {
         },
         // onComplete callback
         async () => {
-          console.log("Streaming plan generation completed");
           setIsLoading(false);
 
           // Track successful plan generation
@@ -282,7 +279,6 @@ const App: React.FC = () => {
         },
         // onError callback
         async (error: Error) => {
-          console.error("Streaming error:", error);
           setIsLoading(false);
 
           // Track plan generation failure
@@ -317,11 +313,9 @@ const App: React.FC = () => {
       );
 
     } catch (error) {
-      console.error("Error starting streaming generation:", error);
       setIsLoading(false);
 
       // Fallback to batch generation if streaming fails
-      console.log("Falling back to batch generation...");
       try {
         const plan = await generateInitialMealPlan(members, prefs);
         setPlanHistory({
@@ -514,8 +508,6 @@ const App: React.FC = () => {
           planHistory.present,
           // onTaskReceived callback
           (taskData: any) => {
-            console.log(`Received task: ${taskData.day} - ${taskData.task.substring(0, 50)}...`, taskData);
-
             // Create task with proper ID and structure
             const newTask: PrepTask = {
               id: `prep-${Date.now()}-${Math.random()}`,
@@ -526,8 +518,8 @@ const App: React.FC = () => {
               completed: false
             };
 
-            // Track newly received task for animation
-            const taskKey = `${taskData.day}-${Date.now()}`;
+            // Track newly received task for animation using the same key format as component
+            const taskKey = `${taskData.day}-${newTask.id}`;
             setNewlyReceivedTasks(prev => new Set([...prev, taskKey]));
 
             // Add task to the list
@@ -544,7 +536,6 @@ const App: React.FC = () => {
           },
           // onComplete callback
           async () => {
-            console.log("Streaming prep generation completed");
             setIsLoading(false);
 
             await analyticsService.trackMealPlanningEvent('prep_generation_completed', {
@@ -553,7 +544,6 @@ const App: React.FC = () => {
           },
           // onError callback
           async (error: Error) => {
-            console.error("Streaming prep error:", error);
             setIsLoading(false);
 
             await analyticsService.trackMealPlanningEvent('prep_generation_failed', {
@@ -571,11 +561,9 @@ const App: React.FC = () => {
         );
 
       } catch (error) {
-        console.error("Error starting streaming prep generation:", error);
         setIsLoading(false);
 
         // Fallback to batch generation if streaming fails
-        console.log("Falling back to batch prep generation...");
         try {
           const tasks = await generateMealPrepPlan(planHistory.present);
           setPrepTasks(tasks);
@@ -618,8 +606,6 @@ const App: React.FC = () => {
           prepTasks,
           // onItemReceived callback
           (itemData: any) => {
-            console.log(`Received item: ${itemData.category} - ${itemData.name}`, itemData);
-
             // Create item with proper ID and structure
             const newItem: GroceryItem = {
               id: `groc-${Date.now()}-${Math.random()}`,
@@ -629,8 +615,8 @@ const App: React.FC = () => {
               checked: false
             };
 
-            // Track newly received item for animation
-            const itemKey = `${itemData.category}-${itemData.name}-${Date.now()}`;
+            // Track newly received item for animation using the same key format as component
+            const itemKey = `${itemData.category}-${itemData.name}-${newItem.id}`;
             setNewlyReceivedItems(prev => new Set([...prev, itemKey]));
 
             // Add item to the list
@@ -647,7 +633,6 @@ const App: React.FC = () => {
           },
           // onComplete callback
           async () => {
-            console.log("Streaming grocery generation completed");
             setIsLoading(false);
 
             await analyticsService.trackMealPlanningEvent('grocery_generation_completed', {
@@ -656,7 +641,6 @@ const App: React.FC = () => {
           },
           // onError callback
           async (error: Error) => {
-            console.error("Streaming grocery error:", error);
             setIsLoading(false);
 
             await analyticsService.trackMealPlanningEvent('grocery_generation_failed', {
@@ -674,11 +658,9 @@ const App: React.FC = () => {
         );
 
       } catch (error) {
-        console.error("Error starting streaming grocery generation:", error);
         setIsLoading(false);
 
         // Fallback to batch generation if streaming fails
-        console.log("Falling back to batch grocery generation...");
         try {
           const items = await generateGroceryList(planHistory.present, prepTasks);
           setGroceryItems(items);

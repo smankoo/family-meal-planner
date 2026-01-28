@@ -183,8 +183,8 @@ EOF
     # Activate virtual environment and start server
     source .venv/bin/activate
 
-    # Start backend in background
-    python main.py > ../logs/backend.log 2>&1 &
+    # Start backend in background with environment variables passed through
+    GEMINI_API_KEY="$GEMINI_API_KEY" python main.py > ../logs/backend.log 2>&1 &
     BACKEND_PID=$!
 
     cd ..

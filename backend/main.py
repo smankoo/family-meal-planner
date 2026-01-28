@@ -16,8 +16,15 @@ from dotenv import load_dotenv
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from .env file, but don't override existing shell env vars
+load_dotenv(override=False)
+
+# Debug: Log what API key we're actually using (first 10 chars only for security)
+api_key = os.getenv("GEMINI_API_KEY")
+if api_key:
+    logger.info(f"Using API key starting with: {api_key[:10]}...")
+else:
+    logger.warning("No GEMINI_API_KEY found in environment")
 
 app = FastAPI(title="Family Meal Planner API")
 

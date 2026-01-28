@@ -5,8 +5,6 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000
 
 // Helper function for API calls with enhanced error handling
 const apiCall = async (endpoint: string, data: any) => {
-  console.log(`Making API call to ${API_BASE_URL}${endpoint}`, data);
-
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     method: 'POST',
     headers: {
@@ -14,8 +12,6 @@ const apiCall = async (endpoint: string, data: any) => {
     },
     body: JSON.stringify(data),
   });
-
-  console.log(`Response status: ${response.status} ${response.statusText}`);
 
   if (!response.ok) {
     let errorData;
@@ -41,7 +37,6 @@ const apiCall = async (endpoint: string, data: any) => {
   }
 
   const result = await response.json();
-  console.log("API success response:", result);
   return result;
 };
 
@@ -52,13 +47,10 @@ export const generateInitialMealPlan = async (
   preferences: FamilyPreferences
 ): Promise<WeekPlan> => {
   try {
-    console.log("Making API call to generate plan...");
     const response = await apiCall('/api/generate-plan', {
       members,
       preferences
     });
-
-    console.log("API response received:", response);
 
     if (!response.plan) {
       throw new Error("No plan in response");
@@ -80,8 +72,6 @@ export const generateInitialMealPlanStream = async (
   onError: (error: Error) => void
 ): Promise<void> => {
   try {
-    console.log("Starting meal-by-meal streaming generation...");
-
     const response = await fetch(`${API_BASE_URL}/api/generate-plan-stream`, {
       method: 'POST',
       headers: {
@@ -124,7 +114,6 @@ export const generateInitialMealPlanStream = async (
         const { done, value } = await reader.read();
 
         if (done) {
-          console.log("Stream completed");
           break;
         }
 
@@ -140,18 +129,15 @@ export const generateInitialMealPlanStream = async (
               const data = JSON.parse(line.slice(6)); // Remove 'data: ' prefix
 
               if (data.type === 'complete') {
-                console.log("Received completion signal");
                 onComplete();
                 return;
               } else if (data.type === 'error') {
-                console.error("Received error from stream:", data);
                 const error = new Error(data.message || 'Streaming error');
                 (error as any).code = data.code;
                 onError(error);
                 return;
               } else if (data.day && data.mealType && data.meal) {
                 // This is a meal object
-                console.log(`Received meal: ${data.day}-${data.mealType}`, data);
                 onMealReceived(data);
                 mealCount++;
               }
@@ -166,7 +152,6 @@ export const generateInitialMealPlanStream = async (
     }
 
   } catch (error) {
-    console.error("Error in meal-by-meal streaming generation:", error);
     onError(error as Error);
   }
 };
@@ -223,8 +208,6 @@ export const generateMealPrepPlanStream = async (
   onError: (error: Error) => void
 ): Promise<void> => {
   try {
-    console.log("Starting task-by-task streaming generation...");
-
     const response = await fetch(`${API_BASE_URL}/api/generate-prep-stream`, {
       method: 'POST',
       headers: {
@@ -266,7 +249,6 @@ export const generateMealPrepPlanStream = async (
         const { done, value } = await reader.read();
 
         if (done) {
-          console.log("Stream completed");
           break;
         }
 
@@ -282,18 +264,15 @@ export const generateMealPrepPlanStream = async (
               const data = JSON.parse(line.slice(6)); // Remove 'data: ' prefix
 
               if (data.type === 'complete') {
-                console.log("Received completion signal");
                 onComplete();
                 return;
               } else if (data.type === 'error') {
-                console.error("Received error from stream:", data);
                 const error = new Error(data.message || 'Streaming error');
                 (error as any).code = data.code;
                 onError(error);
                 return;
               } else if (data.day && data.task) {
                 // This is a task object
-                console.log(`Received task: ${data.day} - ${data.task.substring(0, 50)}...`, data);
                 onTaskReceived(data);
                 taskCount++;
               }
@@ -308,7 +287,6 @@ export const generateMealPrepPlanStream = async (
     }
 
   } catch (error) {
-    console.error("Error in task-by-task streaming generation:", error);
     onError(error as Error);
   }
 };
@@ -341,8 +319,6 @@ export const generateGroceryListStream = async (
   onError: (error: Error) => void
 ): Promise<void> => {
   try {
-    console.log("Starting item-by-item streaming generation...");
-
     const response = await fetch(`${API_BASE_URL}/api/generate-grocery-stream`, {
       method: 'POST',
       headers: {
@@ -385,7 +361,6 @@ export const generateGroceryListStream = async (
         const { done, value } = await reader.read();
 
         if (done) {
-          console.log("Stream completed");
           break;
         }
 
@@ -401,18 +376,15 @@ export const generateGroceryListStream = async (
               const data = JSON.parse(line.slice(6)); // Remove 'data: ' prefix
 
               if (data.type === 'complete') {
-                console.log("Received completion signal");
                 onComplete();
                 return;
               } else if (data.type === 'error') {
-                console.error("Received error from stream:", data);
                 const error = new Error(data.message || 'Streaming error');
                 (error as any).code = data.code;
                 onError(error);
                 return;
               } else if (data.name && data.category) {
                 // This is an item object
-                console.log(`Received item: ${data.category} - ${data.name}`, data);
                 onItemReceived(data);
                 itemCount++;
               }
@@ -427,7 +399,6 @@ export const generateGroceryListStream = async (
     }
 
   } catch (error) {
-    console.error("Error in item-by-item streaming generation:", error);
     onError(error as Error);
   }
 };
