@@ -204,35 +204,18 @@ const handleApiError = (error: any, showToast: any, setErrorModal: any, onRetry?
 
 type ViewMode = 'planning' | 'household';
 
-// --- Local Storage Helpers ---
-const loadState = <T,>(key: string, fallback: T): T => {
-  try {
-    const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : fallback;
-  } catch (e) {
-    console.error(`Failed to load ${key}`, e);
-    return fallback;
-  }
-};
-
-const saveState = (key: string, value: any) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (e) {
-    console.error(`Failed to save ${key}`, e);
-  }
-};
+import { loadState, saveState, validateFamily, validatePreferences, validatePlanHistory } from './utils/localStorage';
 
 const App: React.FC = () => {
   const { showToast } = useToast();
   // --- Initialization with Persistence ---
 
   const [family, setFamily] = useState<FamilyMember[]>(() =>
-    loadState('fmp_family', INITIAL_FAMILY)
+    loadState('fmp_family', INITIAL_FAMILY, validateFamily)
   );
 
   const [preferences, setPreferences] = useState<FamilyPreferences>(() =>
-    loadState('fmp_preferences', INITIAL_PREFERENCES)
+    loadState('fmp_preferences', INITIAL_PREFERENCES, validatePreferences)
   );
 
   const [hasPlanGenerated, setHasPlanGenerated] = useState<boolean>(() =>
@@ -253,7 +236,7 @@ const App: React.FC = () => {
       past: [],
       present: EMPTY_PLAN,
       future: []
-    })
+    }, validatePlanHistory)
   );
 
   const [prepTasks, setPrepTasks] = useState<PrepTask[]>(() =>
