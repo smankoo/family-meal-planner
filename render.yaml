@@ -30,6 +30,10 @@ services:
     buildCommand: "npm install && npm run build"
     publishPath: "./dist"
     autoDeploy: true  # Auto-deploy on push
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
       - key: VITE_ENVIRONMENT
         value: qa
@@ -78,6 +82,10 @@ services:
     buildCommand: "npm install && npm run build"
     publishPath: "./dist"
     autoDeploy: false  # MANUAL DEPLOY ONLY - Changed from auto to manual
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
       - key: VITE_ENVIRONMENT
         value: production
