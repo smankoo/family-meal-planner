@@ -1,39 +1,95 @@
 services:
-  # Backend API Service
+  # ============================================================================
+  # QA ENVIRONMENT (Auto-deploy on push to main)
+  # ============================================================================
+
+  # QA Backend API Service
   - type: web
-    name: meal-planner-api
+    name: meal-planner-api-qa
     env: python
+    branch: master
     buildCommand: "cd backend && uv sync"
     startCommand: "cd backend && uv run uvicorn main:app --host 0.0.0.0 --port $PORT"
+    autoDeploy: true  # Auto-deploy on push
+    envVars:
+      - key: ENVIRONMENT
+        value: qa
+      - key: SUPABASE_URL
+        sync: false  # SECRET - Set in Render dashboard to QA Supabase URL
+      - key: DATABASE_URL
+        sync: false  # SECRET - Set in Render dashboard to QA Supabase pooler connection
+      - key: SQL_DEBUG
+        value: true  # Enable debug logging in QA
+      - key: GEMINI_API_KEY
+        sync: false  # SECRET - Set in Render dashboard
+
+  # QA Frontend Static Site
+  - type: static
+    name: meal-planner-frontend-qa
+    branch: master
+    buildCommand: "npm install && npm run build"
+    publishPath: "./dist"
+    autoDeploy: true  # Auto-deploy on push
+    envVars:
+      - key: VITE_ENVIRONMENT
+        value: qa
+      - key: VITE_SUPABASE_URL
+        sync: false  # SECRET - Set in Render dashboard to QA Supabase URL
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false  # SECRET - Set in Render dashboard to QA Supabase anon key
+      - key: VITE_API_URL
+        sync: false  # SECRET - Set in Render dashboard to QA backend URL
+      - key: VITE_GA_MEASUREMENT_ID
+        value: G-X5HX141WYD
+      - key: VITE_GA_DEBUG
+        value: true  # Enable GA debug in QA
+      - key: VITE_GA_TEST_MODE
+        value: true  # Test mode in QA
+
+  # ============================================================================
+  # PRODUCTION ENVIRONMENT (Manual deploy only)
+  # IMPORTANT: Using existing service names (meal-planner-*-v2)
+  # ============================================================================
+
+  # Production Backend API Service (existing service name preserved)
+  - type: web
+    name: meal-planner-api-v2
+    env: python
+    branch: master
+    buildCommand: "cd backend && uv sync"
+    startCommand: "cd backend && uv run uvicorn main:app --host 0.0.0.0 --port $PORT"
+    autoDeploy: false  # MANUAL DEPLOY ONLY - Changed from auto to manual
     envVars:
       - key: ENVIRONMENT
         value: production
       - key: SUPABASE_URL
-        value: https://yirgkzecscyuxisolatu.supabase.co
+        sync: false  # SECRET - Already set in Render dashboard
       - key: DATABASE_URL
-        sync: false  # Set this in Render dashboard - contains password
+        sync: false  # SECRET - Already set in Render dashboard
       - key: SQL_DEBUG
-        value: false
+        value: false  # Disable debug logging in production
       - key: GEMINI_API_KEY
-        sync: false  # Set this in Render dashboard
+        sync: false  # SECRET - Already set in Render dashboard
 
-  # Frontend Static Site
+  # Production Frontend Static Site (existing service name preserved)
   - type: static
-    name: meal-planner-frontend
-    buildCommand: "npm install && npm run build:production"
+    name: meal-planner-frontend-v2
+    branch: master
+    buildCommand: "npm install && npm run build"
     publishPath: "./dist"
+    autoDeploy: false  # MANUAL DEPLOY ONLY - Changed from auto to manual
     envVars:
       - key: VITE_ENVIRONMENT
         value: production
       - key: VITE_SUPABASE_URL
-        value: https://yirgkzecscyuxisolatu.supabase.co
+        sync: false  # SECRET - Already set in Render dashboard
       - key: VITE_SUPABASE_ANON_KEY
-        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpcmdremVjc2N5dXhpc29sYXR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1OTc2OTIsImV4cCI6MjA4NTE3MzY5Mn0.9S1RE4sIKqGZzWfTy9ql8O0fsCnPkSAHDqF98t27A6A  # pragma: allowlist secret
+        sync: false  # SECRET - Already set in Render dashboard
       - key: VITE_API_URL
-        sync: false  # Set this in Render dashboard to your actual backend URL
+        sync: false  # SECRET - Already set in Render dashboard
       - key: VITE_GA_MEASUREMENT_ID
         value: G-X5HX141WYD
       - key: VITE_GA_DEBUG
-        value: false
+        value: false  # Disable GA debug in production
       - key: VITE_GA_TEST_MODE
-        value: false
+        value: false  # Live mode in production

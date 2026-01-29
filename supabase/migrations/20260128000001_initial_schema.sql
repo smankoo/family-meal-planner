@@ -1,9 +1,6 @@
 -- Initial schema for Family Meal Planner
 -- This migration creates the core tables for user profiles and user data
 
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 -- Create profiles table (extends auth.users)
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -16,7 +13,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 
 -- Create user_data table for storing app data
 CREATE TABLE IF NOT EXISTS public.user_data (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     data_type TEXT NOT NULL CHECK (data_type IN (
         'family',
