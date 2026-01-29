@@ -92,3 +92,7 @@ coverage.xml
 
 # pyenv
 .python-version
+
+# Credentials and secrets
+QA_SETUP_CREDENTIALS.md
+*CREDENTIALS*.md
