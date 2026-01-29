@@ -50,9 +50,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
   return (
     <div
       className={`
-        fixed inset-0 z-50 flex items-center justify-center p-4
-        bg-black/20 backdrop-blur-sm
-        transition-all duration-300 ease-out
+        modal-backdrop
         ${isVisible ? 'opacity-100' : 'opacity-0'}
       `}
       onClick={handleBackdropClick}

@@ -25,7 +25,7 @@ const Toast: React.FC<ToastProps> = ({ toast }) => {
   const getIcon = () => {
     switch (toast.type) {
       case 'success':
-        return <CheckCircle size={18} className="text-zinc-900" strokeWidth={2.5} />;
+        return <CheckCircle size={18} className="text-primary-900" strokeWidth={2.5} />;
       case 'error':
         return <AlertCircle size={18} className="text-red-600" strokeWidth={2.5} />;
       case 'warning':
@@ -48,8 +48,8 @@ const Toast: React.FC<ToastProps> = ({ toast }) => {
     >
       <div
         className="
-          bg-white/90 backdrop-blur-xl rounded-2xl shadow-lg
-          border border-zinc-200/50
+          bg-white/90 backdrop-blur-xl rounded-card shadow-card-hover
+          border border-primary-200/50
           px-4 py-3 flex items-center gap-3
           min-w-[320px] max-w-md
         "
@@ -61,7 +61,7 @@ const Toast: React.FC<ToastProps> = ({ toast }) => {
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-zinc-900 leading-snug">
+          <p className="text-sm font-medium text-primary-900 leading-snug">
             {toast.message}
           </p>
         </div>
@@ -69,10 +69,10 @@ const Toast: React.FC<ToastProps> = ({ toast }) => {
         {/* Close Button */}
         <button
           onClick={handleClose}
-          className="flex-shrink-0 w-6 h-6 rounded-full hover:bg-zinc-100 transition-colors flex items-center justify-center"
+          className="flex-shrink-0 w-6 h-6 rounded-full hover:bg-primary-100 transition-colors flex items-center justify-center"
           aria-label="Close notification"
         >
-          <X size={14} className="text-zinc-400" strokeWidth={2.5} />
+          <X size={14} className="text-primary-400" strokeWidth={2.5} />
         </button>
       </div>
     </div>

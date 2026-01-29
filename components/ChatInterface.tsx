@@ -38,22 +38,22 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     <div className="fixed bottom-24 right-4 md:right-10 w-[90vw] md:w-[400px] h-[600px] max-h-[70vh] flex flex-col z-40 animate-fade-in-up origin-bottom-right">
 
       {/* Main Container with Apple-style Glassmorphism */}
-      <div className="flex-1 flex flex-col bg-white/90 backdrop-blur-2xl rounded-[2rem] shadow-2xl border border-white/40 overflow-hidden ring-1 ring-black/5">
+      <div className="flex-1 flex flex-col card-glass rounded-modal shadow-modal overflow-hidden">
 
         {/* Header */}
-        <div className="px-6 py-4 border-b border-zinc-100/50 flex justify-between items-center bg-white/50 backdrop-blur-md sticky top-0 z-10">
+        <div className="modal-header bg-white/50 backdrop-blur-md sticky top-0 z-10">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center">
-                <Sparkles size={16} className="text-indigo-600" />
+            <div className="w-8 h-8 rounded-full bg-accent-50 flex items-center justify-center">
+                <Sparkles size={16} className="text-accent-600" />
             </div>
             <div>
-                <h3 className="font-bold text-zinc-900 text-sm leading-tight">Planner AI</h3>
-                <p className="text-[10px] font-medium text-zinc-500">Always active</p>
+                <h3 className="font-bold text-primary-900 text-sm leading-tight">Planner AI</h3>
+                <p className="text-[10px] font-medium text-primary-500">Always active</p>
             </div>
           </div>
           <button
             onClick={onToggle}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-600 transition-colors"
+            className="btn-icon"
           >
             <X size={16} />
           </button>

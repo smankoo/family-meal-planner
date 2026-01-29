@@ -16,7 +16,7 @@ const StageStepper: React.FC<StageStepperProps> = ({ currentStage, setStage, has
   ];
 
   return (
-    <div className="inline-flex bg-zinc-100/80 p-1 rounded-full">
+    <div className="inline-flex bg-primary-100/80 p-1 rounded-full">
         {steps.map((step) => {
           const isActive = currentStage === step.id;
           // All stages are clickable if we have a meal plan
@@ -31,13 +31,13 @@ const StageStepper: React.FC<StageStepperProps> = ({ currentStage, setStage, has
               className={`
                 flex items-center gap-2 px-6 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition-all duration-300
                 ${isActive
-                  ? 'bg-white text-zinc-900 shadow-sm'
+                  ? 'bg-white text-primary-900 shadow-sm'
                   : isClickable
-                    ? 'text-zinc-500 hover:text-zinc-700'
-                    : 'text-zinc-300 cursor-not-allowed'}
+                    ? 'text-primary-500 hover:text-primary-700'
+                    : 'text-primary-300 cursor-not-allowed'}
               `}
             >
-              <step.icon size={14} strokeWidth={2.5} className={isActive ? 'text-zinc-900' : 'currentColor'} />
+              <step.icon size={14} strokeWidth={2.5} className={isActive ? 'text-primary-900' : 'currentColor'} />
               <span>{step.label}</span>
             </button>
           );

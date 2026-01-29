@@ -5,10 +5,168 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Color System - Primary (Neutral) Scale */
+    --color-primary-50: #fafafa;
+    --color-primary-100: #f4f4f5;
+    --color-primary-200: #e4e4e7;
+    --color-primary-300: #d4d4d8;
+    --color-primary-400: #a1a1aa;
+    --color-primary-500: #71717a;
+    --color-primary-600: #52525b;
+    --color-primary-700: #3f3f46;
+    --color-primary-800: #27272a;
+    --color-primary-900: #18181b;
+
+    /* Accent Colors */
+    --color-accent-50: #eef2ff;
+    --color-accent-500: #6366f1;
+    --color-accent-600: #4f46e5;
+
+    /* Border Radius */
+    --radius-card: 1rem;        /* 16px - cards, containers */
+    --radius-button: 0.75rem;   /* 12px - buttons */
+    --radius-input: 0.75rem;    /* 12px - inputs */
+    --radius-modal: 1.5rem;     /* 24px - modals, major containers */
+
+    /* Spacing */
+    --spacing-card: 1.5rem;     /* 24px - card padding */
+    --spacing-section: 2rem;    /* 32px - section spacing */
+
+    /* Shadows */
+    --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-card-hover: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-modal: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    --shadow-float: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+    /* Typography */
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    /* Transitions */
+    --transition-fast: 200ms;
+    --transition-base: 300ms;
+    --transition-slow: 500ms;
+  }
+
   body {
     font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer components {
+  /* Button Variants */
+  .btn-primary {
+    @apply bg-primary-900 text-white rounded-button px-6 py-3 font-semibold;
+    @apply hover:bg-primary-800 transition-colors;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-primary-100 text-primary-600 rounded-button px-4 py-3 font-semibold;
+    @apply hover:bg-primary-200 transition-colors;
+  }
+
+  .btn-danger {
+    @apply bg-red-600 text-white rounded-button px-4 py-3 font-semibold;
+    @apply hover:bg-red-700 transition-colors;
+  }
+
+  .btn-warning {
+    @apply bg-amber-600 text-white rounded-button px-4 py-2.5 font-medium;
+    @apply hover:bg-amber-700 transition-all shadow-sm hover:shadow-md;
+  }
+
+  .btn-ghost {
+    @apply text-primary-600 hover:text-primary-900 hover:bg-primary-100 rounded-lg px-3 py-1.5;
+    @apply transition-colors;
+  }
+
+  .btn-icon {
+    @apply w-8 h-8 rounded-full bg-primary-100 text-primary-400;
+    @apply hover:bg-primary-200 hover:text-primary-600;
+    @apply flex items-center justify-center transition-colors;
+  }
+
+  /* Card Variants */
+  .card {
+    @apply bg-white rounded-card border border-primary-200 p-card;
+    @apply shadow-card hover:shadow-card-hover transition-all;
+  }
+
+  .card-glass {
+    @apply bg-white/90 backdrop-blur-2xl rounded-card;
+    @apply shadow-modal border border-white/40 ring-1 ring-black/5;
+  }
+
+  .card-interactive {
+    @apply bg-white rounded-card border-2 border-primary-100 p-4;
+    @apply hover:-translate-y-1 hover:shadow-card-hover hover:border-primary-200;
+    @apply transition-all duration-200 cursor-pointer;
+  }
+
+  /* Input Fields */
+  .input {
+    @apply w-full px-4 py-3 border border-primary-200 rounded-input;
+    @apply focus:ring-2 focus:ring-primary-900 focus:border-transparent;
+    @apply transition-colors placeholder:text-primary-400;
+  }
+
+  .textarea {
+    @apply w-full px-4 py-3 border border-primary-200 rounded-input;
+    @apply focus:ring-2 focus:ring-primary-100 focus:bg-white;
+    @apply transition-colors resize-none;
+  }
+
+  /* Modal */
+  .modal-backdrop {
+    @apply fixed inset-0 z-50 flex items-center justify-center p-4;
+    @apply bg-black/20 backdrop-blur-sm;
+    @apply transition-all duration-300 ease-out;
+  }
+
+  .modal-container {
+    @apply bg-white/95 backdrop-blur-xl rounded-modal shadow-modal;
+    @apply border border-white/40 ring-1 ring-black/5;
+    @apply max-w-md w-full max-h-[80vh] overflow-hidden;
+    @apply transform transition-all duration-300 ease-out;
+  }
+
+  .modal-header {
+    @apply flex items-center justify-between p-6 border-b border-primary-100;
+  }
+
+  .modal-content {
+    @apply p-6;
+  }
+
+  /* Typography Utilities */
+  .heading-hero {
+    @apply text-4xl font-bold text-primary-900 tracking-tight;
+  }
+
+  .heading-section {
+    @apply text-2xl font-bold text-primary-900;
+  }
+
+  .heading-card {
+    @apply text-lg font-semibold text-primary-900;
+  }
+
+  .label-section {
+    @apply text-xs font-bold text-primary-400 uppercase tracking-widest;
+  }
+
+  .text-body {
+    @apply text-primary-700 leading-relaxed;
+  }
+
+  .text-secondary {
+    @apply text-primary-500 leading-relaxed;
   }
 }
 
@@ -41,67 +199,13 @@
     will-change: transform;
   }
 
-  /* Toast animations */
-  .animate-slide-in-right {
-    animation: slideInRight 0.3s ease-out;
+  /* Hide native number input spinners for a cleaner aesthetic */
+  .no-spinners::-webkit-outer-spin-button,
+  .no-spinners::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
   }
-
-  .animate-fade-in-up {
-    animation: fadeInUp 0.5s ease-out;
-  }
-
-  /* Streaming animations for meal cards */
-  .animate-stream-in {
-    animation: streamIn 0.6s ease-out;
-  }
-
-  .animate-pulse-soft {
-    animation: pulseSoft 2s ease-in-out infinite;
-  }
-
-  @keyframes slideInRight {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-
-  @keyframes fadeInUp {
-    from {
-      transform: translateY(20px) scale(0.95);
-      opacity: 0;
-    }
-    to {
-      transform: translateY(0) scale(1);
-      opacity: 1;
-    }
-  }
-
-  @keyframes streamIn {
-    from {
-      transform: translateY(30px) scale(0.9);
-      opacity: 0;
-    }
-    50% {
-      transform: translateY(-5px) scale(1.02);
-      opacity: 0.8;
-    }
-    to {
-      transform: translateY(0) scale(1);
-      opacity: 1;
-    }
-  }
-
-  @keyframes pulseSoft {
-    0%, 100% {
-      opacity: 0.6;
-    }
-    50% {
-      opacity: 1;
-    }
+  .no-spinners {
+    -moz-appearance: textfield;
   }
 }

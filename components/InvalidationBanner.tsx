@@ -24,8 +24,8 @@ const InvalidationBanner: React.FC<InvalidationBannerProps> = ({
       relative overflow-hidden
       bg-gradient-to-r from-amber-50 to-orange-50
       border border-amber-200/60
-      rounded-2xl p-6 mb-6
-      shadow-sm
+      rounded-card p-card mb-6
+      shadow-card
       ${className}
     `}>
       {/* Subtle background pattern */}
@@ -56,15 +56,7 @@ const InvalidationBanner: React.FC<InvalidationBannerProps> = ({
             <button
               onClick={onRegenerate}
               disabled={isLoading}
-              className="
-                inline-flex items-center justify-center gap-2 px-4 py-2.5
-                bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400
-                text-white text-sm font-medium
-                rounded-xl transition-all duration-200
-                shadow-sm hover:shadow-md
-                disabled:cursor-not-allowed
-                min-w-[140px]
-              "
+              className="btn-warning min-w-[140px]"
             >
               {isLoading ? (
                 <>
@@ -87,7 +79,7 @@ const InvalidationBanner: React.FC<InvalidationBannerProps> = ({
                   bg-white hover:bg-amber-50
                   text-amber-700 text-sm font-medium
                   border border-amber-200 hover:border-amber-300
-                  rounded-xl transition-all duration-200
+                  rounded-button transition-all duration-200
                   shadow-sm hover:shadow-md
                 "
               >

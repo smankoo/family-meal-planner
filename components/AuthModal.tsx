@@ -103,7 +103,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="modal-backdrop">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -111,29 +111,29 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden animate-fade-in">
+      <div className="relative w-full max-w-md bg-white rounded-card shadow-modal overflow-hidden animate-fade-in">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-zinc-100">
-          <h2 className="text-xl font-semibold text-zinc-900">
+        <div className="modal-header">
+          <h2 className="text-xl font-semibold text-primary-900">
             {mode === 'signin' && 'Welcome Back'}
             {mode === 'signup' && 'Create Account'}
             {mode === 'reset' && 'Reset Password'}
           </h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-500 hover:bg-zinc-200 hover:text-zinc-700 transition-colors"
+            className="btn-icon"
           >
             <X size={16} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="modal-content space-y-6">
           {/* Google Sign-In Button */}
           <button
             onClick={handleGoogleSignIn}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border-2 border-zinc-200 rounded-xl font-medium text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border-2 border-primary-200 rounded-input font-medium text-primary-700 hover:bg-primary-50 hover:border-primary-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <Loader2 size={20} className="animate-spin" />
@@ -165,10 +165,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           {/* Divider */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-zinc-200"></div>
+              <div className="w-full border-t border-primary-200"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-zinc-500">Or continue with email</span>
+              <span className="px-4 bg-white text-primary-500">Or continue with email</span>
             </div>
           </div>
 
@@ -176,7 +176,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           <form onSubmit={handleEmailAuth} autoComplete="off" className="space-y-4">
             {mode === 'signup' && (
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-zinc-700 mb-2">
+                <label htmlFor="name" className="block text-sm font-medium text-primary-700 mb-2">
                   Full Name
                 </label>
                 <input
@@ -185,14 +185,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   autoComplete="off"
-                  className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-colors"
+                  className="input"
                   placeholder="Enter your full name"
                 />
               </div>
             )}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-zinc-700 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-primary-700 mb-2">
                 Email Address
               </label>
               <div className="relative">
@@ -203,16 +203,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="off"
                   required
-                  className="w-full px-4 py-3 pl-11 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-colors"
+                  className="input pl-11"
                   placeholder="Enter your email"
                 />
-                <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-primary-400" />
               </div>
             </div>
 
             {mode !== 'reset' && (
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-zinc-700 mb-2">
+                <label htmlFor="password" className="block text-sm font-medium text-primary-700 mb-2">
                   Password
                 </label>
                 <div className="relative">
@@ -223,14 +223,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete="off"
                     required
-                    className="w-full px-4 py-3 pr-11 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-colors"
+                    className="input pr-11"
                     placeholder="Enter your password"
                     minLength={6}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-400 hover:text-primary-600 transition-colors"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -241,7 +241,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             <button
               type="submit"
               disabled={loading || !email || (mode !== 'reset' && !password)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-900 text-white rounded-xl font-medium hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary w-full flex items-center justify-center gap-2"
             >
               {loading ? (
                 <Loader2 size={20} className="animate-spin" />
@@ -261,14 +261,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               <>
                 <button
                   onClick={() => switchMode('signup')}
-                  className="text-sm text-zinc-600 hover:text-zinc-900 transition-colors"
+                  className="text-sm text-primary-600 hover:text-primary-900 transition-colors"
                 >
                   Don't have an account? <span className="font-medium">Sign up</span>
                 </button>
                 <br />
                 <button
                   onClick={() => switchMode('reset')}
-                  className="text-sm text-zinc-600 hover:text-zinc-900 transition-colors"
+                  className="text-sm text-primary-600 hover:text-primary-900 transition-colors"
                 >
                   Forgot your password?
                 </button>
@@ -278,7 +278,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             {mode === 'signup' && (
               <button
                 onClick={() => switchMode('signin')}
-                className="text-sm text-zinc-600 hover:text-zinc-900 transition-colors"
+                className="text-sm text-primary-600 hover:text-primary-900 transition-colors"
               >
                 Already have an account? <span className="font-medium">Sign in</span>
               </button>
@@ -287,7 +287,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             {mode === 'reset' && (
               <button
                 onClick={() => switchMode('signin')}
-                className="text-sm text-zinc-600 hover:text-zinc-900 transition-colors"
+                className="text-sm text-primary-600 hover:text-primary-900 transition-colors"
               >
                 Back to <span className="font-medium">Sign in</span>
               </button>
