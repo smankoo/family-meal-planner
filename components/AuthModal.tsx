@@ -11,7 +11,7 @@ interface AuthModalProps {
 type AuthMode = 'signin' | 'signup' | 'reset';
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-  const { signInWithEmail, signUpWithEmail } = useAuth();
+  const { signInWithEmail, signUpWithEmail, resetPassword } = useAuth();
   const { showToast } = useToast();
 
   const [mode, setMode] = useState<AuthMode>('signin');
@@ -25,6 +25,24 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (mode === 'reset') {
+      if (!email) return;
+
+      setLoading(true);
+      try {
+        await resetPassword(email);
+        showToast('Password reset email sent! Check your inbox.', 'success');
+        switchMode('signin');
+      } catch (error: any) {
+        console.error('Password reset error:', error);
+        showToast(error.message || 'Failed to send reset email', 'error');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     if (!email || !password) return;
 
     setLoading(true);

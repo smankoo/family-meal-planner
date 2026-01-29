@@ -10,6 +10,7 @@ interface AuthContextType {
   signUpWithEmail: (email: string, password: string, name?: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (updates: { name?: string; avatar_url?: string }) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -121,6 +122,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(data.user);
   };
 
+  const resetPassword = async (email: string) => {
+    // Get the current origin for the redirect URL
+    const redirectUrl = `${window.location.origin}/auth/callback?type=recovery`;
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl,
+    });
+
+    if (error) {
+      throw error;
+    }
+  };
+
   const value: AuthContextType = {
     user,
     session,
@@ -129,6 +143,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signUpWithEmail,
     signOut,
     updateProfile,
+    resetPassword,
   };
 
   return (
