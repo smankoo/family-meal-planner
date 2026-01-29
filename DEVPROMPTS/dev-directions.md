@@ -18,3 +18,8 @@ General Development Practices:
 - Use scripts/dev.sh and stop.sh to start and stop the app. There are more scripts in the scripts directory to diagnose and manage the app state.
 - When there are errors, they must be clearly communicated to the user right to the backend. Wherever the error occurs, it should be cleanly caught, logged, transported, and shown to the user elegantly. This is an LLM-driven app, we fully expect to run into token-per-minute limits etc. So when that happens, the app should degrade gracefuly, not fall flat on its face.
 - Streaming by default - when making an LLM call, our goal is to show UI update to the user as soon as possible. To achieve this, we employ sophisticated techniques to parse partial LLM responses to show the user UI updates. Time to first token or Time to first UI update is a critical performance metric for the app.
+- We don't do undifferentiated heavy lifting, we won't build ourselves whatever is easily available at a high quality for low cost or free (like auth for example)
+- We do dev locally (react + fastapi + supabase in docker) and qa and prod in cloud (render.com + supabase)
+
+Security:
+- We MUST NOT commit secrets to github. Be wary of writing secrets into config files.

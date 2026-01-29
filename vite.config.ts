@@ -10,7 +10,8 @@ export default defineConfig(({ mode }) => {
   return {
     server: {
       port: 3000,
-      host: '0.0.0.0',
+      host: true, // Listen on all addresses including localhost and 127.0.0.1
+      strictPort: true, // Exit if port is already in use
     },
     plugins: [react()],
     resolve: {
