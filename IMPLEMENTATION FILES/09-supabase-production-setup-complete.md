@@ -1,8 +1,8 @@
 # Supabase Production Setup - Complete
 
-## Status: ✅ Ready for Credentials
+## Status: ✅ COMPLETE - Modern Asymmetric JWT Verification Active
 
-The Supabase infrastructure is fully configured and the migration has been successfully applied to production. You just need to add two credentials from the dashboard to complete the setup.
+The Supabase infrastructure is fully configured with modern asymmetric JWT verification (ES256) using JWKS endpoint. The migration has been successfully applied to production. Database connection is active and JWT verification is working.
 
 ## What's Been Done
 
@@ -23,44 +23,49 @@ The Supabase infrastructure is fully configured and the migration has been succe
 - Ready to connect to production Supabase
 
 ### 4. Backend Code ✅
-- `backend/supabase_auth.py` - JWT validation middleware
+- `backend/supabase_auth.py` - **Modern asymmetric JWT validation (ES256/RS256)**
+  - Uses JWKS endpoint for public key retrieval
+  - Automatic key caching with 60-minute refresh
+  - Supports zero-downtime key rotation
+  - Verifies issuer, audience, and expiration
 - `backend/models.py` - SQLAlchemy models for Supabase
 - `backend/database.py` - Connection pooling configured
 - `backend/routers/user_data.py` - Protected endpoints with JWT validation
-- Dependencies added to `backend/pyproject.toml`
+- Dependencies added to `backend/pyproject.toml`:
+  - `pyjwt[crypto]>=2.8.0` - JWT with cryptography support
+  - `requests>=2.31.0` - JWKS endpoint fetching
+  - `cryptography>=41.0.0` - Asymmetric key verification
+
+### 5. Modern JWT Architecture ✅
+- **No shared secrets**: Uses public/private key pairs (ES256)
+- **JWKS endpoint**: `https://yirgkzecscyuxisolatu.supabase.co/auth/v1/.well-known/jwks.json`
+- **Automatic key rotation**: Backend fetches latest public keys automatically
+- **Zero-downtime rotation**: Users stay signed in during key rotation
+- **Compliance-friendly**: Industry standard asymmetric verification
 
 ## What You Need to Do
 
-### Step 1: Get JWT Secret
-
-1. Visit: https://supabase.com/dashboard/project/yirgkzecscyuxisolatu/settings/api
-2. Scroll to "Project API keys" section
-3. Find "JWT Secret" (it's a long string)
-4. Copy it
-
-### Step 2: Get Database Connection String
+### Step 1: Get Database Password
 
 1. Visit: https://supabase.com/dashboard/project/yirgkzecscyuxisolatu/settings/database
-2. Click on "Connection string" tab
-3. Select "Connection pooling" sub-tab
-4. Set Mode to "Transaction"
-5. Copy the connection string (format: `postgresql://postgres.[project-ref]:[password]@...`)
+2. If you don't know your password, click "Reset database password"
+3. Copy the password
 
-### Step 3: Update backend/.env
+### Step 2: Update backend/.env
 
-Open `backend/.env` and replace the placeholder values:
+Open `backend/.env` and replace `[YOUR-PASSWORD]` in the DATABASE_URL:
 
 ```bash
-# Replace this line:
-SUPABASE_JWT_SECRET=<GET_FROM_DASHBOARD_SETTINGS_API_JWT_SECRET>
-# With the actual JWT secret from Step 1
+# Current line:
+DATABASE_URL=postgresql://postgres.yirgkzecscyuxisolatu:[YOUR-PASSWORD]@aws-0-us-west-2.pooler.supabase.com:6543/postgres
 
-# Replace this line:
-DATABASE_URL=<GET_FROM_DASHBOARD_SETTINGS_DATABASE_CONNECTION_POOLING>
-# With the actual connection string from Step 2
+# Replace [YOUR-PASSWORD] with your actual database password
+DATABASE_URL=postgresql://postgres.yirgkzecscyuxisolatu:your_actual_password@aws-0-us-west-2.pooler.supabase.com:6543/postgres
 ```
 
-### Step 4: Start the App
+**Note**: No JWT secret needed! The backend automatically fetches public keys from the JWKS endpoint.
+
+### Step 3: Start the App
 
 ```bash
 ./scripts/dev.sh

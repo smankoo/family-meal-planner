@@ -1,21 +1,39 @@
 services:
+  # Backend API Service
   - type: web
     name: meal-planner-api
     env: python
     buildCommand: "cd backend && uv sync"
     startCommand: "cd backend && uv run uvicorn main:app --host 0.0.0.0 --port $PORT"
     envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: SUPABASE_URL
+        value: https://yirgkzecscyuxisolatu.supabase.co
+      - key: DATABASE_URL
+        sync: false  # Set this in Render dashboard - contains password
+      - key: SQL_DEBUG
+        value: false
       - key: GEMINI_API_KEY
-        sync: false  # You'll set this in Render dashboard
+        sync: false  # Set this in Render dashboard
 
+  # Frontend Static Site
   - type: static
     name: meal-planner-frontend
-    buildCommand: "npm install && npm run build"
+    buildCommand: "npm install && npm run build:production"
     publishPath: "./dist"
     envVars:
-      - key: VITE_API_BASE_URL
-        value: "https://meal-planner-api-v2.onrender.com"
+      - key: VITE_ENVIRONMENT
+        value: production
+      - key: VITE_SUPABASE_URL
+        value: https://yirgkzecscyuxisolatu.supabase.co
+      - key: VITE_SUPABASE_ANON_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpcmdremVjc2N5dXhpc29sYXR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1OTc2OTIsImV4cCI6MjA4NTE3MzY5Mn0.9S1RE4sIKqGZzWfTy9ql8O0fsCnPkSAHDqF98t27A6A  # pragma: allowlist secret
+      - key: VITE_API_URL
+        sync: false  # Set this in Render dashboard to your actual backend URL
       - key: VITE_GA_MEASUREMENT_ID
-        value: "G-X5HX141WYD"
+        value: G-X5HX141WYD
       - key: VITE_GA_DEBUG
-        value: "false"
+        value: false
+      - key: VITE_GA_TEST_MODE
+        value: false

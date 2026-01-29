@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:production": "vite build --mode production",
     "preview": "vite preview",
     "start": "./scripts/start.sh",
     "stop": "./scripts/stop.sh",

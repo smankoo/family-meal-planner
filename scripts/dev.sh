@@ -72,6 +72,38 @@ trap cleanup SIGINT SIGTERM
 check_dev_prerequisites() {
     log "Checking development prerequisites..."
 
+    # Check if Docker is running (required for local Supabase)
+    if ! docker info >/dev/null 2>&1; then
+        error "Docker is not running"
+        info "Please start Docker Desktop and try again"
+        info "Local Supabase requires Docker to run"
+        exit 1
+    fi
+
+    # Check if Supabase CLI is installed
+    if ! command -v supabase &> /dev/null; then
+        warning "Supabase CLI not found"
+        info "Install with: brew install supabase/tap/supabase"
+        info "Or: npm install -g supabase"
+        exit 1
+    fi
+
+    # Check if local Supabase is running
+    if ! curl -s http://127.0.0.1:54321/health >/dev/null 2>&1; then
+        warning "Local Supabase is not running"
+        info "Starting local Supabase..."
+        cd supabase
+        if ! supabase start; then
+            error "Failed to start local Supabase"
+            info "Make sure Docker Desktop is running"
+            exit 1
+        fi
+        cd ..
+        success "Local Supabase started"
+    else
+        success "Local Supabase is running"
+    fi
+
     # Check if ports are available
     if lsof -Pi :$BACKEND_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
         error "Backend port $BACKEND_PORT is already in use"
@@ -208,9 +240,15 @@ show_dev_info() {
     echo -e "${PURPLE}================================================================${NC}"
     echo -e "${PURPLE}                    DEVELOPMENT MODE ACTIVE                     ${NC}"
     echo -e "${PURPLE}================================================================${NC}"
-    echo -e "${PURPLE} Frontend: ${GREEN}http://localhost:$FRONTEND_PORT${NC}                             ${PURPLE} ${NC}"
-    echo -e "${PURPLE} Backend:  ${GREEN}http://localhost:$BACKEND_PORT${NC}                              ${PURPLE} ${NC}"
-    echo -e "${PURPLE} API Docs: ${GREEN}http://localhost:$BACKEND_PORT/docs${NC}                        ${PURPLE} ${NC}"
+    echo -e "${PURPLE} Frontend:        ${GREEN}http://localhost:$FRONTEND_PORT${NC}                      ${PURPLE} ${NC}"
+    echo -e "${PURPLE} Backend:         ${GREEN}http://localhost:$BACKEND_PORT${NC}                       ${PURPLE} ${NC}"
+    echo -e "${PURPLE} API Docs:        ${GREEN}http://localhost:$BACKEND_PORT/docs${NC}                 ${PURPLE} ${NC}"
+    echo -e "${PURPLE} Supabase Studio: ${GREEN}http://127.0.0.1:54323${NC}                       ${PURPLE} ${NC}"
+    echo -e "${PURPLE}================================================================${NC}"
+    echo -e "${PURPLE} Environment: ${CYAN}LOCAL DEVELOPMENT${NC}                              ${PURPLE} ${NC}"
+    echo -e "${PURPLE}   • Using local Supabase (Docker)                             ${NC}"
+    echo -e "${PURPLE}   • Local Postgres database                                   ${NC}"
+    echo -e "${PURPLE}   • ${GREEN}✓${NC} Isolated from production                                ${PURPLE} ${NC}"
     echo -e "${PURPLE}================================================================${NC}"
     echo -e "${PURPLE} Features:                                                      ${NC}"
     echo -e "${PURPLE}   • Hot reloading enabled for both frontend and backend       ${NC}"

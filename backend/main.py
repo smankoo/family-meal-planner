@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 # Import database
 from database import engine, Base
 from routers import user_data
+from supabase_auth import get_current_user_id
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -227,6 +228,15 @@ class GroceryListRequest(BaseModel):
 @app.get("/")
 async def root():
     return {"message": "Family Meal Planner API"}
+
+@app.get("/api/test-auth")
+async def test_auth(user_id: str = Depends(get_current_user_id)):
+    """Test endpoint to verify JWT authentication is working"""
+    return {
+        "message": "Authentication successful!",
+        "user_id": user_id,
+        "auth_method": "Supabase JWT (ES256 asymmetric verification)"
+    }
 
 @app.post("/api/generate-plan")
 async def generate_plan(request: GeneratePlanRequest):
