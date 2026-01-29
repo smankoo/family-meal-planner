@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AuthModal from './AuthModal';
-import { ChefHat, Loader2 } from 'lucide-react';
+import LoadingScreen from './LoadingScreen';
+import { ChefHat } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -13,19 +14,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   // Show loading spinner while checking auth state
   if (loading) {
-    return (
-      <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center">
-        <div className="flex flex-col items-center space-y-6">
-          <div className="w-16 h-16 bg-zinc-900 rounded-2xl flex items-center justify-center shadow-lg">
-            <ChefHat size={24} className="text-white" strokeWidth={2.5} />
-          </div>
-          <div className="flex flex-col items-center space-y-3">
-            <Loader2 size={24} className="animate-spin text-zinc-400" />
-            <p className="text-zinc-600 font-medium">Loading your meal planner...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   // Show auth modal if not authenticated

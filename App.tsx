@@ -9,6 +9,7 @@ import ToastContainer from './components/Toast';
 import ErrorModal from './components/ErrorModal';
 import ConfirmationModal from './components/ConfirmationModal';
 import Footer from './components/Footer';
+import LoadingScreen from './components/LoadingScreen';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import {
   Stage,
@@ -37,7 +38,7 @@ import {
 } from './services/geminiService';
 import { analyticsService } from './services/analyticsService';
 import { getAnalyticsConfig, validateAnalyticsConfig } from './config/analytics';
-import { Undo2, Sparkles, ChefHat, Settings, ArrowLeft, ArrowRight, X, Loader2, RotateCcw, LogOut } from 'lucide-react';
+import { Undo2, Sparkles, ChefHat, Settings, ArrowLeft, ArrowRight, X, RotateCcw, LogOut } from 'lucide-react';
 
 // Helper function to handle API errors consistently
 const handleApiError = (error: any, showToast: any, setErrorModal: any, onRetry?: () => void) => {
@@ -1159,19 +1160,7 @@ const App: React.FC = () => {
 
   // Show loading state while data is being loaded
   if (isDataLoading) {
-    return (
-      <div className="flex flex-col h-full bg-zinc-50 font-sans items-center justify-center">
-        <div className="flex flex-col items-center space-y-6">
-          <div className="w-16 h-16 bg-zinc-900 rounded-2xl flex items-center justify-center shadow-lg">
-            <ChefHat size={24} className="text-white" strokeWidth={2.5} />
-          </div>
-          <div className="flex flex-col items-center space-y-3">
-            <Loader2 size={24} className="animate-spin text-zinc-400" />
-            <p className="text-zinc-600 font-medium">Loading your meal planner...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
