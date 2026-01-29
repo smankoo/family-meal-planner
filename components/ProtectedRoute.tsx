@@ -15,12 +15,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   if (loading) {
     return (
       <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center">
-        <div className="text-center space-y-4">
+        <div className="flex flex-col items-center space-y-6">
           <div className="w-16 h-16 bg-zinc-900 rounded-2xl flex items-center justify-center shadow-lg">
             <ChefHat size={24} className="text-white" strokeWidth={2.5} />
           </div>
-          <div className="space-y-2">
-            <Loader2 size={24} className="animate-spin text-zinc-400 mx-auto" />
+          <div className="flex flex-col items-center space-y-3">
+            <Loader2 size={24} className="animate-spin text-zinc-400" />
             <p className="text-zinc-600 font-medium">Loading your meal planner...</p>
           </div>
         </div>

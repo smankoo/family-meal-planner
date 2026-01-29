@@ -1,5 +1,6 @@
 Frontend:
-- Design language of the app is Apple-like - sophisticated and elegant.
+- The design language of the app is well documented in DESIGN_LANGUAGE.md. Whenever you are creating or modifying a UI element, you must read this file in its entirety.
+- There will be NO hardcoded styling. All styles must live in the central styling. When creating or updating UI components, you must use the existing styling, where the existing styling does not cover the type of component you are making, you must add the styling to this file and then use from there, not hardcode styling. This is to keep a consistent look of the app, and in the future offer easy theme application.
 - Use tailwind for styling
 - The app will treat both mobile and desktop as first class citizens. UI should be 100% usable and delighftul on a phone and use the additional screen space available on a desktop well. The UI should have consistency between desktop and mobile UIs. Like between these diffent modes, layouts will obviously change, but things like button and text colors etc should not change.
 - Whenever a long running call happens (typically call to LLM), it should be an asynch call as per our principles, but also, in the UI, there should be an immediate update, cleanly showing that the user input has been accepted and is being processed, once the async call is completed, the UI should update to show the results. Wherever possible, these results should stream instead of batch-update so the app feels more responsive.
@@ -20,3 +21,6 @@ General Development Practices:
 - Streaming by default - when making an LLM call, our goal is to show UI update to the user as soon as possible. To achieve this, we employ sophisticated techniques to parse partial LLM responses to show the user UI updates. Time to first token or Time to first UI update is a critical performance metric for the app.
 - We don't do undifferentiated heavy lifting, we won't build ourselves whatever is easily available at a high quality for low cost or free (like auth for example)
 - We do dev locally (react + fastapi + supabase in docker) and qa and prod in cloud (render.com + supabase)
+
+Security:
+- We MUST NOT commit secrets to github. Be wary of writing secrets into config files.
