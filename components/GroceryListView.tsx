@@ -12,6 +12,7 @@ interface GroceryListViewProps {
   hasMealPlan: boolean;
   newlyReceivedItems?: Set<string>;
   isInvalidated?: boolean; // New prop to show invalidation banner
+  onItemsChange?: (items: GroceryItem[]) => void; // Callback to persist changes
 }
 
 const GroceryListView: React.FC<GroceryListViewProps> = ({
@@ -22,7 +23,8 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
   isLoading,
   hasMealPlan,
   newlyReceivedItems = new Set(),
-  isInvalidated = false
+  isInvalidated = false,
+  onItemsChange
 }) => {
   const [items, setItems] = useState<GroceryItem[]>(initialItems);
 
@@ -71,9 +73,15 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
   };
 
   const toggleItem = (id: string) => {
-    setItems(prev => prev.map(item =>
+    const updatedItems = items.map(item =>
       item.id === id ? { ...item, checked: !item.checked } : item
-    ));
+    );
+    setItems(updatedItems);
+
+    // Propagate changes to parent for persistence
+    if (onItemsChange) {
+      onItemsChange(updatedItems);
+    }
   };
 
   // Skeleton component for loading states

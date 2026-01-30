@@ -41,7 +41,24 @@ app = FastAPI(
     version="3.0.0"
 )
 
-# Include routers
+# Configure CORS FIRST - before including routers
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "https://mealplan.mankoo.ca",
+        "https://meal-planner-frontend-v2.onrender.com",
+        "https://meal-planner-api-v2.onrender.com",
+        "https://www.mankoo.ca",
+        "https://mankoo.ca"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routers AFTER middleware
 app.include_router(user_data.router)
 
 # Error response model
@@ -171,23 +188,6 @@ async def global_exception_handler(request, exc):
                 details=str(exc) if os.getenv("DEBUG") == "true" else None
             ).model_dump()
         )
-
-# Configure CORS - allow production domains
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "https://mealplan.mankoo.ca",
-        "https://meal-planner-frontend-v2.onrender.com",
-        "https://meal-planner-api-v2.onrender.com",
-        "https://www.mankoo.ca",
-        "https://mankoo.ca"
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Configure Gemini with new SDK
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))

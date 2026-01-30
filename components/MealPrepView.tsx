@@ -13,6 +13,7 @@ interface MealPrepViewProps {
   hasMealPlan: boolean;
   newlyReceivedTasks?: Set<string>;
   isInvalidated?: boolean; // New prop to show invalidation banner
+  onTasksChange?: (tasks: PrepTask[]) => void; // Callback to persist changes
 }
 
 const MealPrepView: React.FC<MealPrepViewProps> = ({
@@ -24,7 +25,8 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
   isLoading,
   hasMealPlan,
   newlyReceivedTasks = new Set(),
-  isInvalidated = false
+  isInvalidated = false,
+  onTasksChange
 }) => {
   const [tasks, setTasks] = useState<PrepTask[]>(initialTasks);
 
@@ -110,9 +112,15 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
   };
 
   const toggleTask = (id: string) => {
-    setTasks(prev => prev.map(task =>
+    const updatedTasks = tasks.map(task =>
       task.id === id ? { ...task, completed: !task.completed } : task
-    ));
+    );
+    setTasks(updatedTasks);
+
+    // Propagate changes to parent for persistence
+    if (onTasksChange) {
+      onTasksChange(updatedTasks);
+    }
   };
 
   // Skeleton component for loading states

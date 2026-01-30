@@ -120,11 +120,11 @@ class DataService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-        console.error('Error saving data to cloud:', errorData);
+        console.error(`Error saving ${dataType} to cloud (${response.status}):`, errorData);
         throw new Error(errorData.message || 'Failed to save data');
       }
     } catch (error) {
-      console.error('Failed to save data to cloud:', error);
+      console.error(`Failed to save ${dataType} to cloud:`, error);
       // Don't throw - allow app to continue with local storage
     }
   }

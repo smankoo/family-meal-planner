@@ -428,6 +428,10 @@ const App: React.FC = () => {
       }
     }));
 
+    // Use a ref to track the plan as it's being built during streaming
+    // IMPORTANT: Create a deep copy so mutations don't affect the initial state
+    const streamingPlanRef = { current: JSON.parse(JSON.stringify(emptyPlan)) };
+
     // Clear previously received cards and set initial empty plan
     setNewlyReceivedCards(new Set());
     setAnimatedCards(new Set()); // Reset animated cards for new generation
@@ -440,11 +444,15 @@ const App: React.FC = () => {
       groceryListVersion: undefined
     });
 
-    setPlanHistory({
-      past: [],
-      present: emptyPlan,
-      future: []
-    });
+    // Set empty plan WITHOUT saving (skipSave=true) to avoid persisting skeleton
+    setPlanHistory(
+      {
+        past: [],
+        present: emptyPlan,
+        future: []
+      },
+      true // skipSave - don't persist the empty skeleton plan
+    );
     setHasPlanGenerated(true);
     setViewMode('planning');
     setCurrentStage(Stage.MEAL_PLANNING);
@@ -482,32 +490,40 @@ const App: React.FC = () => {
             }, 600); // Match animation duration
           }
 
-          // Update plan with new meal data
-          setPlanHistory(prev => {
-            const newPlan = [...prev.present];
-
-            // Find the day index
-            const dayIndex = newPlan.findIndex(day => day.day === mealData.day);
-            if (dayIndex !== -1) {
-              // Update the specific meal
-              newPlan[dayIndex] = {
-                ...newPlan[dayIndex],
-                meals: {
-                  ...newPlan[dayIndex].meals,
-                  [mealData.mealType]: mealData.meal
-                }
-              };
-            }
-
-            return {
-              ...prev,
-              present: newPlan
+          // Update plan with new meal data - skip save during streaming
+          // Find the day index in the ref's current plan
+          const dayIndex = streamingPlanRef.current.findIndex(day => day.day === mealData.day);
+          if (dayIndex !== -1) {
+            // Update the specific meal in the ref
+            streamingPlanRef.current[dayIndex] = {
+              ...streamingPlanRef.current[dayIndex],
+              meals: {
+                ...streamingPlanRef.current[dayIndex].meals,
+                [mealData.mealType]: mealData.meal
+              }
             };
-          });
+          }
+
+          // Update the UI state with the ref's current plan
+          setPlanHistory({
+            past: [],
+            present: [...streamingPlanRef.current], // Create a new array for React to detect change
+            future: []
+          }, true); // skipSave=true during streaming
         },
         // onComplete callback
         async () => {
           setIsLoading(false);
+
+          // Save the completed plan from the ref (streaming is done)
+          const completedPlan = {
+            past: [],
+            present: streamingPlanRef.current,
+            future: []
+          };
+
+          await dataService.saveData('meal_plan', completedPlan);
+          console.log('✓ Saved completed meal plan after streaming');
 
           // Track successful plan generation
           await analyticsService.trackMealPlanningEvent('plan_generation_completed', {
@@ -574,8 +590,8 @@ const App: React.FC = () => {
         });
 
         // Reset all states for fresh regeneration with skeleton loading
-        setPrepTasks([]);
-        setGroceryItems([]);
+        setPrepTasks([], true); // skipSave during reset
+        setGroceryItems([], true); // skipSave during reset
         setNewlyReceivedCards(new Set());
         setAnimatedCards(new Set());
         setNewlyReceivedTasks(new Set());
@@ -735,7 +751,10 @@ const App: React.FC = () => {
 
       // Clear previously received tasks and set initial empty state
       setNewlyReceivedTasks(new Set());
-      setPrepTasks([]);
+      setPrepTasks([], true); // skipSave - don't persist empty array during init
+
+      // Use a ref to track tasks as they're being built during streaming
+      const streamingTasksRef = { current: [] as PrepTask[] };
 
       try {
         // Use task-by-task streaming generation
@@ -757,8 +776,11 @@ const App: React.FC = () => {
             const taskKey = `${taskData.day}-${newTask.id}`;
             setNewlyReceivedTasks(prev => new Set([...prev, taskKey]));
 
-            // Add task to the list
-            setPrepTasks(prev => [...prev, newTask]);
+            // Add task to the ref
+            streamingTasksRef.current.push(newTask);
+
+            // Update UI state with the ref's current tasks
+            setPrepTasks([...streamingTasksRef.current], true); // skipSave during streaming
 
             // Clear the animation state after animation completes
             setTimeout(() => {
@@ -772,6 +794,10 @@ const App: React.FC = () => {
           // onComplete callback
           async () => {
             setIsLoading(false);
+
+            // Save the completed prep tasks from the ref
+            await dataService.saveData('prep_tasks', streamingTasksRef.current);
+            console.log('✓ Saved completed prep tasks after streaming');
 
             // Mark prep plan as current with the meal plan version
             setInvalidationState(prev => ({
@@ -849,7 +875,10 @@ const App: React.FC = () => {
 
       // Clear previously received items and set initial empty state
       setNewlyReceivedItems(new Set());
-      setGroceryItems([]);
+      setGroceryItems([], true); // skipSave - don't persist empty array during init
+
+      // Use a ref to track items as they're being built during streaming
+      const streamingItemsRef = { current: [] as GroceryItem[] };
 
       try {
         // Use item-by-item streaming generation
@@ -871,8 +900,11 @@ const App: React.FC = () => {
             const itemKey = `${itemData.category}-${itemData.name}-${newItem.id}`;
             setNewlyReceivedItems(prev => new Set([...prev, itemKey]));
 
-            // Add item to the list
-            setGroceryItems(prev => [...prev, newItem]);
+            // Add item to the ref
+            streamingItemsRef.current.push(newItem);
+
+            // Update UI state with the ref's current items
+            setGroceryItems([...streamingItemsRef.current], true); // skipSave during streaming
 
             // Clear the animation state after animation completes
             setTimeout(() => {
@@ -886,6 +918,10 @@ const App: React.FC = () => {
           // onComplete callback
           async () => {
             setIsLoading(false);
+
+            // Save the completed grocery items from the ref
+            await dataService.saveData('grocery_items', streamingItemsRef.current);
+            console.log('✓ Saved completed grocery items after streaming');
 
             // Mark grocery list as current with the meal plan version
             setInvalidationState(prev => ({
@@ -972,7 +1008,10 @@ const App: React.FC = () => {
 
     // Clear existing prep tasks and reset animation state
     setNewlyReceivedTasks(new Set());
-    setPrepTasks([]);
+    setPrepTasks([], true); // skipSave during init
+
+    // Use a ref to track tasks as they're being built during streaming
+    const streamingTasksRef = { current: [] as PrepTask[] };
 
     try {
       // Use task-by-task streaming generation
@@ -994,8 +1033,11 @@ const App: React.FC = () => {
           const taskKey = `${taskData.day}-${newTask.id}`;
           setNewlyReceivedTasks(prev => new Set([...prev, taskKey]));
 
-          // Add task to the list
-          setPrepTasks(prev => [...prev, newTask]);
+          // Add task to the ref
+          streamingTasksRef.current.push(newTask);
+
+          // Update UI state with the ref's current tasks
+          setPrepTasks([...streamingTasksRef.current], true); // skipSave during streaming
 
           // Clear the animation state after animation completes
           setTimeout(() => {
@@ -1009,6 +1051,10 @@ const App: React.FC = () => {
         // onComplete callback
         async () => {
           setIsLoading(false);
+
+          // Save the completed prep tasks from the ref
+          await dataService.saveData('prep_tasks', streamingTasksRef.current);
+          console.log('✓ Saved completed prep tasks after streaming');
 
           // Mark prep plan as current with the meal plan version
           setInvalidationState(prev => ({
@@ -1071,7 +1117,10 @@ const App: React.FC = () => {
 
     // Clear existing grocery items and reset animation state
     setNewlyReceivedItems(new Set());
-    setGroceryItems([]);
+    setGroceryItems([], true); // skipSave during init
+
+    // Use a ref to track items as they're being built during streaming
+    const streamingItemsRef = { current: [] as GroceryItem[] };
 
     try {
       // Use item-by-item streaming generation
@@ -1093,8 +1142,11 @@ const App: React.FC = () => {
           const itemKey = `${itemData.category}-${itemData.name}-${newItem.id}`;
           setNewlyReceivedItems(prev => new Set([...prev, itemKey]));
 
-          // Add item to the list
-          setGroceryItems(prev => [...prev, newItem]);
+          // Add item to the ref
+          streamingItemsRef.current.push(newItem);
+
+          // Update UI state with the ref's current items
+          setGroceryItems([...streamingItemsRef.current], true); // skipSave during streaming
 
           // Clear the animation state after animation completes
           setTimeout(() => {
@@ -1108,6 +1160,10 @@ const App: React.FC = () => {
         // onComplete callback
         async () => {
           setIsLoading(false);
+
+          // Save the completed grocery items from the ref
+          await dataService.saveData('grocery_items', streamingItemsRef.current);
+          console.log('✓ Saved completed grocery items after streaming');
 
           // Mark grocery list as current with the meal plan version
           setInvalidationState(prev => ({
@@ -1351,6 +1407,7 @@ const App: React.FC = () => {
                          )}
                          newlyReceivedTasks={newlyReceivedTasks}
                          isInvalidated={isPrepPlanInvalidated()}
+                         onTasksChange={setPrepTasks}
                     />
                     <Footer className="mt-16" />
                   </div>
@@ -1380,6 +1437,7 @@ const App: React.FC = () => {
                          )}
                          newlyReceivedItems={newlyReceivedItems}
                          isInvalidated={isGroceryListInvalidated()}
+                         onItemsChange={setGroceryItems}
                     />
                     <Footer className="mt-16" />
                   </div>
