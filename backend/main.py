@@ -41,7 +41,7 @@ app = FastAPI(
     version="3.0.0"
 )
 
-# Configure CORS FIRST - before including routers
+# Configure CORS - this handles OPTIONS preflight requests automatically
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -61,21 +61,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Add middleware to handle OPTIONS requests before authentication
-@app.middleware("http")
-async def handle_options_requests(request, call_next):
-    """
-    Handle OPTIONS preflight requests before they hit authentication.
-    This ensures CORS headers are added even when auth would normally fail.
-    """
-    if request.method == "OPTIONS":
-        # Return 200 OK for OPTIONS requests
-        # CORSMiddleware will add the appropriate headers
-        return JSONResponse(content={}, status_code=200)
-
-    response = await call_next(request)
-    return response
 
 # Include routers AFTER middleware
 app.include_router(user_data.router)
