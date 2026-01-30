@@ -1277,22 +1277,21 @@ const App: React.FC = () => {
 
           {/* Right: User Actions */}
           <div className="pointer-events-auto flex items-center gap-2">
-              {/* User Menu - Always visible when logged in */}
+              {/* User Menu or Close Button - Transform in place */}
               {user && (
-                  <UserMenu
-                    onOpenSettings={() => setViewMode('household')}
-                  />
-              )}
-
-              {/* Close button when in household view */}
-              {viewMode === 'household' && hasPlanGenerated && (
-                  <button
-                      onClick={handleCloseSetup}
-                      className="w-9 h-9 md:w-10 md:h-10 bg-white/60 backdrop-blur-sm shadow-sm border border-white/40 rounded-full flex items-center justify-center text-zinc-500 hover:text-red-600 hover:bg-white/80 transition-all"
-                      title="Close Settings"
-                  >
-                      <X size={18} className="md:w-5 md:h-5" />
-                  </button>
+                  viewMode === 'household' && hasPlanGenerated ? (
+                      <button
+                          onClick={handleCloseSetup}
+                          className="w-9 h-9 md:w-10 md:h-10 bg-white/60 backdrop-blur-sm shadow-sm border border-white/40 rounded-full flex items-center justify-center text-zinc-500 hover:text-red-600 hover:bg-white/80 transition-all"
+                          title="Close Settings"
+                      >
+                          <X size={18} className="md:w-5 md:h-5" />
+                      </button>
+                  ) : (
+                      <UserMenu
+                        onOpenSettings={() => setViewMode('household')}
+                      />
+                  )
               )}
           </div>
         </div>
