@@ -55,11 +55,11 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   const getIconColor = () => {
     switch (variant) {
       case 'warning':
-        return 'text-amber-500 bg-amber-50';
+        return 'text-amber-500';
       case 'danger':
-        return 'text-red-500 bg-red-50';
+        return 'text-red-500';
       default:
-        return 'text-blue-500 bg-blue-50';
+        return 'text-accent-500';
     }
   };
 
@@ -91,14 +91,15 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         {/* Header */}
         <div className="modal-header">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getIconColor()}`}>
-              <AlertCircle size={20} />
+            <div className={`${getIconColor()}`}>
+              <AlertCircle size={24} />
             </div>
             <h2 className="heading-card">{title}</h2>
           </div>
           <button
             onClick={onClose}
             className="btn-icon"
+            aria-label="Close"
           >
             <X size={16} />
           </button>
@@ -121,7 +122,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           </button>
           <button
             onClick={handleConfirm}
-            className={`flex-1 px-4 py-3 rounded-button font-semibold transition-colors ${getConfirmButtonStyle()}`}
+            className={`${getConfirmButtonStyle()} flex-1`}
           >
             {confirmLabel}
           </button>
