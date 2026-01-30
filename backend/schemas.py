@@ -60,18 +60,18 @@ class OAuthCallback(BaseModel):
 # User data schemas
 class UserDataCreate(BaseModel):
     data_type: str
-    data: Dict[str, Any]
+    data: Any  # Can be dict, list, string, number, etc.
 
 
 class UserDataUpdate(BaseModel):
-    data: Dict[str, Any]
+    data: Any  # Can be dict, list, string, number, etc.
 
 
 class UserDataResponse(BaseModel):
     id: str
     user_id: str
     data_type: str
-    data: Dict[str, Any]
+    data: Any  # Can be dict, list, string, number, etc.
     created_at: datetime
     updated_at: datetime
 

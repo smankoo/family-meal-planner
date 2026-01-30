@@ -38,7 +38,7 @@ import {
 } from './services/geminiService';
 import { analyticsService } from './services/analyticsService';
 import { getAnalyticsConfig, validateAnalyticsConfig } from './config/analytics';
-import { Undo2, Sparkles, ChefHat, Settings, ArrowLeft, ArrowRight, X, RotateCcw } from 'lucide-react';
+import { Undo2, Sparkles, ChefHat, Settings, ArrowLeft, ArrowRight, X, RotateCcw, Loader2 } from 'lucide-react';
 import UserMenu from './components/UserMenu';
 import UserProfile from './components/UserProfile';
 
@@ -233,11 +233,16 @@ const App: React.FC = () => {
 
     // Migrate from localStorage when user first signs in
     if (user?.id) {
-      dataService.migrateFromLocalStorage().catch(error => {
-        console.error('Migration failed:', error);
-      });
+      dataService.migrateFromLocalStorage()
+        .then(() => {
+          console.log('Data migration check completed');
+        })
+        .catch(error => {
+          console.error('Migration failed:', error);
+          showToast('Failed to sync your data. Please refresh the page.', 'error');
+        });
     }
-  }, [user?.id]);
+  }, [user?.id, showToast]);
 
   // --- Initialization with Persistence ---
 

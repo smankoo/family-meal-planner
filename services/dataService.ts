@@ -196,14 +196,18 @@ class DataService {
 
       if (hasExistingData) {
         console.log('User already has cloud data, skipping migration');
+        // Clean up localStorage after successful migration verification
+        this.cleanupLocalStorage();
         return;
       }
+
+      console.log('Starting migration from localStorage to cloud...');
 
       // Migrate data from localStorage
       const migrations: Array<{ key: string; dataType: DataType }> = [
         { key: 'fmp_family', dataType: 'family' },
         { key: 'fmp_preferences', dataType: 'preferences' },
-        { key: 'fmp_plan_history', dataType: 'meal_plan' }, // Updated to match backend
+        { key: 'fmp_plan_history', dataType: 'meal_plan' },
         { key: 'fmp_prep_tasks', dataType: 'prep_tasks' },
         { key: 'fmp_grocery_items', dataType: 'grocery_items' },
         { key: 'fmp_invalidation_state', dataType: 'invalidation_state' },
@@ -211,24 +215,57 @@ class DataService {
         { key: 'fmp_current_stage', dataType: 'current_stage' }
       ];
 
+      let migratedCount = 0;
       const migrationPromises = migrations.map(async ({ key, dataType }) => {
         const localData = localStorage.getItem(key);
         if (localData) {
           try {
             const parsedData = JSON.parse(localData);
             await this.saveData(dataType, parsedData);
-            console.log(`Migrated ${dataType} from localStorage`);
+            migratedCount++;
+            console.log(`✓ Migrated ${dataType} from localStorage`);
           } catch (error) {
-            console.error(`Failed to migrate ${dataType}:`, error);
+            console.error(`✗ Failed to migrate ${dataType}:`, error);
           }
         }
       });
 
       await Promise.all(migrationPromises);
-      console.log('Migration from localStorage completed');
+
+      if (migratedCount > 0) {
+        console.log(`Migration completed: ${migratedCount} items migrated to cloud`);
+        // Clean up localStorage after successful migration
+        this.cleanupLocalStorage();
+      } else {
+        console.log('No localStorage data found to migrate');
+      }
     } catch (error) {
       console.error('Migration failed:', error);
     }
+  }
+
+  private cleanupLocalStorage(): void {
+    const keysToRemove = [
+      'fmp_family',
+      'fmp_preferences',
+      'fmp_plan_history',
+      'fmp_prep_tasks',
+      'fmp_grocery_items',
+      'fmp_invalidation_state',
+      'fmp_has_plan',
+      'fmp_current_stage',
+      'fmp_schema_version'
+    ];
+
+    keysToRemove.forEach(key => {
+      try {
+        localStorage.removeItem(key);
+      } catch (error) {
+        console.warn(`Failed to remove ${key} from localStorage:`, error);
+      }
+    });
+
+    console.log('localStorage cleanup completed');
   }
 
   async clearAllUserData(): Promise<void> {

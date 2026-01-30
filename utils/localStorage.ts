@@ -1,3 +1,18 @@
+/**
+ * @deprecated This file is deprecated as of January 29, 2026
+ *
+ * The app now uses cloud-first data persistence with Supabase.
+ * All data is stored in and loaded from the cloud database.
+ *
+ * This file is kept only for reference and potential emergency rollback.
+ * The migration logic in dataService.ts handles one-time migration from
+ * localStorage to cloud storage.
+ *
+ * DO NOT USE THESE FUNCTIONS IN NEW CODE.
+ *
+ * See: IMPLEMENTATION FILES/22-cloud-first-data-persistence.md
+ */
+
 import { FamilyMember, FamilyPreferences, WeekPlan, PlanHistory, PrepTask, GroceryItem, InvalidationState } from '../types';
 import { INITIAL_FAMILY, INITIAL_PREFERENCES, EMPTY_PLAN } from '../constants';
 

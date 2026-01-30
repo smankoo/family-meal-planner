@@ -42,6 +42,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+
+        // Note: Data migration from localStorage to cloud happens automatically
+        // in App.tsx when user is set. See dataService.migrateFromLocalStorage()
       }
     });
 
