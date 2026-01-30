@@ -38,7 +38,9 @@ import {
 } from './services/geminiService';
 import { analyticsService } from './services/analyticsService';
 import { getAnalyticsConfig, validateAnalyticsConfig } from './config/analytics';
-import { Undo2, Sparkles, ChefHat, Settings, ArrowLeft, ArrowRight, X, RotateCcw, LogOut } from 'lucide-react';
+import { Undo2, Sparkles, ChefHat, Settings, ArrowLeft, ArrowRight, X, RotateCcw } from 'lucide-react';
+import UserMenu from './components/UserMenu';
+import UserProfile from './components/UserProfile';
 
 // Helper function to handle API errors consistently
 const handleApiError = (error: any, showToast: any, setErrorModal: any, onRetry?: () => void) => {
@@ -223,7 +225,7 @@ const DEFAULT_INVALIDATION_STATE = {
 
 const App: React.FC = () => {
   const { showToast } = useToast();
-  const { user, profile, signOut } = useAuth();
+  const { user, signOut } = useAuth();
 
   // Initialize data service when user changes
   React.useEffect(() => {
@@ -299,6 +301,9 @@ const App: React.FC = () => {
      // If we have a plan generated, default to planning view
      hasPlanGenerated ? 'planning' : 'household'
   );
+
+  // Profile modal state
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Runtime UI state (not persisted)
   const [isLoading, setIsLoading] = useState(false);
@@ -1188,6 +1193,26 @@ const App: React.FC = () => {
         variant="warning"
       />
 
+      {/* Profile Modal */}
+      {isProfileModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsProfileModalOpen(false)}>
+          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="heading-card">Your Profile</h2>
+              <button
+                onClick={() => setIsProfileModalOpen(false)}
+                className="btn-icon"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="modal-content overflow-y-auto max-h-[60vh]">
+              <UserProfile />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header - Apple-like frosted glass effect */}
       <header className="frosted-header fixed top-0 left-0 right-0 z-50 h-16 md:h-20 flex items-center justify-between px-4 md:px-6 lg:px-10 pointer-events-none">
         {/* Backdrop blur background */}
@@ -1214,24 +1239,12 @@ const App: React.FC = () => {
 
           {/* Right: Settings and User Actions */}
           <div className="pointer-events-auto flex items-center gap-2">
-              {/* Show logout button only during first run (before plan is generated) */}
-              {user && !hasPlanGenerated && (
-                  <button
-                      onClick={async () => {
-                        try {
-                          await signOut();
-                          showToast('Signed out successfully', 'success');
-                        } catch (error: any) {
-                          console.error('Sign out error:', error);
-                          showToast(error.message || 'Failed to sign out', 'error');
-                        }
-                      }}
-                      className="w-9 h-9 md:w-10 md:h-10 bg-white/60 backdrop-blur-sm shadow-sm border border-white/40 rounded-full flex items-center justify-center text-zinc-500 hover:text-red-600 hover:bg-white/80 transition-all"
-                      title="Sign Out"
-                  >
-                      <LogOut size={16} className="md:w-[18px] md:h-[18px]" />
-                  </button>
+              {/* User Menu - Always visible when logged in */}
+              {user && (
+                  <UserMenu onOpenProfile={() => setIsProfileModalOpen(true)} />
               )}
+
+              {/* Settings/Close button for view mode switching */}
               {viewMode === 'planning' ? (
                   <button
                       onClick={() => setViewMode('household')}

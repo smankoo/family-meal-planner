@@ -12,7 +12,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ className = '' }) => {
   const { showToast } = useToast();
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState(user?.name || '');
+  const [editName, setEditName] = useState(user?.user_metadata?.name || '');
   const [loading, setLoading] = useState(false);
 
   if (!user) return null;
@@ -37,7 +37,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ className = '' }) => {
   };
 
   const handleCancelEdit = () => {
-    setEditName(user?.name || '');
+    setEditName(user?.user_metadata?.name || '');
     setIsEditing(false);
   };
 
@@ -60,8 +60,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ className = '' }) => {
       .slice(0, 2);
   };
 
-  const displayName = user.name || 'User';
+  const displayName = user.user_metadata?.name || user.email?.split('@')[0] || 'User';
   const initials = getInitials(displayName);
+  const provider = user.app_metadata?.provider || 'email';
 
   return (
     <div className={`card ${className}`}>
@@ -79,9 +80,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ className = '' }) => {
       <div className="space-y-4">
         {/* Avatar and Basic Info */}
         <div className="flex items-center gap-4">
-          {user.avatar_url ? (
+          {user.user_metadata?.avatar_url ? (
             <img
-              src={user.avatar_url}
+              src={user.user_metadata.avatar_url}
               alt={displayName}
               className="w-16 h-16 rounded-full object-cover border-2 border-primary-100"
             />
@@ -138,7 +139,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ className = '' }) => {
         <div className="pt-4 border-t border-primary-100 space-y-3">
           <div className="flex justify-between items-center text-sm">
             <span className="text-primary-600">Provider</span>
-            <span className="text-primary-900 font-medium capitalize">{user.provider}</span>
+            <span className="text-primary-900 font-medium capitalize">{provider}</span>
           </div>
 
           <div className="flex justify-between items-center text-sm">
@@ -152,16 +153,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ className = '' }) => {
           </div>
 
           <div className="flex justify-between items-center text-sm">
-            <span className="text-primary-600">Account status</span>
-            <span className={`font-medium ${user.is_active ? 'text-green-600' : 'text-red-600'}`}>
-              {user.is_active ? 'Active' : 'Inactive'}
-            </span>
-          </div>
-
-          <div className="flex justify-between items-center text-sm">
             <span className="text-primary-600">Email verified</span>
-            <span className={`font-medium ${user.email_verified ? 'text-green-600' : 'text-amber-600'}`}>
-              {user.email_verified ? 'Verified' : 'Pending'}
+            <span className={`font-medium ${user.email_confirmed_at ? 'text-green-600' : 'text-amber-600'}`}>
+              {user.email_confirmed_at ? 'Verified' : 'Pending'}
             </span>
           </div>
         </div>
