@@ -8,6 +8,15 @@ export default defineConfig(({ mode }) => {
   // Set the third parameter to '' to load all env regardless of the `VITE_` prefix.
   const env = loadEnv(mode, process.cwd(), '');
 
+  // Also check process.env for VITE_ prefixed variables (from Render/CI)
+  // These should override .env file values
+  const processEnvVars: Record<string, string> = {};
+  Object.keys(process.env).forEach(key => {
+    if (key.startsWith('VITE_')) {
+      processEnvVars[`import.meta.env.${key}`] = JSON.stringify(process.env[key]);
+    }
+  });
+
   return {
     server: {
       port: 3000,
@@ -35,8 +44,10 @@ export default defineConfig(({ mode }) => {
       }
     },
     // Define which env vars to expose to the client
+    // Process env vars from Render/CI override .env file values
     define: {
       __APP_ENV__: JSON.stringify(env.VITE_ENVIRONMENT || mode),
+      ...processEnvVars,
     },
   };
 });
