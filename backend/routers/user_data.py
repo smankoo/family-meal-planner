@@ -33,7 +33,7 @@ async def get_user_data(
         query = query.filter(UserData.data_type == data_type)
 
     user_data = query.all()
-    return [UserDataResponse.from_orm(data) for data in user_data]
+    return [UserDataResponse.model_validate(data) for data in user_data]
 
 
 @router.get("/{data_type}", response_model=UserDataResponse)
@@ -60,7 +60,7 @@ async def get_user_data_by_type(
             detail=f"No data found for type: {data_type}"
         )
 
-    return UserDataResponse.from_orm(user_data)
+    return UserDataResponse.model_validate(user_data)
 
 
 @router.post("/", response_model=UserDataResponse)
@@ -98,7 +98,7 @@ async def create_user_data(
     db.commit()
     db.refresh(user_data)
 
-    return UserDataResponse.from_orm(user_data)
+    return UserDataResponse.model_validate(user_data)
 
 
 @router.put("/{data_type}", response_model=UserDataResponse)
@@ -136,7 +136,7 @@ async def update_user_data(
     db.commit()
     db.refresh(user_data)
 
-    return UserDataResponse.from_orm(user_data)
+    return UserDataResponse.model_validate(user_data)
 
 
 @router.delete("/{data_type}")

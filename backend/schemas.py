@@ -69,17 +69,26 @@ class UserDataUpdate(BaseModel):
 
 
 class UserDataResponse(BaseModel):
-    id: UUID
-    user_id: UUID
+    id: str
+    user_id: str
     data_type: str
     data: Any  # Can be dict, list, string, number, etc.
     created_at: datetime
     updated_at: datetime
 
-    @field_serializer('id', 'user_id')
-    def serialize_uuid(self, value: UUID) -> str:
-        """Convert UUID to string for JSON serialization"""
-        return str(value)
-
     class Config:
         from_attributes = True
+
+    @classmethod
+    def model_validate(cls, obj, **kwargs):
+        """Custom validation to handle UUID objects from SQLAlchemy"""
+        if hasattr(obj, '__dict__'):
+            # Convert UUID objects to strings before validation
+            data = {}
+            for key, value in obj.__dict__.items():
+                if isinstance(value, UUID):
+                    data[key] = str(value)
+                else:
+                    data[key] = value
+            return super().model_validate(data, **kwargs)
+        return super().model_validate(obj, **kwargs)
