@@ -1,21 +1,25 @@
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { WeekPlan, MealTime } from '../types';
-import { Users, Sparkles, ChevronRight, ChevronLeft, Loader2 } from 'lucide-react';
+import { Users, Sparkles, ChevronRight, ChevronLeft, Loader2, RefreshCw } from 'lucide-react';
 
 interface MealGridProps {
   plan: WeekPlan;
   previousPlan?: WeekPlan;
   onCellClick?: (day: string, time: MealTime) => void;
+  onReplaceMeal?: (day: string, time: MealTime) => void;
   isStreaming?: boolean;
   newlyReceivedCards?: Set<string>;
+  replacingMeals?: Set<string>;
 }
 
 const MealGrid: React.FC<MealGridProps> = ({
   plan,
   previousPlan,
   onCellClick,
+  onReplaceMeal,
   isStreaming = false,
-  newlyReceivedCards = new Set()
+  newlyReceivedCards = new Set(),
+  replacingMeals = new Set()
 }) => {
   const mealTimes = [MealTime.BREAKFAST, MealTime.LUNCH, MealTime.SNACK, MealTime.DINNER];
 
@@ -137,17 +141,35 @@ const MealGrid: React.FC<MealGridProps> = ({
                              <div
                                 key={time}
                                 ref={(el) => registerCardRef(cardKey, el)}
-                                onClick={() => onCellClick && onCellClick(dayPlan.day, time)}
                                 className={`
                                   relative bg-white rounded-2xl p-5 shadow-sm border transition-all duration-500 active:scale-[0.98]
                                   ${isChanged
                                     ? 'border-indigo-100 bg-indigo-50/20'
                                     : 'border-zinc-100'}
+                                  ${replacingMeals.has(cardKey) ? 'opacity-60' : ''}
                                 `}
                               >
                                 <div className="flex justify-between items-start mb-2">
                                   <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{time}</span>
-                                  {isChanged && <Sparkles size={14} className="text-indigo-500 animate-pulse" />}
+                                  <div className="flex items-center gap-2">
+                                    {isChanged && <Sparkles size={14} className="text-indigo-500 animate-pulse" />}
+                                    {!isEmpty && onReplaceMeal && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onReplaceMeal(dayPlan.day, time);
+                                        }}
+                                        disabled={replacingMeals.has(cardKey)}
+                                        className="btn-icon-sm"
+                                        aria-label="Replace meal"
+                                      >
+                                        <RefreshCw
+                                          size={14}
+                                          className={replacingMeals.has(cardKey) ? 'animate-spin-slow' : ''}
+                                        />
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
 
                                 <h4 className={`text-lg font-semibold mb-1 leading-snug ${isEmpty ? 'text-zinc-300 italic' : 'text-zinc-800'}`}>
@@ -212,14 +234,14 @@ const MealGrid: React.FC<MealGridProps> = ({
                             <div
                                 key={`${dayPlan.day}-${time}`}
                                 ref={(el) => registerCardRef(cardKey, el)}
-                                onClick={() => onCellClick && onCellClick(dayPlan.day, time)}
                                 className={`
                                     relative p-4 xl:p-5 bg-white rounded-2xl border transition-all duration-500 group
                                     flex flex-col h-full min-h-[140px] xl:min-h-[160px]
-                                    hover:-translate-y-1 hover:shadow-lg hover:shadow-zinc-200/50 cursor-default
+                                    hover:-translate-y-1 hover:shadow-lg hover:shadow-zinc-200/50
                                     ${isChanged
                                         ? 'border-indigo-100 bg-gradient-to-br from-indigo-50/30 to-white'
                                         : 'border-zinc-100 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.03)]'}
+                                    ${replacingMeals.has(cardKey) ? 'opacity-60' : ''}
                                 `}
                             >
                                 {/* Meal Time Label inside card for context */}
@@ -227,7 +249,25 @@ const MealGrid: React.FC<MealGridProps> = ({
                                     <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-wider">
                                         {time}
                                     </span>
-                                    {isChanged && <Sparkles size={14} className="text-indigo-400 animate-pulse" />}
+                                    <div className="flex items-center gap-2">
+                                        {isChanged && <Sparkles size={14} className="text-indigo-400 animate-pulse" />}
+                                        {!isEmpty && onReplaceMeal && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              onReplaceMeal(dayPlan.day, time);
+                                            }}
+                                            disabled={replacingMeals.has(cardKey)}
+                                            className="btn-icon-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                                            aria-label="Replace meal"
+                                          >
+                                            <RefreshCw
+                                              size={14}
+                                              className={replacingMeals.has(cardKey) ? 'animate-spin-slow' : ''}
+                                            />
+                                          </button>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="flex-1">

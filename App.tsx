@@ -13,6 +13,7 @@ import LoadingScreen from './components/LoadingScreen';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import {
   Stage,
+  MealTime,
   WeekPlan,
   ChatMessage,
   PrepTask,
@@ -31,6 +32,7 @@ import {
   generateInitialMealPlan,
   generateInitialMealPlanStream,
   updateMealPlanWithAgent,
+  replaceSingleMeal,
   generateMealPrepPlan,
   generateMealPrepPlanStream,
   generateGroceryList,
@@ -313,6 +315,7 @@ const App: React.FC = () => {
   const [lastDiffPlan, setLastDiffPlan] = useState<WeekPlan | undefined>(undefined);
   const [newlyReceivedCards, setNewlyReceivedCards] = useState<Set<string>>(new Set());
   const [animatedCards, setAnimatedCards] = useState<Set<string>>(new Set()); // Track cards that have already animated
+  const [replacingMeals, setReplacingMeals] = useState<Set<string>>(new Set()); // Track meals being replaced
   const [newlyReceivedTasks, setNewlyReceivedTasks] = useState<Set<string>>(new Set());
   const [newlyReceivedItems, setNewlyReceivedItems] = useState<Set<string>>(new Set());
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -704,6 +707,107 @@ const App: React.FC = () => {
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleReplaceMeal = async (day: string, mealType: MealTime) => {
+    const cardKey = `${day}-${mealType}`;
+
+    // Mark this meal as being replaced
+    setReplacingMeals(prev => new Set([...prev, cardKey]));
+
+    // Track meal replacement start
+    await analyticsService.trackLLMEvent('meal_replacement_requested', {
+      day,
+      meal_type: mealType
+    });
+
+    try {
+      // Get the current meal
+      const dayIndex = planHistory.present.findIndex(d => d.day === day);
+      if (dayIndex === -1) {
+        throw new Error('Day not found in plan');
+      }
+
+      const currentMeal = planHistory.present[dayIndex].meals[mealType];
+
+      // Call the API to get a replacement meal
+      const newMeal = await replaceSingleMeal(
+        day,
+        mealType,
+        currentMeal,
+        planHistory.present,
+        family,
+        preferences
+      );
+
+      // Store previous plan for diff highlighting
+      setLastDiffPlan(planHistory.present);
+
+      // Create updated plan with the new meal
+      const updatedPlan = JSON.parse(JSON.stringify(planHistory.present)); // Deep copy
+      updatedPlan[dayIndex].meals[mealType] = newMeal;
+
+      // Generate new plan version to invalidate downstream data
+      const newPlanVersion = generatePlanVersion();
+      setInvalidationState(prev => ({
+        ...prev,
+        currentPlanVersion: newPlanVersion
+      }));
+
+      // Update plan history
+      setPlanHistory(prev => ({
+        past: [...prev.past, prev.present],
+        present: updatedPlan,
+        future: []
+      }));
+
+      // Trigger animation for the replaced card
+      setNewlyReceivedCards(prev => new Set([...prev, cardKey]));
+      setAnimatedCards(prev => new Set([...prev, cardKey]));
+
+      // Clear animation state after animation completes
+      setTimeout(() => {
+        setNewlyReceivedCards(prev => {
+          const updated = new Set(prev);
+          updated.delete(cardKey);
+          return updated;
+        });
+      }, 600);
+
+      // Track successful replacement
+      await analyticsService.trackLLMEvent('meal_replacement_completed', {
+        day,
+        meal_type: mealType,
+        new_meal: newMeal.name
+      });
+
+      showToast(`Replaced ${mealType} with ${newMeal.name}`, 'success');
+
+    } catch (error) {
+      console.error('Error replacing meal:', error);
+
+      // Track replacement failure
+      await analyticsService.trackLLMEvent('meal_replacement_failed', {
+        day,
+        meal_type: mealType,
+        error_message: error instanceof Error ? error.message : 'Unknown error'
+      });
+
+      const errorCode = (error as any)?.code;
+
+      if (errorCode === 'RATE_LIMIT_EXCEEDED' || errorCode === 'SERVICE_UNAVAILABLE') {
+        handleApiError(error, showToast, setErrorModal, () => handleReplaceMeal(day, mealType));
+      } else {
+        showToast('Failed to replace meal. Please try again.', 'error');
+      }
+    } finally {
+      // Remove from replacing set
+      setReplacingMeals(prev => {
+        const updated = new Set(prev);
+        updated.delete(cardKey);
+        return updated;
+      });
     }
   };
 
@@ -1374,6 +1478,8 @@ const App: React.FC = () => {
                            previousPlan={lastDiffPlan}
                            isStreaming={isLoading}
                            newlyReceivedCards={newlyReceivedCards}
+                           onReplaceMeal={handleReplaceMeal}
+                           replacingMeals={replacingMeals}
                          />
                       )}
                     </div>

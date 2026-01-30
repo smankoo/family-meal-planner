@@ -56,6 +56,7 @@ export default {
         'fade-in-up': 'fadeInUp 0.5s ease-out',
         'slide-in-right': 'slideInRight 0.3s ease-out',
         'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
+        'spin-slow': 'spin 1s linear infinite',
       },
       keyframes: {
         streamIn: {

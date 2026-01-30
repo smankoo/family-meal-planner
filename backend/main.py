@@ -606,6 +606,89 @@ async def generate_plan_stream(request: GeneratePlanRequest):
         }
     )
 
+class ReplaceMealRequest(BaseModel):
+    day: str
+    mealType: str
+    currentMeal: Dict[str, Any]
+    currentPlan: List[Dict[str, Any]]
+    members: List[FamilyMember]
+    preferences: FamilyPreferences
+
+@app.post("/api/replace-meal")
+async def replace_meal(request: ReplaceMealRequest):
+    """Replace a single meal with a new suggestion"""
+    try:
+        logger.info(f"Replacing meal: {request.day} {request.mealType}")
+
+        members_json = [member.model_dump() for member in request.members]
+        preferences_json = request.preferences.model_dump()
+
+        cuisine_instruction = ""
+        if request.preferences.cuisines.strip():
+            cuisine_instruction = f"Prefer these cuisines: {request.preferences.cuisines}."
+
+        prompt = f"""
+        Generate a replacement meal for {request.day} {request.mealType}.
+
+        Current meal being replaced:
+        {json.dumps(request.currentMeal)}
+
+        Full week context (for variety):
+        {json.dumps(request.currentPlan)}
+
+        Family Context:
+        {json.dumps(members_json)}
+
+        Preferences:
+        {json.dumps(preferences_json)}
+
+        Task:
+        1. Generate a DIFFERENT meal that fits the family's preferences
+        2. {cuisine_instruction}
+        3. Ensure it's different from the current meal and provides variety from other meals in the week
+        4. Maintain LIFESTYLE CONSTRAINTS: {request.preferences.generalNotes or "None"}
+        5. Consider the meal time ({request.mealType}) and day ({request.day})
+
+        IMPORTANT: Return EXACTLY this JSON structure:
+        {{
+          "meal": {{
+            "name": "New Meal Name",
+            "description": "Brief description",
+            "notes": "Any notes"
+          }}
+        }}
+        """
+
+        response = client.models.generate_content(
+            model="gemini-3-flash-preview",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json"
+            )
+        )
+
+        result = json.loads(response.text)
+        logger.info(f"Successfully generated replacement meal: {result['meal']['name']}")
+        return result
+
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON parsing error in replace_meal: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=ErrorResponse(
+                error="Response Parsing Error",
+                message="Failed to parse the replacement meal. Please try again.",
+                code="PARSE_ERROR",
+                details=str(e) if os.getenv("DEBUG") == "true" else None
+            ).model_dump()
+        )
+    except google_exceptions.GoogleAPICallError as e:
+        status_code, error_response = handle_gemini_exception(e)
+        raise HTTPException(status_code=status_code, detail=error_response.model_dump())
+    except Exception as e:
+        logger.error(f"Error in replace_meal: {str(e)}")
+        raise e
+
 @app.post("/api/update-plan")
 async def update_plan(request: UpdatePlanRequest):
     try:

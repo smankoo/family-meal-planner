@@ -206,6 +206,31 @@ export const updateMealPlanWithAgent = async (
   }
 };
 
+export const replaceSingleMeal = async (
+  day: string,
+  mealType: string,
+  currentMeal: any,
+  currentPlan: WeekPlan,
+  members: FamilyMember[],
+  preferences: FamilyPreferences
+): Promise<any> => {
+  try {
+    const response = await apiCall('/api/replace-meal', {
+      day,
+      mealType,
+      currentMeal,
+      currentPlan,
+      members,
+      preferences
+    });
+
+    return response.meal;
+  } catch (error) {
+    console.error("Error replacing meal:", error);
+    throw error;
+  }
+};
+
 export const generateMealPrepPlan = async (mealPlan: WeekPlan): Promise<PrepTask[]> => {
   try {
     const response = await apiCall('/api/generate-prep', {

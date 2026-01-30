@@ -92,6 +92,13 @@
     @apply flex items-center justify-center transition-colors;
   }
 
+  .btn-icon-sm {
+    @apply w-7 h-7 rounded-full bg-white/80 text-primary-400 border border-primary-200;
+    @apply hover:bg-white hover:text-accent-600 hover:border-accent-600;
+    @apply flex items-center justify-center transition-all;
+    @apply active:scale-95;
+  }
+
   /* Card Variants */
   .card {
     @apply bg-white rounded-card border border-primary-200 p-card;
