@@ -72,12 +72,12 @@ const FamilySetup: React.FC<FamilySetupProps> = ({
       {/* Introduction */}
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold text-zinc-900 tracking-tight mb-4">
-          {isFirstRun ? "Welcome Home." : "Household Settings"}
+          {isFirstRun ? "Welcome Home." : "Settings"}
         </h1>
         <p className="text-zinc-500 max-w-lg mx-auto leading-relaxed">
           {isFirstRun
             ? "Tell us who's eating. We'll handle the planning, prep, and shopping."
-            : "Update your family details and preferences. Changes apply to the next generated plan."}
+            : "Manage your account and household preferences."}
         </p>
       </div>
 
@@ -87,7 +87,7 @@ const FamilySetup: React.FC<FamilySetupProps> = ({
         {!isFirstRun && (
           <section>
             <div className="flex justify-between items-center mb-8">
-              <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-widest">Your Account</h2>
+              <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-widest">Account</h2>
             </div>
             <UserProfile />
           </section>

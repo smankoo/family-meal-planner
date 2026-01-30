@@ -38,7 +38,7 @@ import {
 } from './services/geminiService';
 import { analyticsService } from './services/analyticsService';
 import { getAnalyticsConfig, validateAnalyticsConfig } from './config/analytics';
-import { Undo2, Sparkles, ChefHat, Settings, ArrowLeft, ArrowRight, X, RotateCcw, Loader2 } from 'lucide-react';
+import { Undo2, Sparkles, ChefHat, ArrowLeft, ArrowRight, X, RotateCcw, Loader2 } from 'lucide-react';
 import UserMenu from './components/UserMenu';
 import UserProfile from './components/UserProfile';
 
@@ -306,9 +306,6 @@ const App: React.FC = () => {
      // If we have a plan generated, default to planning view
      hasPlanGenerated ? 'planning' : 'household'
   );
-
-  // Profile modal state
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Runtime UI state (not persisted)
   const [isLoading, setIsLoading] = useState(false);
@@ -1198,26 +1195,6 @@ const App: React.FC = () => {
         variant="warning"
       />
 
-      {/* Profile Modal */}
-      {isProfileModalOpen && (
-        <div className="modal-backdrop" onClick={() => setIsProfileModalOpen(false)}>
-          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 className="heading-card">Your Profile</h2>
-              <button
-                onClick={() => setIsProfileModalOpen(false)}
-                className="btn-icon"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <div className="modal-content overflow-y-auto max-h-[60vh]">
-              <UserProfile />
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Header - Apple-like frosted glass effect */}
       <header className="frosted-header fixed top-0 left-0 right-0 z-50 h-16 md:h-20 flex items-center justify-between px-4 md:px-6 lg:px-10 pointer-events-none">
         {/* Backdrop blur background */}
@@ -1242,23 +1219,17 @@ const App: React.FC = () => {
                />
           </div>
 
-          {/* Right: Settings and User Actions */}
+          {/* Right: User Actions */}
           <div className="pointer-events-auto flex items-center gap-2">
               {/* User Menu - Always visible when logged in */}
               {user && (
-                  <UserMenu onOpenProfile={() => setIsProfileModalOpen(true)} />
+                  <UserMenu
+                    onOpenSettings={() => setViewMode('household')}
+                  />
               )}
 
-              {/* Settings/Close button for view mode switching */}
-              {viewMode === 'planning' ? (
-                  <button
-                      onClick={() => setViewMode('household')}
-                      className="w-9 h-9 md:w-10 md:h-10 bg-white/60 backdrop-blur-sm shadow-sm border border-white/40 rounded-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 hover:bg-white/80 transition-all"
-                      title="Household Settings"
-                  >
-                      <Settings size={18} className="md:w-5 md:h-5" />
-                  </button>
-              ) : hasPlanGenerated && (
+              {/* Close button when in household view */}
+              {viewMode === 'household' && hasPlanGenerated && (
                   <button
                       onClick={handleCloseSetup}
                       className="w-9 h-9 md:w-10 md:h-10 bg-white/60 backdrop-blur-sm shadow-sm border border-white/40 rounded-full flex items-center justify-center text-zinc-500 hover:text-red-600 hover:bg-white/80 transition-all"

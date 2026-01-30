@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, LogOut, Settings as SettingsIcon, ChevronDown } from 'lucide-react';
+import { LogOut, Settings as SettingsIcon, ChevronDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 
 interface UserMenuProps {
-  onOpenProfile?: () => void;
+  onOpenSettings?: () => void;
 }
 
-const UserMenu: React.FC<UserMenuProps> = ({ onOpenProfile }) => {
+const UserMenu: React.FC<UserMenuProps> = ({ onOpenSettings }) => {
   const { user, signOut } = useAuth();
   const { showToast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
@@ -114,16 +114,16 @@ const UserMenu: React.FC<UserMenuProps> = ({ onOpenProfile }) => {
 
           {/* Menu Items */}
           <div className="py-2">
-            {onOpenProfile && (
+            {onOpenSettings && (
               <button
                 onClick={() => {
-                  onOpenProfile();
+                  onOpenSettings();
                   setIsOpen(false);
                 }}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
               >
                 <SettingsIcon size={16} className="text-zinc-400" />
-                <span>Account Settings</span>
+                <span>Settings</span>
               </button>
             )}
 
