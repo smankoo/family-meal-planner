@@ -3,6 +3,7 @@
  * Handles authentication and data persistence through our FastAPI backend
  */
 
+// Empty string from build means env var wasn't set, so fall back to localhost
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 interface ApiResponse<T = any> {

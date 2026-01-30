@@ -1,6 +1,7 @@
 import { FamilyMember, FamilyPreferences, WeekPlan, PrepTask, GroceryItem } from "../types";
 
 // FastAPI backend base URL - use environment variable in production
+// Empty string from build means env var wasn't set, so fall back to localhost
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 // Helper function for API calls with enhanced error handling
