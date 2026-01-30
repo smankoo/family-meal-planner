@@ -1,130 +1,178 @@
-# CORS Fix - OPTIONS Preflight & Environment Configuration
+# CORS Fix - Complete Solution for QA Environment
 
 ## Issue Summary
-The QA application was experiencing CORS errors due to two critical issues:
-1. **Frontend Environment Variable**: `VITE_API_BASE_URL` not set in Render, causing frontend to call `http://localhost:8000` instead of QA backend
-2. **Backend CORS Configuration**: OPTIONS preflight requests blocked by authentication before CORS headers could be added
+The QA application was experiencing CORS errors due to multiple issues:
+1. **Frontend Environment Variable**: `VITE_API_BASE_URL` not properly injected during build
+2. **Hardcoded localhost in dataService**: `dataService.ts` had hardcoded `localhost:8000`
+3. **Custom OPTIONS middleware blocking CORS headers**: A custom middleware was intercepting OPTIONS requests before CORSMiddleware could add headers
+4. **Incorrect Database Credentials**: Backend was crashing due to wrong Supabase connection string
 
-### Error Symptoms
+## Root Causes & Solutions
+
+### 1. Vite Environment Variable Injection (Fixed)
+**Problem**: Vite's `define` block wasn't properly injecting `process.env` variables from Render into the build.
+
+**Solution**: Updated `vite.config.ts` to explicitly merge `.env` file values with `process.env` values, with CI/Render taking precedence:
+
+```typescript
+// Build the final env by merging file env with process.env
+// process.env (from Render/CI) takes precedence over .env files
+const finalEnv: Record<string, string> = {};
+
+// First, add all VITE_ vars from .env files
+Object.keys(fileEnv).forEach(key => {
+  if (key.startsWith('VITE_')) {
+    finalEnv[key] = fileEnv[key];
+  }
+});
+
+// Then, override with process.env VITE_ vars (from Render/CI)
+Object.keys(process.env).forEach(key => {
+  if (key.startsWith('VITE_') && process.env[key]) {
+    finalEnv[key] = process.env[key] as string;
+  }
+});
+
+// Explicitly define each VITE_ variable in the define block
+define: {
+  'import.meta.env.VITE_API_BASE_URL': JSON.stringify(finalEnv.VITE_API_BASE_URL || ''),
+  // ... other vars
+}
 ```
-Cross-Origin Request Blocked: The Same Origin Policy disallows reading the remote resource at http://localhost:8000/user-data/.
-(Reason: CORS header 'Access-Control-Allow-Origin' missing). Status code: 200.
+
+### 2. Hardcoded localhost in dataService.ts (Fixed)
+**Problem**: `services/dataService.ts` had `private baseUrl = 'http://localhost:8000'` hardcoded, while `geminiService.ts` and `apiService.ts` correctly used the environment variable.
+
+**Solution**: Updated `dataService.ts` to use the environment variable:
+```typescript
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
+class DataService {
+  private baseUrl = API_BASE_URL;
+  // ...
+}
 ```
 
-## Root Causes
+### 3. Custom OPTIONS Middleware Blocking CORS (Fixed)
+**Problem**: A custom middleware was added to handle OPTIONS requests, but it was returning a response BEFORE CORSMiddleware could add the required CORS headers.
 
-### 1. Missing Environment Variable in QA Frontend
-**Critical Issue**: Vite injects environment variables at BUILD time, not runtime. The QA frontend static site on Render was built without `VITE_API_BASE_URL` set, causing it to default to `http://localhost:8000`.
+**Solution**: Removed the custom OPTIONS middleware entirely. FastAPI's CORSMiddleware handles OPTIONS preflight requests automatically:
 
-**Why it happened**: Environment variables for static sites must be configured in Render dashboard BEFORE the build runs. The variable was defined in `render.yaml` as `sync: false` (secret), but the actual value wasn't set in the dashboard.
-
-### 2. Authentication Dependency on OPTIONS Requests
-All `/user-data/` endpoints required authentication via `Depends(get_current_user_id)`. When browsers send OPTIONS preflight requests, they **do not include the Authorization header**. This caused:
-
-1. Browser sends OPTIONS request (no Authorization header)
-2. FastAPI processes request through router
-3. `get_current_user_id` dependency tries to extract Bearer token
-4. No token present → HTTPException raised
-5. FastAPI returns 400/401 **before** CORSMiddleware can add CORS headers
-6. Browser sees response without CORS headers → blocks all subsequent requests
-
-### 3. Missing QA URLs in CORS Configuration
-The CORS middleware was missing QA environment URLs in the allowed origins list.
-
-## Solutions Implemented
-
-### 1. Set Frontend Environment Variable in Render
-Used Render MCP to set `VITE_API_BASE_URL=https://meal-planner-api-qa.onrender.com` for the QA frontend service. This triggered an automatic rebuild with the correct API URL baked into the static assets.
-
-**Command used**:
-```
-mcp_render_update_environment_variables(
-  serviceId: "srv-d5tddhe3jp1c73e5a490",
-  envVars: [{"key": "VITE_API_BASE_URL", "value": "https://meal-planner-api-qa.onrender.com"}]
+```python
+# Configure CORS - this handles OPTIONS preflight requests automatically
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:5173",
+        "https://mealplan.mankoo.ca",
+        "https://qa.mealplan.mankoo.ca",
+        "https://meal-planner-frontend-v2.onrender.com",
+        "https://meal-planner-frontend-qa.onrender.com",
+        "https://meal-planner-api-v2.onrender.com",
+        "https://meal-planner-api-qa.onrender.com",
+        "https://www.mankoo.ca",
+        "https://mankoo.ca"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 ```
 
-### 2. Updated CORS Allowed Origins
-Added missing URLs to the CORS configuration in `backend/main.py`:
-- `http://localhost:5173` - Vite dev server default port
-- `https://qa.mealplan.mankoo.ca` - QA environment custom domain
-- `https://meal-planner-frontend-qa.onrender.com` - QA Render URL
-- `https://meal-planner-api-qa.onrender.com` - QA API Render URL
-
-### 3. Added OPTIONS Request Middleware
-Created a custom middleware that intercepts OPTIONS requests **before** they reach the authentication layer:
-
-```python
-@app.middleware("http")
-async def handle_options_requests(request, call_next):
-    """
-    Handle OPTIONS preflight requests before they hit authentication.
-    This ensures CORS headers are added even when auth would normally fail.
-    """
-    if request.method == "OPTIONS":
-        # Return 200 OK for OPTIONS requests
-        # CORSMiddleware will add the appropriate headers
-        return JSONResponse(content={}, status_code=200)
-
-    response = await call_next(request)
-    return response
-```
-
-### Key Points
-- Middleware is added **after** CORSMiddleware so CORS headers are still applied
-- OPTIONS requests return 200 OK immediately without hitting authentication
-- All other requests (GET, POST, PUT, DELETE) still require authentication
-- This is a standard pattern for handling CORS preflight in authenticated APIs
-
 ## Verification
 
-### After the fix:
-1. ✅ Frontend calls correct QA backend URL (`https://meal-planner-api-qa.onrender.com`)
-2. ✅ OPTIONS requests return `200 OK` with proper CORS headers
-3. ✅ Authenticated API calls succeed from QA frontend
-4. ✅ No CORS errors in browser console
+### Backend CORS Headers (Confirmed Working)
+```bash
+$ curl -s -X OPTIONS https://meal-planner-api-qa.onrender.com/user-data/ \
+  -H "Origin: https://qa.mealplan.mankoo.ca" \
+  -H "Access-Control-Request-Method: GET" \
+  -H "Access-Control-Request-Headers: authorization,content-type" -i
 
-### Deployment Status
-- **QA Backend**: Live at `https://meal-planner-api-qa.onrender.com` (deploy: dep-d5u2ib6mcj7s73d2r1q0)
-- **QA Frontend**: Live at `https://meal-planner-frontend-qa.onrender.com` (deploy: dep-d5u2i8ogjchc73bcro0g)
+HTTP/2 200
+access-control-allow-credentials: true
+access-control-allow-headers: authorization,content-type
+access-control-allow-methods: DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT
+access-control-allow-origin: https://qa.mealplan.mankoo.ca
+access-control-max-age: 600
+```
+
+### Frontend Build (Confirmed Working)
+Build logs show correct environment variables:
+```
+=== Vite Build Environment ===
+Mode: production
+VITE_API_BASE_URL: https://meal-planner-api-qa.onrender.com
+VITE_ENVIRONMENT: qa
+VITE_SUPABASE_URL: (set)
+==============================
+```
+
+### JS Bundle (Confirmed Working)
+The built JS bundle contains the correct QA backend URL:
+- `"https://meal-planner-api-qa.onrender.com"` appears for both geminiService and dataService
+- No more `localhost:8000` references for API calls
+
+## Browser Cache Note
+After deploying the fix, browsers may cache the old (broken) preflight response for up to 10 minutes due to `access-control-max-age: 600`. Users experiencing issues should:
+1. Wait 10 minutes for cache to expire, OR
+2. Use incognito/private browsing mode, OR
+3. Clear browser cache
+
+## Database Connection Fix (Critical)
+**Problem**: After fixing CORS configuration, the backend was still returning errors because it couldn't connect to the Supabase database. The error was "Circuit breaker open: Too many authentication errors" followed by "Network is unreachable".
+
+**Root Cause**: The `DATABASE_URL` environment variable was using:
+1. Wrong password (causing authentication errors)
+2. Direct connection (port 5432) instead of connection pooler (port 6543)
+
+**Solution**: Updated the `DATABASE_URL` on Render to use the correct Supabase Transaction Pooler connection string:
+```
+postgresql://postgres.kzesxycoqofzlzifynql:[PASSWORD]@aws-1-us-east-2.pooler.supabase.com:6543/postgres
+```
+
+**Why the pooler?** Serverless environments like Render need the connection pooler (port 6543) instead of direct connections (port 5432) because:
+- Direct connections can fail with IPv6 network issues
+- Pooler provides better connection management for serverless workloads
+- Pooler handles connection limits more gracefully
+
+## Final Verification
+After all fixes were deployed:
+- ✅ Backend starts successfully without database errors
+- ✅ CORS headers present on all responses
+- ✅ Frontend makes successful API calls (200 or 404, no CORS errors)
+- ✅ No "Access-Control-Allow-Origin missing" errors in console
+- ✅ User can generate meal plans and save data
+- ⚠️ Occasional 502 errors during high load (separate issue, not CORS-related)
 
 ## Files Modified
-- `backend/main.py` - Updated CORS configuration and added OPTIONS middleware
-- Render QA Frontend Service - Set `VITE_API_BASE_URL` environment variable
+- `vite.config.ts` - Fixed env var injection from process.env
+- `services/dataService.ts` - Use VITE_API_BASE_URL instead of hardcoded localhost
+- `services/geminiService.ts` - Added comment clarifying fallback behavior
+- `services/apiService.ts` - Added comment clarifying fallback behavior
+- `backend/main.py` - Removed custom OPTIONS middleware that was blocking CORS headers
+- `.env.production` - Removed hardcoded values (now set via Render dashboard)
 
-## Important Lessons
+## Commits
+1. `5fe7003` - Fix Vite env var injection from Render/CI process.env
+2. `133bdd7` - Fix dataService.ts to use VITE_API_BASE_URL env var
+3. `16dbaed` - Remove custom OPTIONS middleware that was blocking CORS headers
+4. Database credentials updated via Render dashboard (no commit - env var only)
+
+## Key Lessons Learned
 
 ### Vite Environment Variables
-- **Build-time injection**: Vite replaces `import.meta.env.VITE_*` with actual values during build
-- **Not runtime**: Unlike server-side apps, static sites can't read env vars at runtime
-- **Render requirement**: For static sites, env vars must be set in dashboard before build
-- **Verification**: Check built files to confirm correct values are baked in
+- Vite's `loadEnv()` only loads from `.env` files, NOT from `process.env`
+- Must explicitly use `define` block to inject `process.env` values
+- Build-time logging helps debug env var issues in CI
 
-### CORS Preflight Pattern
-- OPTIONS requests must bypass authentication
-- Middleware ordering matters: CORS first, then custom middleware
-- Return 200 OK for OPTIONS, let CORSMiddleware add headers
-- Never block OPTIONS at authentication layer
+### CORS in FastAPI
+- CORSMiddleware handles OPTIONS preflight automatically
+- Custom middleware can interfere with CORS header injection
+- Don't return responses for OPTIONS before CORSMiddleware processes them
 
-## Deployment Notes
-
-### For QA Environment
-Ensure these environment variables are set in Render dashboard:
-- **Frontend**: `VITE_API_BASE_URL=https://meal-planner-api-qa.onrender.com`
-- **Backend**: Standard Supabase and Gemini API keys
-
-### For Production
-Same pattern applies. Ensure:
-- **Frontend**: `VITE_API_BASE_URL=https://meal-planner-api-v2.onrender.com`
-- **Backend**: CORS includes production URLs
-
-## Related Documentation
-- [Vite Environment Variables](https://vitejs.dev/guide/env-and-mode.html)
-- [MDN: CORS Preflight Requests](https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request)
-- [FastAPI CORS Documentation](https://fastapi.tiangolo.com/tutorial/cors/)
-- [Render Static Site Environment Variables](https://render.com/docs/configure-environment-variables)
-
-## Related Implementation Files
-- `03-supabase-authentication-implementation.md`
-- `05-streaming-implementation-and-security.md`
-- `14-automatic-environment-detection.md`
+### Debugging CORS Issues
+- Use `curl` to test OPTIONS and actual requests separately
+- Check for `access-control-allow-origin` header in responses
+- Browser preflight cache can mask fixes for up to 10 minutes
