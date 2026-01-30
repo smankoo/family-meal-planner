@@ -21,6 +21,7 @@ General Development Practices:
 - Streaming by default - when making an LLM call, our goal is to show UI update to the user as soon as possible. To achieve this, we employ sophisticated techniques to parse partial LLM responses to show the user UI updates. Time to first token or Time to first UI update is a critical performance metric for the app.
 - We don't do undifferentiated heavy lifting, we won't build ourselves whatever is easily available at a high quality for low cost or free (like auth for example)
 - We do dev locally (react + fastapi + supabase in docker) and qa and prod in cloud (render.com + supabase)
+- More context leads to better response, whenever you feel your response might be aided by more info from the app, run context-gatherer agent accordingly
 
 Security:
 - We MUST NOT commit secrets to github. Be wary of writing secrets into config files.

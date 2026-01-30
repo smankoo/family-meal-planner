@@ -47,9 +47,13 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:3001",
+        "http://localhost:5173",  # Vite dev server default port
         "https://mealplan.mankoo.ca",
+        "https://qa.mealplan.mankoo.ca",  # QA environment
         "https://meal-planner-frontend-v2.onrender.com",
+        "https://meal-planner-frontend-qa.onrender.com",  # QA Render URL
         "https://meal-planner-api-v2.onrender.com",
+        "https://meal-planner-api-qa.onrender.com",  # QA API Render URL
         "https://www.mankoo.ca",
         "https://mankoo.ca"
     ],
@@ -57,6 +61,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add middleware to handle OPTIONS requests before authentication
+@app.middleware("http")
+async def handle_options_requests(request, call_next):
+    """
+    Handle OPTIONS preflight requests before they hit authentication.
+    This ensures CORS headers are added even when auth would normally fail.
+    """
+    if request.method == "OPTIONS":
+        # Return 200 OK for OPTIONS requests
+        # CORSMiddleware will add the appropriate headers
+        return JSONResponse(content={}, status_code=200)
+
+    response = await call_next(request)
+    return response
 
 # Include routers AFTER middleware
 app.include_router(user_data.router)
