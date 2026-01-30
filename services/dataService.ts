@@ -1,6 +1,10 @@
 import { FamilyMember, FamilyPreferences, WeekPlan, PrepTask, GroceryItem, PlanHistory, InvalidationState } from '../types';
 import { supabase } from '../config/supabase';
 
+// Backend API URL - use environment variable in production
+// Empty string from build means env var wasn't set, so fall back to localhost
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
 export type DataType = 'family' | 'preferences' | 'meal_plan' | 'prep_tasks' | 'grocery_items' | 'invalidation_state' | 'has_plan' | 'current_stage';
 
 interface UserData {
@@ -21,7 +25,7 @@ interface QueuedRequest {
 
 class DataService {
   private userId: string | null = null;
-  private baseUrl = 'http://localhost:8000';
+  private baseUrl = API_BASE_URL;
   private requestQueue: QueuedRequest[] = [];
   private isProcessingQueue = false;
   private readonly MAX_CONCURRENT_REQUESTS = 3;
