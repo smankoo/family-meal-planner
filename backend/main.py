@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 # Import database
 from database import engine, Base
-from routers import user_data
+from routers import user_data, collaborative_plans
 from supabase_auth import get_current_user_id
 
 # Configure logging
@@ -64,6 +64,7 @@ app.add_middleware(
 
 # Include routers AFTER middleware
 app.include_router(user_data.router)
+app.include_router(collaborative_plans.router)
 
 # Error response model
 class ErrorResponse(BaseModel):

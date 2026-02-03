@@ -3,6 +3,8 @@
  * Handles authentication and data persistence through our FastAPI backend
  */
 
+import { supabase } from '../config/supabase';
+
 // Empty string from build means env var wasn't set, so fall back to localhost
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -40,20 +42,17 @@ interface UserData {
 }
 
 class ApiService {
-  private token: string | null = null;
-
-  constructor() {
-    // Load token from localStorage on initialization
-    this.token = localStorage.getItem('auth_token');
-  }
-
-  private getHeaders(): HeadersInit {
+  private async getHeaders(): Promise<HeadersInit> {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
 
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
+    // Get Supabase session token
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
 
     return headers;
@@ -68,50 +67,42 @@ class ApiService {
     return response.json();
   }
 
-  // Authentication methods
+  // Authentication methods (legacy - app uses Supabase directly)
   async register(email: string, password: string, name?: string): Promise<AuthResponse> {
     const response = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
-      headers: this.getHeaders(),
+      headers: await this.getHeaders(),
       body: JSON.stringify({ email, password, name }),
     });
 
-    const data = await this.handleResponse<AuthResponse>(response);
-    this.setToken(data.access_token);
-    return data;
+    return this.handleResponse<AuthResponse>(response);
   }
 
   async login(email: string, password: string): Promise<AuthResponse> {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
-      headers: this.getHeaders(),
+      headers: await this.getHeaders(),
       body: JSON.stringify({ email, password }),
     });
 
-    const data = await this.handleResponse<AuthResponse>(response);
-    this.setToken(data.access_token);
-    return data;
+    return this.handleResponse<AuthResponse>(response);
   }
 
   async logout(): Promise<void> {
-    if (this.token) {
-      try {
-        await fetch(`${API_BASE_URL}/auth/logout`, {
-          method: 'POST',
-          headers: this.getHeaders(),
-        });
-      } catch (error) {
-        console.warn('Logout request failed:', error);
-      }
+    try {
+      await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: 'POST',
+        headers: await this.getHeaders(),
+      });
+    } catch (error) {
+      console.warn('Logout request failed:', error);
     }
-
-    this.clearToken();
   }
 
   async getCurrentUser(): Promise<User> {
     const response = await fetch(`${API_BASE_URL}/auth/me`, {
       method: 'GET',
-      headers: this.getHeaders(),
+      headers: await this.getHeaders(),
     });
 
     return this.handleResponse<User>(response);
@@ -120,7 +111,7 @@ class ApiService {
   async updateUser(updates: { name?: string; avatar_url?: string }): Promise<User> {
     const response = await fetch(`${API_BASE_URL}/auth/me`, {
       method: 'PUT',
-      headers: this.getHeaders(),
+      headers: await this.getHeaders(),
       body: JSON.stringify(updates),
     });
 
@@ -130,7 +121,7 @@ class ApiService {
   async verifyToken(): Promise<{ valid: boolean; user_id: string }> {
     const response = await fetch(`${API_BASE_URL}/auth/verify`, {
       method: 'GET',
-      headers: this.getHeaders(),
+      headers: await this.getHeaders(),
     });
 
     return this.handleResponse<{ valid: boolean; user_id: string }>(response);
@@ -144,7 +135,7 @@ class ApiService {
 
     const response = await fetch(url, {
       method: 'GET',
-      headers: this.getHeaders(),
+      headers: await this.getHeaders(),
     });
 
     return this.handleResponse<UserData[]>(response);
@@ -153,7 +144,7 @@ class ApiService {
   async getUserDataByType(dataType: string): Promise<UserData> {
     const response = await fetch(`${API_BASE_URL}/user-data/${dataType}`, {
       method: 'GET',
-      headers: this.getHeaders(),
+      headers: await this.getHeaders(),
     });
 
     return this.handleResponse<UserData>(response);
@@ -162,7 +153,7 @@ class ApiService {
   async saveUserData(dataType: string, data: any): Promise<UserData> {
     const response = await fetch(`${API_BASE_URL}/user-data/${dataType}`, {
       method: 'PUT',
-      headers: this.getHeaders(),
+      headers: await this.getHeaders(),
       body: JSON.stringify({ data }),
     });
 
@@ -172,7 +163,7 @@ class ApiService {
   async deleteUserData(dataType: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/user-data/${dataType}`, {
       method: 'DELETE',
-      headers: this.getHeaders(),
+      headers: await this.getHeaders(),
     });
 
     await this.handleResponse(response);
@@ -181,7 +172,7 @@ class ApiService {
   async exportAllUserData(): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/user-data/export/all`, {
       method: 'GET',
-      headers: this.getHeaders(),
+      headers: await this.getHeaders(),
     });
 
     return this.handleResponse(response);
@@ -190,30 +181,98 @@ class ApiService {
   async importAllUserData(data: any): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/user-data/import/all`, {
       method: 'POST',
-      headers: this.getHeaders(),
+      headers: await this.getHeaders(),
       body: JSON.stringify(data),
     });
 
     await this.handleResponse(response);
   }
 
-  // Token management
-  setToken(token: string): void {
-    this.token = token;
-    localStorage.setItem('auth_token', token);
+  // Collaborative plan methods
+  async createCollaborativePlan(planData: {
+    plan_data: any;
+    family_data?: any;
+    preferences_data?: any;
+    prep_tasks?: any;
+    grocery_items?: any;
+    invalidation_state?: any;
+    has_plan?: string;
+    current_stage?: string;
+    title?: string;
+  }): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/collaborative-plans/`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+      body: JSON.stringify(planData),
+    });
+
+    return this.handleResponse(response);
   }
 
-  clearToken(): void {
-    this.token = null;
-    localStorage.removeItem('auth_token');
+  async getMyCollaborativePlans(): Promise<any[]> {
+    const response = await fetch(`${API_BASE_URL}/collaborative-plans/my-plans`, {
+      method: 'GET',
+      headers: await this.getHeaders(),
+    });
+
+    return this.handleResponse(response);
   }
 
-  getToken(): string | null {
-    return this.token;
+  async getPlanByShareId(shareId: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/collaborative-plans/by-share-id/${shareId}`, {
+      method: 'GET',
+      headers: await this.getHeaders(),
+    });
+
+    return this.handleResponse(response);
   }
 
-  isAuthenticated(): boolean {
-    return !!this.token;
+  async joinCollaborativePlan(shareId: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/collaborative-plans/join`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+      body: JSON.stringify({ share_id: shareId }),
+    });
+
+    return this.handleResponse(response);
+  }
+
+  async updateCollaborativePlan(planId: string, updates: {
+    plan_data?: any;
+    family_data?: any;
+    preferences_data?: any;
+    prep_tasks?: any;
+    grocery_items?: any;
+    invalidation_state?: any;
+    has_plan?: string;
+    current_stage?: string;
+    title?: string;
+  }): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/collaborative-plans/${planId}`, {
+      method: 'PUT',
+      headers: await this.getHeaders(),
+      body: JSON.stringify(updates),
+    });
+
+    return this.handleResponse(response);
+  }
+
+  async leaveCollaborativePlan(planId: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/collaborative-plans/${planId}/leave`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+    });
+
+    return this.handleResponse(response);
+  }
+
+  async deleteCollaborativePlan(planId: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/collaborative-plans/${planId}`, {
+      method: 'DELETE',
+      headers: await this.getHeaders(),
+    });
+
+    return this.handleResponse(response);
   }
 }
 

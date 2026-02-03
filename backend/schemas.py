@@ -92,3 +92,66 @@ class UserDataResponse(BaseModel):
                     data[key] = value
             return super().model_validate(data, **kwargs)
         return super().model_validate(obj, **kwargs)
+
+
+# Collaborative plan schemas
+class PlanMemberResponse(BaseModel):
+    id: str
+    user_id: str
+    role: str
+    joined_at: datetime
+    last_viewed_at: datetime
+    user: Optional[UserResponse] = None
+
+    class Config:
+        from_attributes = True
+
+
+class CollaborativePlanCreate(BaseModel):
+    plan_data: Any
+    family_data: Optional[Any] = None
+    preferences_data: Optional[Any] = None
+    prep_tasks: Optional[Any] = None
+    grocery_items: Optional[Any] = None
+    invalidation_state: Optional[Any] = None
+    has_plan: Optional[str] = "true"
+    current_stage: Optional[str] = "0"
+    title: Optional[str] = None
+
+
+class CollaborativePlanUpdate(BaseModel):
+    plan_data: Optional[Any] = None
+    family_data: Optional[Any] = None
+    preferences_data: Optional[Any] = None
+    prep_tasks: Optional[Any] = None
+    grocery_items: Optional[Any] = None
+    invalidation_state: Optional[Any] = None
+    has_plan: Optional[str] = None
+    current_stage: Optional[str] = None
+    title: Optional[str] = None
+
+
+class CollaborativePlanResponse(BaseModel):
+    id: str
+    share_id: str
+    plan_data: Any
+    family_data: Optional[Any] = None
+    preferences_data: Optional[Any] = None
+    prep_tasks: Optional[Any] = None
+    grocery_items: Optional[Any] = None
+    invalidation_state: Optional[Any] = None
+    has_plan: str
+    current_stage: str
+    title: Optional[str] = None
+    created_by: str
+    created_at: datetime
+    updated_at: datetime
+    last_modified_by: Optional[str] = None
+    members: Optional[list[PlanMemberResponse]] = None
+
+    class Config:
+        from_attributes = True
+
+
+class JoinPlanRequest(BaseModel):
+    share_id: str

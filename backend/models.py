@@ -70,6 +70,62 @@ class UserData(Base):
     )
 
 
+class CollaborativePlan(Base):
+    """Collaborative meal plans that can be shared among multiple users"""
+    __tablename__ = "collaborative_plans"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    share_id = Column(Text, unique=True, nullable=False)
+
+    # Plan data
+    plan_data = Column(JSON, nullable=False)
+    family_data = Column(JSON, nullable=True)
+    preferences_data = Column(JSON, nullable=True)
+    prep_tasks = Column(JSON, nullable=True)
+    grocery_items = Column(JSON, nullable=True)
+    invalidation_state = Column(JSON, nullable=True)
+    has_plan = Column(String, default="true")
+    current_stage = Column(String, default="0")
+    title = Column(Text, nullable=True)
+
+    # Metadata
+    created_by = Column(UUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    last_modified_by = Column(UUID(as_uuid=True), ForeignKey("profiles.id"), nullable=True)
+
+    # Relationships
+    creator = relationship("Profile", foreign_keys=[created_by])
+    last_modifier = relationship("Profile", foreign_keys=[last_modified_by])
+    members = relationship("PlanMember", back_populates="plan", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index('idx_collaborative_plans_share_id', 'share_id'),
+        Index('idx_collaborative_plans_created_by', 'created_by'),
+    )
+
+
+class PlanMember(Base):
+    """Members who have access to a collaborative plan"""
+    __tablename__ = "plan_members"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    plan_id = Column(UUID(as_uuid=True), ForeignKey("collaborative_plans.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
+    role = Column(Text, nullable=False, default="member")  # 'owner' or 'member'
+    joined_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    last_viewed_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # Relationships
+    plan = relationship("CollaborativePlan", back_populates="members")
+    user = relationship("Profile")
+
+    __table_args__ = (
+        Index('idx_plan_members_plan_id', 'plan_id'),
+        Index('idx_plan_members_user_id', 'user_id'),
+    )
+
+
 # Valid data types for user_data
 VALID_DATA_TYPES = {
     'family',

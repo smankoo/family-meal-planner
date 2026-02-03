@@ -8,6 +8,7 @@ import FamilySetup from './components/FamilySetup';
 import ToastContainer from './components/Toast';
 import ErrorModal from './components/ErrorModal';
 import ConfirmationModal from './components/ConfirmationModal';
+import ShareModal from './components/ShareModal';
 import Footer from './components/Footer';
 import LoadingScreen from './components/LoadingScreen';
 import { ToastProvider, useToast } from './contexts/ToastContext';
@@ -40,7 +41,7 @@ import {
 } from './services/geminiService';
 import { analyticsService } from './services/analyticsService';
 import { getAnalyticsConfig, validateAnalyticsConfig } from './config/analytics';
-import { Undo2, Sparkles, ChefHat, ArrowLeft, ArrowRight, X, RotateCcw, Loader2 } from 'lucide-react';
+import { Undo2, Sparkles, ChefHat, ArrowLeft, ArrowRight, X, RotateCcw, Loader2, Share2 } from 'lucide-react';
 import UserMenu from './components/UserMenu';
 import UserProfile from './components/UserProfile';
 
@@ -211,6 +212,7 @@ type ViewMode = 'planning' | 'household';
 
 import { useAuth } from './contexts/AuthContext';
 import { dataService } from './services/dataService';
+import { apiService } from './services/apiService';
 import { usePersistedState } from './hooks/usePersistedState';
 import { validateFamily, validatePreferences, validatePlanHistory } from './utils/localStorage';
 
@@ -342,6 +344,12 @@ const App: React.FC = () => {
     message: '',
     onConfirm: () => {}
   });
+
+  // Sharing state
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+  const [isSharing, setIsSharing] = useState(false);
+  const [activePlanId, setActivePlanId] = useState<string | null>(null);
 
   // --- Analytics Initialization ---
   useEffect(() => {
@@ -630,6 +638,135 @@ const App: React.FC = () => {
       }
   };
 
+  // --- Share Handlers ---
+  const handleSharePlan = async () => {
+    if (activePlanId) {
+      // Already shared, just show the modal with existing URL
+      setShareModalOpen(true);
+      return;
+    }
+
+    setIsSharing(true);
+    try {
+      const response = await apiService.createCollaborativePlan({
+        plan_data: planHistory.present,
+        family_data: family,
+        preferences_data: preferences,
+        prep_tasks: prepTasks,
+        grocery_items: groceryItems,
+        invalidation_state: invalidationState,
+        has_plan: hasPlanGenerated ? 'true' : 'false',
+        current_stage: currentStage.toString(),
+        title: `${family[0]?.name || 'Family'}'s Meal Plan`
+      });
+
+      setActivePlanId(response.id);
+      const url = `${window.location.origin}/?share=${response.share_id}`;
+      setShareUrl(url);
+      setShareModalOpen(true);
+
+      await analyticsService.trackEngagement('plan_shared', {
+        plan_id: response.id,
+        share_id: response.share_id
+      });
+
+      showToast('Share link created!', 'success');
+    } catch (error) {
+      console.error('Failed to create share link:', error);
+      handleApiError(error, showToast, setErrorModal, handleSharePlan);
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const saveToCollaborativePlan = async () => {
+    if (!activePlanId) return;
+
+    try {
+      await apiService.updateCollaborativePlan(activePlanId, {
+        plan_data: planHistory.present,
+        family_data: family,
+        preferences_data: preferences,
+        prep_tasks: prepTasks,
+        grocery_items: groceryItems,
+        invalidation_state: invalidationState,
+        has_plan: hasPlanGenerated ? 'true' : 'false',
+        current_stage: currentStage.toString()
+      });
+      console.log('✓ Synced to collaborative plan');
+    } catch (error) {
+      console.error('Failed to sync collaborative plan:', error);
+      // Don't show error to user, this is background sync
+    }
+  };
+
+  // --- URL Parameter Handling for Shared Plans ---
+  useEffect(() => {
+    const handleSharedPlanAccess = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const shareId = urlParams.get('share');
+
+      if (shareId && user) {
+        try {
+          showToast('Loading shared plan...', 'info');
+
+          // Get the plan details
+          const plan = await apiService.getPlanByShareId(shareId);
+
+          // Check if already a member
+          const isMember = plan.members?.some((m: any) => m.user_id === user.id);
+
+          if (!isMember) {
+            // Join the plan
+            await apiService.joinCollaborativePlan(shareId);
+            showToast('Joined collaborative plan!', 'success');
+          } else {
+            showToast('Loaded collaborative plan', 'success');
+          }
+
+          // Load the plan data
+          setPlanHistory({
+            past: [],
+            present: plan.plan_data,
+            future: []
+          }, true); // Skip save initially
+
+          setFamily(plan.family_data || INITIAL_FAMILY);
+          setPreferences(plan.preferences_data || INITIAL_PREFERENCES);
+          setPrepTasks(plan.prep_tasks || []);
+          setGroceryItems(plan.grocery_items || []);
+          setInvalidationState(plan.invalidation_state || DEFAULT_INVALIDATION_STATE);
+          setHasPlanGenerated(plan.has_plan === 'true');
+          setCurrentStage(parseInt(plan.current_stage) || Stage.MEAL_PLANNING);
+          setActivePlanId(plan.id);
+          setViewMode('planning');
+
+          // Set share URL for the modal
+          const url = `${window.location.origin}/?share=${shareId}`;
+          setShareUrl(url);
+
+          // Clear the URL parameter
+          window.history.replaceState({}, '', window.location.pathname);
+
+          await analyticsService.trackEngagement('plan_joined', {
+            plan_id: plan.id,
+            share_id: shareId
+          });
+
+        } catch (error) {
+          console.error('Failed to load shared plan:', error);
+          showToast('Failed to load shared plan', 'error');
+          // Clear the URL parameter even on error
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      }
+    };
+
+    if (!isDataLoading && user) {
+      handleSharedPlanAccess();
+    }
+  }, [isDataLoading, user]);
+
   const handlePlanUpdate = async (userMessage: string) => {
     setIsLoading(true);
     const newMsgId = Date.now().toString();
@@ -664,6 +801,9 @@ const App: React.FC = () => {
         present: newPlan,
         future: []
       }));
+
+      // Sync to collaborative plan if active
+      await saveToCollaborativePlan();
 
       const botMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -761,6 +901,9 @@ const App: React.FC = () => {
         present: updatedPlan,
         future: []
       }));
+
+      // Sync to collaborative plan if active
+      await saveToCollaborativePlan();
 
       // Trigger animation for the replaced card
       setNewlyReceivedCards(prev => new Set([...prev, cardKey]));
@@ -1355,6 +1498,15 @@ const App: React.FC = () => {
         variant="warning"
       />
 
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        shareUrl={shareUrl}
+        onShare={handleSharePlan}
+        isSharing={isSharing}
+      />
+
       {/* Header - Apple-like frosted glass effect */}
       <header className="frosted-header fixed top-0 left-0 right-0 z-50 h-16 md:h-20 flex items-center justify-between px-4 md:px-6 lg:px-10 pointer-events-none">
         {/* Backdrop blur background */}
@@ -1450,6 +1602,14 @@ const App: React.FC = () => {
                                    <Undo2 size={12} className="md:w-[14px] md:h-[14px]" /> Undo
                                </button>
                             )}
+                            <button
+                               onClick={handleSharePlan}
+                               disabled={isSharing}
+                               className="flex items-center gap-2 px-3 md:px-4 py-2 bg-white border border-zinc-200 text-zinc-600 rounded-full text-xs md:text-sm font-semibold hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                               <Share2 size={12} className="md:w-[14px] md:h-[14px]" />
+                               {isSharing ? 'Creating...' : activePlanId ? 'Share' : 'Share Plan'}
+                            </button>
                             <button onClick={handleRegeneratePlan} className="flex items-center gap-2 px-3 md:px-4 py-2 bg-zinc-100 text-zinc-600 rounded-full text-xs md:text-sm font-semibold hover:bg-zinc-200 transition-colors">
                                <RotateCcw size={12} className="md:w-[14px] md:h-[14px]" /> Regenerate
                             </button>
@@ -1465,6 +1625,14 @@ const App: React.FC = () => {
                                </button>
                             )}
                          </div>
+                         <button
+                            onClick={handleSharePlan}
+                            disabled={isSharing}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-zinc-200 text-zinc-600 rounded-full text-xs font-semibold hover:bg-zinc-50 transition-colors disabled:opacity-50"
+                         >
+                            <Share2 size={12} />
+                            {isSharing ? 'Creating...' : activePlanId ? 'Share' : 'Share'}
+                         </button>
                       </div>
 
                       {isLoading && planHistory.present === EMPTY_PLAN ? (
