@@ -8,7 +8,7 @@ import FamilySetup from './components/FamilySetup';
 import ToastContainer from './components/Toast';
 import ErrorModal from './components/ErrorModal';
 import ConfirmationModal from './components/ConfirmationModal';
-import ShareModal from './components/ShareModal';
+import FamilyInviteModal from './components/FamilyInviteModal';
 import Footer from './components/Footer';
 import LoadingScreen from './components/LoadingScreen';
 import { ToastProvider, useToast } from './contexts/ToastContext';
@@ -41,7 +41,7 @@ import {
 } from './services/geminiService';
 import { analyticsService } from './services/analyticsService';
 import { getAnalyticsConfig, validateAnalyticsConfig } from './config/analytics';
-import { Undo2, Sparkles, ChefHat, ArrowLeft, ArrowRight, X, RotateCcw, Loader2, Share2 } from 'lucide-react';
+import { Undo2, Sparkles, ChefHat, ArrowLeft, ArrowRight, X, RotateCcw, Loader2, UserPlus } from 'lucide-react';
 import UserMenu from './components/UserMenu';
 import UserProfile from './components/UserProfile';
 
@@ -214,6 +214,7 @@ import { useAuth } from './contexts/AuthContext';
 import { dataService } from './services/dataService';
 import { apiService } from './services/apiService';
 import { usePersistedState } from './hooks/usePersistedState';
+import { useFamilyPlan } from './hooks/useFamilyPlan';
 import { validateFamily, validatePreferences, validatePlanHistory } from './utils/localStorage';
 
 // Stable default values to prevent infinite re-renders
@@ -345,11 +346,80 @@ const App: React.FC = () => {
     onConfirm: () => {}
   });
 
-  // Sharing state
-  const [shareModalOpen, setShareModalOpen] = useState(false);
-  const [shareUrl, setShareUrl] = useState('');
-  const [isSharing, setIsSharing] = useState(false);
+  // Family invite state
+  const [familyInviteModalOpen, setFamilyInviteModalOpen] = useState(false);
+  const [inviteUrl, setInviteUrl] = useState('');
+  const [isCreatingInvite, setIsCreatingInvite] = useState(false);
   const [activePlanId, setActivePlanId] = useState<string | null>(null);
+
+  // Handler for remote updates from collaborators
+  const handleRemoteUpdate = React.useCallback((data: {
+    plan_data: any;
+    family_data: any;
+    preferences_data: any;
+    prep_tasks: any[];
+    grocery_items: any[];
+    invalidation_state: any;
+    has_plan: string;
+    current_stage: string;
+  }) => {
+    console.log('[App] Received remote update from collaborator');
+
+    // Update all state from remote - skip save since this is from the server
+    setPlanHistory({
+      past: [],
+      present: data.plan_data,
+      future: []
+    }, true);
+
+    setFamily(data.family_data || INITIAL_FAMILY, true);
+    setPreferences(data.preferences_data || INITIAL_PREFERENCES, true);
+    setPrepTasks(data.prep_tasks || [], true);
+    setGroceryItems(data.grocery_items || [], true);
+    setInvalidationState(data.invalidation_state || DEFAULT_INVALIDATION_STATE, true);
+    setHasPlanGenerated(data.has_plan === 'true', true);
+    setCurrentStage(parseInt(data.current_stage) || Stage.MEAL_PLANNING, true);
+  }, [setPlanHistory, setFamily, setPreferences, setPrepTasks, setGroceryItems, setInvalidationState, setHasPlanGenerated, setCurrentStage]);
+
+  // Family plan real-time sync hook
+  const {
+    saveToFamilyPlan,
+    flushSync,
+    isSyncing: isFamilySyncing
+  } = useFamilyPlan(activePlanId, {
+    onRemoteUpdate: handleRemoteUpdate,
+    userId: user?.id
+  });
+
+  // Effect to sync all changes to family plan
+  React.useEffect(() => {
+    if (!activePlanId || isDataLoading || isLoading) return;
+
+    // Sync current state to family plan
+    saveToFamilyPlan({
+      plan_data: planHistory.present,
+      family_data: family,
+      preferences_data: preferences,
+      prep_tasks: prepTasks,
+      grocery_items: groceryItems,
+      invalidation_state: invalidationState,
+      has_plan: hasPlanGenerated ? 'true' : 'false',
+      current_stage: currentStage.toString()
+    });
+  }, [
+    activePlanId,
+    planHistory.present,
+    family,
+    preferences,
+    prepTasks,
+    groceryItems,
+    invalidationState,
+    hasPlanGenerated,
+    currentStage,
+    isDataLoading,
+    isLoading,
+    saveToFamilyPlan
+  ]);
 
   // --- Analytics Initialization ---
   useEffect(() => {
@@ -638,17 +708,17 @@ const App: React.FC = () => {
       }
   };
 
-  // --- Share Handlers ---
-  const handleSharePlan = async () => {
+  // --- Family Invite Handlers ---
+  const handleInviteToFamily = async () => {
     if (activePlanId) {
-      // Already shared, just show the modal with existing URL
-      setShareModalOpen(true);
+      // Already has a family plan, just show the modal with existing URL
+      setFamilyInviteModalOpen(true);
       return;
     }
 
-    setIsSharing(true);
+    setIsCreatingInvite(true);
     try {
-      const response = await apiService.createCollaborativePlan({
+      const response = await apiService.createFamilyPlan({
         plan_data: planHistory.present,
         family_data: family,
         preferences_data: preferences,
@@ -661,101 +731,82 @@ const App: React.FC = () => {
       });
 
       setActivePlanId(response.id);
-      const url = `${window.location.origin}/?share=${response.share_id}`;
-      setShareUrl(url);
-      setShareModalOpen(true);
+      const url = `${window.location.origin}/?invite=${response.invite_code}`;
+      setInviteUrl(url);
+      setFamilyInviteModalOpen(true);
 
-      await analyticsService.trackEngagement('plan_shared', {
+      await analyticsService.trackEngagement('family_invite_created', {
         plan_id: response.id,
-        share_id: response.share_id
+        invite_code: response.invite_code
       });
 
-      showToast('Share link created!', 'success');
+      showToast('Invite link created!', 'success');
     } catch (error) {
-      console.error('Failed to create share link:', error);
-      handleApiError(error, showToast, setErrorModal, handleSharePlan);
+      console.error('Failed to create invite link:', error);
+      handleApiError(error, showToast, setErrorModal, handleInviteToFamily);
     } finally {
-      setIsSharing(false);
+      setIsCreatingInvite(false);
     }
   };
 
-  const saveToCollaborativePlan = async () => {
-    if (!activePlanId) return;
-
-    try {
-      await apiService.updateCollaborativePlan(activePlanId, {
-        plan_data: planHistory.present,
-        family_data: family,
-        preferences_data: preferences,
-        prep_tasks: prepTasks,
-        grocery_items: groceryItems,
-        invalidation_state: invalidationState,
-        has_plan: hasPlanGenerated ? 'true' : 'false',
-        current_stage: currentStage.toString()
-      });
-      console.log('✓ Synced to collaborative plan');
-    } catch (error) {
-      console.error('Failed to sync collaborative plan:', error);
-      // Don't show error to user, this is background sync
-    }
-  };
-
-  // --- URL Parameter Handling for Shared Plans ---
+  // --- URL Parameter Handling for Family Invites ---
   useEffect(() => {
-    const handleSharedPlanAccess = async () => {
+    const handleFamilyInviteAccess = async () => {
       const urlParams = new URLSearchParams(window.location.search);
-      const shareId = urlParams.get('share');
+      const inviteCode = urlParams.get('invite');
 
-      if (shareId && user) {
+      if (inviteCode && user) {
         try {
-          showToast('Loading shared plan...', 'info');
+          showToast('Loading family plan...', 'info');
 
           // Get the plan details
-          const plan = await apiService.getPlanByShareId(shareId);
+          const plan = await apiService.getPlanByInviteCode(inviteCode);
 
           // Check if already a member
           const isMember = plan.members?.some((m: any) => m.user_id === user.id);
 
           if (!isMember) {
-            // Join the plan
-            await apiService.joinCollaborativePlan(shareId);
-            showToast('Joined collaborative plan!', 'success');
+            // Join the family
+            await apiService.joinFamily(inviteCode);
+            showToast('Joined family plan!', 'success');
           } else {
-            showToast('Loaded collaborative plan', 'success');
+            showToast('Loaded family plan', 'success');
           }
 
-          // Load the plan data
+          // Load the plan data AND persist it to user's data
+          // This makes the family plan "become" the user's plan
+          // Note: We DON'T skip save here - we want to persist the family data
           setPlanHistory({
             past: [],
             present: plan.plan_data,
             future: []
-          }, true); // Skip save initially
+          }); // Persist to user's data
 
-          setFamily(plan.family_data || INITIAL_FAMILY);
-          setPreferences(plan.preferences_data || INITIAL_PREFERENCES);
-          setPrepTasks(plan.prep_tasks || []);
-          setGroceryItems(plan.grocery_items || []);
-          setInvalidationState(plan.invalidation_state || DEFAULT_INVALIDATION_STATE);
-          setHasPlanGenerated(plan.has_plan === 'true');
-          setCurrentStage(parseInt(plan.current_stage) || Stage.MEAL_PLANNING);
+          setFamily(plan.family_data || INITIAL_FAMILY); // Persist
+          setPreferences(plan.preferences_data || INITIAL_PREFERENCES); // Persist
+          setPrepTasks(plan.prep_tasks || []); // Persist
+          setGroceryItems(plan.grocery_items || []); // Persist
+          setInvalidationState(plan.invalidation_state || DEFAULT_INVALIDATION_STATE); // Persist
+          setHasPlanGenerated(plan.has_plan === 'true'); // Persist
+          setCurrentStage(parseInt(plan.current_stage) || Stage.MEAL_PLANNING); // Persist
           setActivePlanId(plan.id);
           setViewMode('planning');
 
-          // Set share URL for the modal
-          const url = `${window.location.origin}/?share=${shareId}`;
-          setShareUrl(url);
+          // Set invite URL for the modal
+          const url = `${window.location.origin}/?invite=${inviteCode}`;
+          setInviteUrl(url);
 
           // Clear the URL parameter
           window.history.replaceState({}, '', window.location.pathname);
 
-          await analyticsService.trackEngagement('plan_joined', {
+          await analyticsService.trackEngagement('family_joined', {
             plan_id: plan.id,
-            share_id: shareId
+            invite_code: inviteCode
           });
 
         } catch (error) {
-          console.error('Failed to load shared plan:', error);
-          showToast('Failed to load shared plan', 'error');
+          console.error('Failed to load family plan:', error);
+          showToast('Failed to load family plan', 'error');
           // Clear the URL parameter even on error
           window.history.replaceState({}, '', window.location.pathname);
         }
@@ -763,7 +814,7 @@ const App: React.FC = () => {
     };
 
     if (!isDataLoading && user) {
-      handleSharedPlanAccess();
+      handleFamilyInviteAccess();
     }
   }, [isDataLoading, user]);
 
@@ -802,8 +853,7 @@ const App: React.FC = () => {
         future: []
       }));
 
-      // Sync to collaborative plan if active
-      await saveToCollaborativePlan();
+      // Note: Collaborative plan sync is handled automatically by useCollaborativePlan hook
 
       const botMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -902,8 +952,7 @@ const App: React.FC = () => {
         future: []
       }));
 
-      // Sync to collaborative plan if active
-      await saveToCollaborativePlan();
+      // Note: Collaborative plan sync is handled automatically by useCollaborativePlan hook
 
       // Trigger animation for the replaced card
       setNewlyReceivedCards(prev => new Set([...prev, cardKey]));
@@ -1498,13 +1547,13 @@ const App: React.FC = () => {
         variant="warning"
       />
 
-      {/* Share Modal */}
-      <ShareModal
-        isOpen={shareModalOpen}
-        onClose={() => setShareModalOpen(false)}
-        shareUrl={shareUrl}
-        onShare={handleSharePlan}
-        isSharing={isSharing}
+      {/* Family Invite Modal */}
+      <FamilyInviteModal
+        isOpen={familyInviteModalOpen}
+        onClose={() => setFamilyInviteModalOpen(false)}
+        inviteUrl={inviteUrl}
+        onCreateInvite={handleInviteToFamily}
+        isCreatingInvite={isCreatingInvite}
       />
 
       {/* Header - Apple-like frosted glass effect */}
@@ -1603,12 +1652,12 @@ const App: React.FC = () => {
                                </button>
                             )}
                             <button
-                               onClick={handleSharePlan}
-                               disabled={isSharing}
+                               onClick={handleInviteToFamily}
+                               disabled={isCreatingInvite}
                                className="flex items-center gap-2 px-3 md:px-4 py-2 bg-white border border-zinc-200 text-zinc-600 rounded-full text-xs md:text-sm font-semibold hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                               <Share2 size={12} className="md:w-[14px] md:h-[14px]" />
-                               {isSharing ? 'Creating...' : activePlanId ? 'Share' : 'Share Plan'}
+                               <UserPlus size={12} className="md:w-[14px] md:h-[14px]" />
+                               {isCreatingInvite ? 'Creating...' : 'Invite'}
                             </button>
                             <button onClick={handleRegeneratePlan} className="flex items-center gap-2 px-3 md:px-4 py-2 bg-zinc-100 text-zinc-600 rounded-full text-xs md:text-sm font-semibold hover:bg-zinc-200 transition-colors">
                                <RotateCcw size={12} className="md:w-[14px] md:h-[14px]" /> Regenerate
@@ -1626,12 +1675,16 @@ const App: React.FC = () => {
                             )}
                          </div>
                          <button
-                            onClick={handleSharePlan}
-                            disabled={isSharing}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-zinc-200 text-zinc-600 rounded-full text-xs font-semibold hover:bg-zinc-50 transition-colors disabled:opacity-50"
+                            onClick={handleInviteToFamily}
+                            disabled={isCreatingInvite}
+                            className="w-8 h-8 flex items-center justify-center bg-white border border-zinc-200 text-zinc-600 rounded-full hover:bg-zinc-50 transition-colors disabled:opacity-50"
+                            title="Invite to Family"
                          >
-                            <Share2 size={12} />
-                            {isSharing ? 'Creating...' : activePlanId ? 'Share' : 'Share'}
+                            {isCreatingInvite ? (
+                               <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                               <UserPlus size={14} />
+                            )}
                          </button>
                       </div>
 

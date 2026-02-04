@@ -94,7 +94,7 @@ class UserDataResponse(BaseModel):
         return super().model_validate(obj, **kwargs)
 
 
-# Collaborative plan schemas
+# Collaborative plan schemas (legacy - kept for backwards compatibility)
 class PlanMemberResponse(BaseModel):
     id: str
     user_id: str
@@ -155,3 +155,54 @@ class CollaborativePlanResponse(BaseModel):
 
 class JoinPlanRequest(BaseModel):
     share_id: str
+
+
+# Family plan schemas (new naming convention)
+class FamilyPlanCreate(BaseModel):
+    plan_data: Any
+    family_data: Optional[Any] = None
+    preferences_data: Optional[Any] = None
+    prep_tasks: Optional[Any] = None
+    grocery_items: Optional[Any] = None
+    invalidation_state: Optional[Any] = None
+    has_plan: Optional[str] = "true"
+    current_stage: Optional[str] = "0"
+    title: Optional[str] = None
+
+
+class FamilyPlanUpdate(BaseModel):
+    plan_data: Optional[Any] = None
+    family_data: Optional[Any] = None
+    preferences_data: Optional[Any] = None
+    prep_tasks: Optional[Any] = None
+    grocery_items: Optional[Any] = None
+    invalidation_state: Optional[Any] = None
+    has_plan: Optional[str] = None
+    current_stage: Optional[str] = None
+    title: Optional[str] = None
+
+
+class FamilyPlanResponse(BaseModel):
+    id: str
+    invite_code: str  # Maps to share_id in DB
+    plan_data: Any
+    family_data: Optional[Any] = None
+    preferences_data: Optional[Any] = None
+    prep_tasks: Optional[Any] = None
+    grocery_items: Optional[Any] = None
+    invalidation_state: Optional[Any] = None
+    has_plan: str
+    current_stage: str
+    title: Optional[str] = None
+    created_by: str
+    created_at: datetime
+    updated_at: datetime
+    last_modified_by: Optional[str] = None
+    members: Optional[list[PlanMemberResponse]] = None
+
+    class Config:
+        from_attributes = True
+
+
+class JoinFamilyRequest(BaseModel):
+    invite_code: str

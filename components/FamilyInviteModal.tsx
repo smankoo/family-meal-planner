@@ -1,20 +1,20 @@
 import React, { useState } from 'react';
-import { Share2, Copy, Check, X, Users } from 'lucide-react';
+import { Users, Copy, Check, X, Heart } from 'lucide-react';
 
-interface ShareModalProps {
+interface FamilyInviteModalProps {
   isOpen: boolean;
   onClose: () => void;
-  shareUrl: string;
-  onShare: () => Promise<void>;
-  isSharing: boolean;
+  inviteUrl: string;
+  onCreateInvite: () => Promise<void>;
+  isCreatingInvite: boolean;
 }
 
-const ShareModal: React.FC<ShareModalProps> = ({
+const FamilyInviteModal: React.FC<FamilyInviteModalProps> = ({
   isOpen,
   onClose,
-  shareUrl,
-  onShare,
-  isSharing
+  inviteUrl,
+  onCreateInvite,
+  isCreatingInvite
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -22,7 +22,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(inviteUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -30,8 +30,8 @@ const ShareModal: React.FC<ShareModalProps> = ({
     }
   };
 
-  const handleShare = async () => {
-    await onShare();
+  const handleCreateInvite = async () => {
+    await onCreateInvite();
   };
 
   return (
@@ -52,9 +52,9 @@ const ShareModal: React.FC<ShareModalProps> = ({
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-zinc-900 rounded-xl flex items-center justify-center">
-                <Share2 size={20} className="text-white" />
+                <Users size={20} className="text-white" />
               </div>
-              <h2 className="text-xl font-bold text-zinc-900">Share Meal Plan</h2>
+              <h2 className="text-xl font-bold text-zinc-900">Invite to Family</h2>
             </div>
             <button
               onClick={onClose}
@@ -67,41 +67,41 @@ const ShareModal: React.FC<ShareModalProps> = ({
 
           {/* Content */}
           <div className="space-y-4">
-            {!shareUrl ? (
+            {!inviteUrl ? (
               <>
                 <p className="text-zinc-600 leading-relaxed">
-                  Create a shareable link for this meal plan. Anyone with the link can view and edit it together in real-time.
+                  Create an invite link to add family members to your meal plan. Everyone with the link can view and edit together in real-time.
                 </p>
 
                 <div className="bg-zinc-50 rounded-xl p-4 space-y-2">
                   <div className="flex items-center gap-2 text-sm text-zinc-700">
-                    <Users size={16} />
-                    <span className="font-medium">Collaborative editing</span>
+                    <Heart size={16} className="text-rose-500" />
+                    <span className="font-medium">Family collaboration</span>
                   </div>
                   <p className="text-sm text-zinc-600">
-                    Changes made by anyone will be reflected for all members instantly.
+                    Changes made by any family member will be reflected for everyone instantly.
                   </p>
                 </div>
 
                 <button
-                  onClick={handleShare}
-                  disabled={isSharing}
+                  onClick={handleCreateInvite}
+                  disabled={isCreatingInvite}
                   className="w-full bg-zinc-900 text-white px-6 py-3 rounded-xl font-semibold hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSharing ? 'Creating Link...' : 'Create Share Link'}
+                  {isCreatingInvite ? 'Creating Invite...' : 'Create Invite Link'}
                 </button>
               </>
             ) : (
               <>
                 <p className="text-zinc-600 leading-relaxed">
-                  Share this link with others to collaborate on this meal plan together.
+                  Share this link with family members to collaborate on meal planning together.
                 </p>
 
-                {/* Share URL */}
+                {/* Invite URL */}
                 <div className="bg-zinc-50 rounded-xl p-4 space-y-3">
                   <div className="flex items-center justify-between gap-3">
                     <code className="text-sm text-zinc-700 font-mono truncate flex-1">
-                      {shareUrl}
+                      {inviteUrl}
                     </code>
                     <button
                       onClick={handleCopy}
@@ -125,7 +125,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
 
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                   <p className="text-sm text-amber-900">
-                    <span className="font-semibold">Note:</span> Anyone with this link can view and edit this plan. Only share with people you trust.
+                    <span className="font-semibold">Note:</span> Anyone with this link can join your family plan. Only share with people you trust.
                   </p>
                 </div>
 
@@ -144,4 +144,4 @@ const ShareModal: React.FC<ShareModalProps> = ({
   );
 };
 
-export default ShareModal;
+export default FamilyInviteModal;

@@ -11,7 +11,13 @@ const UserMenu: React.FC<UserMenuProps> = ({ onOpenSettings }) => {
   const { user, signOut } = useAuth();
   const { showToast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Reset avatar error when user changes
+  useEffect(() => {
+    setAvatarError(false);
+  }, [user?.id, user?.user_metadata?.avatar_url]);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -52,7 +58,8 @@ const UserMenu: React.FC<UserMenuProps> = ({ onOpenSettings }) => {
       .slice(0, 2);
   };
 
-  const displayName = user.user_metadata?.name || user.email?.split('@')[0] || 'User';
+  const displayName = user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+  const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture;
   const initials = getInitials(displayName);
 
   return (
@@ -64,14 +71,17 @@ const UserMenu: React.FC<UserMenuProps> = ({ onOpenSettings }) => {
         title={displayName}
       >
         {/* Avatar */}
-        {user.user_metadata?.avatar_url ? (
+        {avatarUrl && !avatarError ? (
           <img
-            src={user.user_metadata.avatar_url}
-            alt={displayName}
-            className="w-6 h-6 md:w-7 md:h-7 rounded-full object-cover border border-zinc-200"
+            src={avatarUrl}
+            alt=""
+            className="w-6 h-6 md:w-7 md:h-7 rounded-full object-cover border border-zinc-200 flex-shrink-0"
+            crossOrigin="anonymous"
+            referrerPolicy="no-referrer"
+            onError={() => setAvatarError(true)}
           />
         ) : (
-          <div className="w-6 h-6 md:w-7 md:h-7 bg-zinc-900 rounded-full flex items-center justify-center">
+          <div className="w-6 h-6 md:w-7 md:h-7 bg-zinc-900 rounded-full flex items-center justify-center flex-shrink-0">
             <span className="text-white font-semibold text-[10px] md:text-xs">{initials}</span>
           </div>
         )}
@@ -94,14 +104,17 @@ const UserMenu: React.FC<UserMenuProps> = ({ onOpenSettings }) => {
           {/* User Info Section */}
           <div className="p-4 border-b border-zinc-100">
             <div className="flex items-center gap-3">
-              {user.user_metadata?.avatar_url ? (
+              {avatarUrl && !avatarError ? (
                 <img
-                  src={user.user_metadata.avatar_url}
-                  alt={displayName}
-                  className="w-10 h-10 rounded-full object-cover border-2 border-zinc-100"
+                  src={avatarUrl}
+                  alt=""
+                  className="w-10 h-10 rounded-full object-cover border-2 border-zinc-100 flex-shrink-0"
+                  crossOrigin="anonymous"
+                  referrerPolicy="no-referrer"
+                  onError={() => setAvatarError(true)}
                 />
               ) : (
-                <div className="w-10 h-10 bg-zinc-900 rounded-full flex items-center justify-center">
+                <div className="w-10 h-10 bg-zinc-900 rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-white font-semibold text-sm">{initials}</span>
                 </div>
               )}

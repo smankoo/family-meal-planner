@@ -188,8 +188,8 @@ class ApiService {
     await this.handleResponse(response);
   }
 
-  // Collaborative plan methods
-  async createCollaborativePlan(planData: {
+  // Family plan methods
+  async createFamilyPlan(planData: {
     plan_data: any;
     family_data?: any;
     preferences_data?: any;
@@ -200,7 +200,7 @@ class ApiService {
     current_stage?: string;
     title?: string;
   }): Promise<any> {
-    const response = await fetch(`${API_BASE_URL}/collaborative-plans/`, {
+    const response = await fetch(`${API_BASE_URL}/family-plans/`, {
       method: 'POST',
       headers: await this.getHeaders(),
       body: JSON.stringify(planData),
@@ -209,8 +209,8 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  async getMyCollaborativePlans(): Promise<any[]> {
-    const response = await fetch(`${API_BASE_URL}/collaborative-plans/my-plans`, {
+  async getMyFamilyPlans(): Promise<any[]> {
+    const response = await fetch(`${API_BASE_URL}/family-plans/my-plans`, {
       method: 'GET',
       headers: await this.getHeaders(),
     });
@@ -218,8 +218,8 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  async getPlanByShareId(shareId: string): Promise<any> {
-    const response = await fetch(`${API_BASE_URL}/collaborative-plans/by-share-id/${shareId}`, {
+  async getPlanByInviteCode(inviteCode: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/family-plans/by-invite-code/${inviteCode}`, {
       method: 'GET',
       headers: await this.getHeaders(),
     });
@@ -227,17 +227,17 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  async joinCollaborativePlan(shareId: string): Promise<any> {
-    const response = await fetch(`${API_BASE_URL}/collaborative-plans/join`, {
+  async joinFamily(inviteCode: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/family-plans/join`, {
       method: 'POST',
       headers: await this.getHeaders(),
-      body: JSON.stringify({ share_id: shareId }),
+      body: JSON.stringify({ invite_code: inviteCode }),
     });
 
     return this.handleResponse(response);
   }
 
-  async updateCollaborativePlan(planId: string, updates: {
+  async updateFamilyPlan(planId: string, updates: {
     plan_data?: any;
     family_data?: any;
     preferences_data?: any;
@@ -248,7 +248,7 @@ class ApiService {
     current_stage?: string;
     title?: string;
   }): Promise<any> {
-    const response = await fetch(`${API_BASE_URL}/collaborative-plans/${planId}`, {
+    const response = await fetch(`${API_BASE_URL}/family-plans/${planId}`, {
       method: 'PUT',
       headers: await this.getHeaders(),
       body: JSON.stringify(updates),
@@ -257,8 +257,8 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  async leaveCollaborativePlan(planId: string): Promise<any> {
-    const response = await fetch(`${API_BASE_URL}/collaborative-plans/${planId}/leave`, {
+  async leaveFamily(planId: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/family-plans/${planId}/leave`, {
       method: 'POST',
       headers: await this.getHeaders(),
     });
@@ -266,8 +266,8 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  async deleteCollaborativePlan(planId: string): Promise<any> {
-    const response = await fetch(`${API_BASE_URL}/collaborative-plans/${planId}`, {
+  async deleteFamilyPlan(planId: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/family-plans/${planId}`, {
       method: 'DELETE',
       headers: await this.getHeaders(),
     });
