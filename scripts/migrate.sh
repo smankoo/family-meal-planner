@@ -16,14 +16,19 @@ fi
 echo "Database URL configured: ${DATABASE_URL:0:30}..."
 
 # Install Supabase CLI if not present
-if ! command -v supabase &> /dev/null; then
+if ! command -v supabase &> /dev/null && [ ! -f "./supabase" ]; then
     echo "Installing Supabase CLI..."
-    curl -fsSL https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz | tar -xz
+    rm -f supabase  # Remove any partial download
+    curl -fsSL https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz -o supabase.tar.gz
+    tar -xzf supabase.tar.gz
+    rm supabase.tar.gz
     chmod +x supabase
-    export PATH="$PWD:$PATH"
 fi
 
-echo "Supabase CLI version: $(supabase --version)"
+# Add current directory to PATH for supabase binary
+export PATH="$PWD:$PATH"
+
+echo "Supabase CLI version: $(./supabase --version)"
 
 # Check for migrations directory
 if [ ! -d "supabase/migrations" ]; then
