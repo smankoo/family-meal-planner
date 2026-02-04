@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime
-import secrets
+
+import uuid
 
 from database import get_db
 from models import CollaborativePlan, PlanMember, Profile
@@ -24,8 +25,8 @@ router = APIRouter(prefix="/family-plans", tags=["family-plans"])
 
 
 def generate_invite_code() -> str:
-    """Generate a short, readable invite code"""
-    return secrets.token_hex(6).lower()
+    """Generate a full UUID invite code for better uniqueness"""
+    return str(uuid.uuid4())
 
 
 @router.post("/", response_model=FamilyPlanResponse)

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Copy, Check, X, Heart } from 'lucide-react';
+import { Users, Copy, Check, X, Shield } from 'lucide-react';
 
 interface FamilyInviteModalProps {
   isOpen: boolean;
@@ -36,102 +36,125 @@ const FamilyInviteModal: React.FC<FamilyInviteModalProps> = ({
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop - lighter, more sophisticated */}
       <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 animate-fade-in"
+        className="modal-backdrop animate-fade-in"
         onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+      >
+        {/* Modal */}
         <div
-          className="bg-white rounded-3xl shadow-modal max-w-md w-full p-6 pointer-events-auto animate-scale-in"
+          className="modal-container animate-modal-in"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="modal-header">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-zinc-900 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-zinc-900 rounded-xl flex items-center justify-center shadow-sm">
                 <Users size={20} className="text-white" />
               </div>
-              <h2 className="text-xl font-bold text-zinc-900">Invite to Family</h2>
+              <div>
+                <h2 className="heading-card">Invite Family</h2>
+                <p className="text-xs text-zinc-500">Share your meal plan</p>
+              </div>
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-lg hover:bg-zinc-100 flex items-center justify-center transition-colors"
+              className="btn-icon"
               aria-label="Close"
             >
-              <X size={20} className="text-zinc-600" />
+              <X size={18} />
             </button>
           </div>
 
           {/* Content */}
-          <div className="space-y-4">
+          <div className="modal-content space-y-5">
             {!inviteUrl ? (
               <>
-                <p className="text-zinc-600 leading-relaxed">
-                  Create an invite link to add family members to your meal plan. Everyone with the link can view and edit together in real-time.
+                {/* Pre-invite state */}
+                <p className="text-body">
+                  Create an invite link to collaborate on meal planning with your family. Everyone can view and edit together in real-time.
                 </p>
 
-                <div className="bg-zinc-50 rounded-xl p-4 space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-zinc-700">
-                    <Heart size={16} className="text-rose-500" />
-                    <span className="font-medium">Family collaboration</span>
+                {/* Feature highlight */}
+                <div className="flex items-start gap-3 p-4 bg-zinc-50 rounded-xl">
+                  <div className="w-8 h-8 bg-zinc-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Users size={16} className="text-zinc-600" />
                   </div>
-                  <p className="text-sm text-zinc-600">
-                    Changes made by any family member will be reflected for everyone instantly.
-                  </p>
+                  <div>
+                    <p className="text-sm font-medium text-zinc-800">Real-time collaboration</p>
+                    <p className="text-sm text-zinc-500 mt-0.5">
+                      Changes sync instantly for all family members.
+                    </p>
+                  </div>
                 </div>
 
                 <button
                   onClick={handleCreateInvite}
                   disabled={isCreatingInvite}
-                  className="w-full bg-zinc-900 text-white px-6 py-3 rounded-xl font-semibold hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn-primary w-full"
                 >
-                  {isCreatingInvite ? 'Creating Invite...' : 'Create Invite Link'}
+                  {isCreatingInvite ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Creating...
+                    </span>
+                  ) : (
+                    'Create Invite Link'
+                  )}
                 </button>
               </>
             ) : (
               <>
-                <p className="text-zinc-600 leading-relaxed">
-                  Share this link with family members to collaborate on meal planning together.
-                </p>
+                {/* Post-invite state - compact and balanced */}
+                <div className="bg-zinc-50 rounded-xl p-4 space-y-4">
+                  <p className="text-sm text-zinc-600">
+                    Share this link with family members to collaborate together.
+                  </p>
 
-                {/* Invite URL */}
-                <div className="bg-zinc-50 rounded-xl p-4 space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <code className="text-sm text-zinc-700 font-mono truncate flex-1">
-                      {inviteUrl}
-                    </code>
+                  {/* URL input row */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={inviteUrl}
+                      className="text-sm text-zinc-700 font-mono bg-white border border-zinc-200 rounded-lg px-3 py-2.5 flex-1 min-w-0 outline-none focus:ring-2 focus:ring-zinc-900/10 cursor-text select-all"
+                      onClick={(e) => (e.target as HTMLInputElement).select()}
+                    />
                     <button
                       onClick={handleCopy}
-                      className="flex-shrink-0 w-9 h-9 rounded-lg bg-white hover:bg-zinc-100 flex items-center justify-center transition-colors shadow-sm"
-                      aria-label="Copy link"
+                      className={`flex-shrink-0 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
+                        copied
+                          ? 'bg-green-600 text-white'
+                          : 'bg-zinc-900 text-white hover:bg-zinc-800'
+                      }`}
                     >
                       {copied ? (
-                        <Check size={18} className="text-green-600" />
+                        <span className="flex items-center gap-1.5">
+                          <Check size={16} />
+                          Copied
+                        </span>
                       ) : (
-                        <Copy size={18} className="text-zinc-600" />
+                        <span className="flex items-center gap-1.5">
+                          <Copy size={16} />
+                          Copy
+                        </span>
                       )}
                     </button>
                   </div>
 
-                  {copied && (
-                    <p className="text-sm text-green-600 font-medium animate-fade-in">
-                      Link copied to clipboard!
-                    </p>
-                  )}
-                </div>
-
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                  <p className="text-sm text-amber-900">
-                    <span className="font-semibold">Note:</span> Anyone with this link can join your family plan. Only share with people you trust.
+                  {/* Privacy note */}
+                  <p className="text-xs text-zinc-500 flex items-center gap-1.5">
+                    <Shield size={12} className="flex-shrink-0" />
+                    Anyone with this link can join. Share only with trusted people.
                   </p>
                 </div>
 
                 <button
                   onClick={onClose}
-                  className="w-full bg-zinc-100 text-zinc-900 px-6 py-3 rounded-xl font-semibold hover:bg-zinc-200 transition-colors"
+                  className="btn-secondary w-full"
                 >
                   Done
                 </button>
