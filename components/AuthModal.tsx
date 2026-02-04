@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Mail, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -10,19 +10,31 @@ interface AuthModalProps {
 }
 
 type AuthMode = 'signin' | 'signup' | 'reset';
+type AuthStep = 'email' | 'password';
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const { signInWithEmail, signUpWithEmail, resetPassword } = useAuth();
   const { showToast } = useToast();
 
   const [mode, setMode] = useState<AuthMode>('signin');
+  const [step, setStep] = useState<AuthStep>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Reset step when mode changes
+  useEffect(() => {
+    setStep('email');
+  }, [mode]);
+
   if (!isOpen) return null;
+
+  const handleContinueWithEmail = () => {
+    if (!email) return;
+    setStep('password');
+  };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,6 +107,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setPassword('');
     setName('');
     setShowPassword(false);
+    setStep('email');
   };
 
   const switchMode = (newMode: AuthMode) => {
@@ -102,115 +115,182 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     resetForm();
   };
 
+  const handleBackToEmail = () => {
+    setStep('email');
+    setPassword('');
+  };
+
+  const getTitle = () => {
+    if (mode === 'reset') return 'Reset your password';
+    if (mode === 'signup') return 'Create your account';
+    return 'Log in or sign up';
+  };
+
+  const getSubtitle = () => {
+    if (mode === 'reset') return 'Enter your email to receive a reset link';
+    if (mode === 'signup') return 'Join to start planning delicious meals';
+    return 'Welcome to Family Meal Planner';
+  };
+
   return (
-    <div className="modal-backdrop">
-      {/* Backdrop */}
+    <div className="modal-backdrop-light">
+      {/* Lighter backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/30 backdrop-blur-[2px]"
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md bg-white rounded-card shadow-modal overflow-hidden animate-fade-in">
+      <div className="relative w-full max-w-md bg-white rounded-modal shadow-modal overflow-hidden animate-modal-in">
         {/* Header */}
-        <div className="modal-header">
-          <h2 className="text-xl font-semibold text-primary-900">
-            {mode === 'signin' && 'Welcome Back'}
-            {mode === 'signup' && 'Create Account'}
-            {mode === 'reset' && 'Reset Password'}
-          </h2>
+        <div className="relative px-8 pt-8 pb-6">
           <button
             onClick={onClose}
-            className="btn-icon"
+            className="absolute top-6 right-6 w-10 h-10 rounded-full hover:bg-primary-100 text-primary-400 hover:text-primary-600 flex items-center justify-center transition-all"
+            aria-label="Close"
           >
-            <X size={16} />
+            <X size={20} />
           </button>
+
+          <div className="pr-8">
+            <h2 className="text-2xl font-semibold text-primary-900 mb-2">
+              {getTitle()}
+            </h2>
+            <p className="text-sm text-primary-500">
+              {getSubtitle()}
+            </p>
+          </div>
         </div>
 
         {/* Content */}
-        <div className="modal-content space-y-6">
+        <div className="px-8 pb-8 space-y-5">
           {/* Google Sign-In Button */}
-          <button
-            onClick={handleGoogleSignIn}
-            disabled={loading}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border-2 border-primary-200 rounded-input font-medium text-primary-700 hover:bg-primary-50 hover:border-primary-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <Loader2 size={20} className="animate-spin" />
-            ) : (
-              <>
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  />
-                </svg>
-                Continue with Google
-              </>
-            )}
-          </button>
+          {step === 'email' && mode !== 'reset' && (
+            <button
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-3 px-4 py-3.5 bg-white border border-primary-300 rounded-button font-medium text-primary-900 hover:bg-primary-50 hover:border-primary-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow"
+            >
+              {loading ? (
+                <Loader2 size={20} className="animate-spin" />
+              ) : (
+                <>
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    />
+                  </svg>
+                  Continue with Google
+                </>
+              )}
+            </button>
+          )}
 
           {/* Divider */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-primary-200"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-primary-500">Or continue with email</span>
-            </div>
-          </div>
-
-          {/* Email Form */}
-          <form onSubmit={handleEmailAuth} autoComplete="off" className="space-y-4">
-            {mode === 'signup' && (
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-primary-700 mb-2">
-                  Full Name
-                </label>
-                <input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  autoComplete="off"
-                  className="input"
-                  placeholder="Enter your full name"
-                />
+          {step === 'email' && mode !== 'reset' && (
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-primary-200"></div>
               </div>
-            )}
+              <div className="relative flex justify-center text-xs">
+                <span className="px-3 bg-white text-primary-400 uppercase tracking-wide font-medium">OR</span>
+              </div>
+            </div>
+          )}
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-primary-700 mb-2">
-                Email Address
-              </label>
-              <div className="relative">
+          {/* Email Step */}
+          {step === 'email' && (
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (mode === 'reset') {
+                handleEmailAuth(e);
+              } else {
+                handleContinueWithEmail();
+              }
+            }} className="space-y-4 animate-fade-in-up">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-primary-700 mb-2">
+                  Email address
+                </label>
                 <input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="off"
+                  autoComplete="email"
+                  autoFocus
                   required
-                  className="input pl-11"
-                  placeholder="Enter your email"
+                  className="input text-base"
+                  placeholder="you@example.com"
                 />
-                <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-primary-400" />
               </div>
-            </div>
 
-            {mode !== 'reset' && (
+              <button
+                type="submit"
+                disabled={loading || !email}
+                className="btn-primary w-full flex items-center justify-center gap-2 text-base py-3.5"
+              >
+                {loading ? (
+                  <Loader2 size={20} className="animate-spin" />
+                ) : (
+                  mode === 'reset' ? 'Send reset link' : 'Continue'
+                )}
+              </button>
+            </form>
+          )}
+
+          {/* Password Step */}
+          {step === 'password' && mode !== 'reset' && (
+            <form onSubmit={handleEmailAuth} className="space-y-4 animate-fade-in-up">
+              {/* Show email with edit option */}
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-2">
+                  Email address
+                </label>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 px-4 py-3 bg-primary-50 border border-primary-200 rounded-input text-primary-700 text-base">
+                    {email}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleBackToEmail}
+                    className="text-sm font-medium text-primary-600 hover:text-primary-900 transition-colors px-3 py-2"
+                  >
+                    Edit
+                  </button>
+                </div>
+              </div>
+
+              {mode === 'signup' && (
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-primary-700 mb-2">
+                    Full name
+                  </label>
+                  <input
+                    id="name"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    autoComplete="name"
+                    className="input text-base"
+                    placeholder="Your name"
+                  />
+                </div>
+              )}
+
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-primary-700 mb-2">
                   Password
@@ -221,75 +301,81 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="off"
+                    autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                    autoFocus
                     required
-                    className="input pr-11"
-                    placeholder="Enter your password"
+                    className="input pr-11 text-base"
+                    placeholder={mode === 'signup' ? 'Create a password (min. 6 characters)' : 'Enter your password'}
                     minLength={6}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-400 hover:text-primary-600 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-400 hover:text-primary-600 transition-colors p-1"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
-            )}
 
-            <button
-              type="submit"
-              disabled={loading || !email || (mode !== 'reset' && !password)}
-              className="btn-primary w-full flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <Loader2 size={20} className="animate-spin" />
-              ) : (
-                <>
-                  {mode === 'signin' && 'Sign In'}
-                  {mode === 'signup' && 'Create Account'}
-                  {mode === 'reset' && 'Send Reset Email'}
-                </>
-              )}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={loading || !password}
+                className="btn-primary w-full flex items-center justify-center gap-2 text-base py-3.5"
+              >
+                {loading ? (
+                  <Loader2 size={20} className="animate-spin" />
+                ) : (
+                  mode === 'signin' ? 'Sign in' : 'Create account'
+                )}
+              </button>
+            </form>
+          )}
 
           {/* Mode Switching */}
-          <div className="text-center space-y-2">
-            {mode === 'signin' && (
+          <div className="text-center space-y-3 pt-2">
+            {mode === 'signin' && step === 'email' && (
               <>
-                <button
-                  onClick={() => switchMode('signup')}
-                  className="text-sm text-primary-600 hover:text-primary-900 transition-colors"
-                >
-                  Don't have an account? <span className="font-medium">Sign up</span>
-                </button>
-                <br />
-                <button
-                  onClick={() => switchMode('reset')}
-                  className="text-sm text-primary-600 hover:text-primary-900 transition-colors"
-                >
-                  Forgot your password?
-                </button>
+                <div className="text-sm text-primary-600">
+                  Don't have an account?{' '}
+                  <button
+                    onClick={() => switchMode('signup')}
+                    className="font-semibold text-primary-900 hover:text-accent-600 transition-colors"
+                  >
+                    Sign up
+                  </button>
+                </div>
               </>
             )}
 
-            {mode === 'signup' && (
+            {mode === 'signin' && step === 'password' && (
               <button
-                onClick={() => switchMode('signin')}
-                className="text-sm text-primary-600 hover:text-primary-900 transition-colors"
+                onClick={() => switchMode('reset')}
+                className="text-sm font-medium text-primary-600 hover:text-primary-900 transition-colors"
               >
-                Already have an account? <span className="font-medium">Sign in</span>
+                Forgot password?
               </button>
+            )}
+
+            {mode === 'signup' && (
+              <div className="text-sm text-primary-600">
+                Already have an account?{' '}
+                <button
+                  onClick={() => switchMode('signin')}
+                  className="font-semibold text-primary-900 hover:text-accent-600 transition-colors"
+                >
+                  Sign in
+                </button>
+              </div>
             )}
 
             {mode === 'reset' && (
               <button
                 onClick={() => switchMode('signin')}
-                className="text-sm text-primary-600 hover:text-primary-900 transition-colors"
+                className="text-sm font-medium text-primary-600 hover:text-primary-900 transition-colors"
               >
-                Back to <span className="font-medium">Sign in</span>
+                ← Back to sign in
               </button>
             )}
           </div>

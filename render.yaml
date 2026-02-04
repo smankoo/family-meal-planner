@@ -8,7 +8,7 @@ services:
     name: meal-planner-api-qa
     env: python
     branch: master
-    buildCommand: "cd backend && uv sync"
+    buildCommand: "cd backend && uv sync && cd .. && bash scripts/migrate.sh"
     startCommand: "cd backend && uv run uvicorn main:app --host 0.0.0.0 --port $PORT"
     autoDeploy: true  # Auto-deploy on push
     envVars:
@@ -60,7 +60,7 @@ services:
     name: meal-planner-api-v2
     env: python
     branch: master
-    buildCommand: "cd backend && uv sync"
+    buildCommand: "cd backend && uv sync && cd .. && bash scripts/migrate.sh"
     startCommand: "cd backend && uv run uvicorn main:app --host 0.0.0.0 --port $PORT"
     autoDeploy: false  # MANUAL DEPLOY ONLY - Changed from auto to manual
     envVars:
