@@ -201,6 +201,9 @@ async def get_plan_by_share_id(
             ) for m in members
         ]
     )
+
+
+@router.post("/join", response_model=dict)
 async def join_collaborative_plan(
     request: JoinPlanRequest,
     user_id: str = Depends(get_current_user_id),

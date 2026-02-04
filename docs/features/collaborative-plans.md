@@ -298,6 +298,8 @@ POST /collaborative-plans/join
 }
 ```
 
+**Note**: This endpoint was missing its route decorator in initial implementation, causing 500 errors and CORS issues. Fixed in commit addressing QA deployment issues.
+
 ### Update Plan
 
 ```python
