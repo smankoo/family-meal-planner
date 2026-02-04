@@ -15,20 +15,18 @@ fi
 
 echo "Database URL configured: ${DATABASE_URL:0:30}..."
 
-# Install Supabase CLI if not present
-if ! command -v supabase &> /dev/null && [ ! -f "./supabase" ]; then
+# Install Supabase CLI to /tmp to avoid conflicts with supabase/ directory
+SUPABASE_BIN="/tmp/supabase-cli/supabase"
+if [ ! -f "$SUPABASE_BIN" ]; then
     echo "Installing Supabase CLI..."
-    rm -f supabase  # Remove any partial download
-    curl -fsSL https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz -o supabase.tar.gz
-    tar -xzf supabase.tar.gz
-    rm supabase.tar.gz
-    chmod +x supabase
+    mkdir -p /tmp/supabase-cli
+    curl -fsSL https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz -o /tmp/supabase.tar.gz
+    tar -xzf /tmp/supabase.tar.gz -C /tmp/supabase-cli
+    rm /tmp/supabase.tar.gz
+    chmod +x "$SUPABASE_BIN"
 fi
 
-# Add current directory to PATH for supabase binary
-export PATH="$PWD:$PATH"
-
-echo "Supabase CLI version: $(./supabase --version)"
+echo "Supabase CLI version: $($SUPABASE_BIN --version)"
 
 # Check for migrations directory
 if [ ! -d "supabase/migrations" ]; then
@@ -47,6 +45,6 @@ fi
 
 # Apply migrations
 echo "Applying migrations to database..."
-./supabase db push --db-url "$DATABASE_URL" --include-all
+$SUPABASE_BIN db push --db-url "$DATABASE_URL" --include-all
 
 echo "✓ Migrations applied successfully!"
