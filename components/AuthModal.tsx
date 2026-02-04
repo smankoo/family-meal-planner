@@ -164,6 +164,63 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
         {/* Content */}
         <div className="px-8 pb-8 space-y-5">
+          {/* Email Step */}
+          {step === 'email' && (
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (mode === 'reset') {
+                handleEmailAuth(e);
+              } else {
+                handleContinueWithEmail();
+              }
+            }} className="space-y-4 animate-fade-in-up">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-primary-700 mb-2">
+                  Email address
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  autoFocus
+                  required
+                  className="input text-base"
+                  placeholder="you@example.com"
+                />
+              </div>
+
+              <div className={`grid transition-all duration-300 ease-out ${email ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                <div className="overflow-hidden">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn-primary w-full flex items-center justify-center gap-2 text-base py-3.5 mt-4"
+                  >
+                    {loading ? (
+                      <Loader2 size={20} className="animate-spin" />
+                    ) : (
+                      mode === 'reset' ? 'Send reset link' : 'Continue'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
+
+          {/* Divider */}
+          {step === 'email' && mode !== 'reset' && (
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-primary-200"></div>
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="px-3 bg-white text-primary-400 uppercase tracking-wide font-medium">OR</span>
+              </div>
+            </div>
+          )}
+
           {/* Google Sign-In Button */}
           {step === 'email' && mode !== 'reset' && (
             <button
@@ -197,59 +254,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 </>
               )}
             </button>
-          )}
-
-          {/* Divider */}
-          {step === 'email' && mode !== 'reset' && (
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-primary-200"></div>
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="px-3 bg-white text-primary-400 uppercase tracking-wide font-medium">OR</span>
-              </div>
-            </div>
-          )}
-
-          {/* Email Step */}
-          {step === 'email' && (
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              if (mode === 'reset') {
-                handleEmailAuth(e);
-              } else {
-                handleContinueWithEmail();
-              }
-            }} className="space-y-4 animate-fade-in-up">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-primary-700 mb-2">
-                  Email address
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="email"
-                  autoFocus
-                  required
-                  className="input text-base"
-                  placeholder="you@example.com"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading || !email}
-                className="btn-primary w-full flex items-center justify-center gap-2 text-base py-3.5"
-              >
-                {loading ? (
-                  <Loader2 size={20} className="animate-spin" />
-                ) : (
-                  mode === 'reset' ? 'Send reset link' : 'Continue'
-                )}
-              </button>
-            </form>
           )}
 
           {/* Password Step */}
