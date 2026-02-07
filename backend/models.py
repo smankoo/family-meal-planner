@@ -47,7 +47,7 @@ class UserData(Base):
     data_type = Column(
         Text,
         CheckConstraint(
-            "data_type IN ('family', 'preferences', 'meal_plan', 'prep_tasks', 'grocery_items', 'invalidation_state', 'has_plan', 'current_stage')",
+            "data_type IN ('family', 'preferences', 'meal_plan', 'prep_tasks', 'grocery_items', 'invalidation_state', 'has_plan', 'current_stage', 'active_plan_id')",
             name='valid_data_types'
         ),
         nullable=False
@@ -135,5 +135,6 @@ VALID_DATA_TYPES = {
     'grocery_items',
     'invalidation_state',
     'has_plan',
-    'current_stage'
+    'current_stage',
+    'active_plan_id'
 }

@@ -125,96 +125,89 @@
 - Invalidation tracking ensures downstream data stays consistent
 - User prompted to regenerate prep tasks and grocery list
 
-### Scenario 3: Sharing a Plan
+### Scenario 3: Family Plan Sharing with Real-Time Sync
 
 ```
 ┌──────┐                ┌──────────┐              ┌──────────┐              ┌─────────┐
 │User A│                │ Frontend │              │  Backend │              │Supabase │
 └──┬───┘                └────┬─────┘              └────┬─────┘              └────┬────┘
    │                         │                         │                         │
-   │ 1. Click "Share Plan"   │                         │                         │
+   │ 1. Click "Invite"       │                         │                         │
    ├────────────────────────>│                         │                         │
    │                         │                         │                         │
-   │                         │ 2. POST /collaborative-plans/                     │
+   │                         │ 2. POST /family-plans/  │                         │
    │                         ├────────────────────────>│                         │
    │                         │                         │                         │
-   │                         │                         │ 3. Generate share_id    │
+   │                         │                         │ 3. Generate invite code │
    │                         │                         ├──────────────────┐      │
-   │                         │                         │                  │      │
    │                         │                         │<─────────────────┘      │
    │                         │                         │                         │
-   │                         │                         │ 4. INSERT collaborative_plan
+   │                         │                         │ 4. INSERT plan + member │
    │                         │                         ├────────────────────────>│
    │                         │                         │                         │
-   │                         │                         │ 5. INSERT plan_member   │
-   │                         │                         │    (User A as owner)    │
-   │                         │                         ├────────────────────────>│
-   │                         │                         │                         │
-   │                         │ 6. Share URL            │                         │
+   │                         │ 5. Plan + invite URL    │                         │
    │                         │<────────────────────────┤                         │
    │                         │                         │                         │
-   │ 7. Show share modal     │                         │                         │
-   │ with copy button        │                         │                         │
+   │ 6. Show invite modal    │                         │                         │
    │<────────────────────────┤                         │                         │
    │                         │                         │                         │
-   │ 8. Copy URL             │                         │                         │
-   ├────────────────────────>│                         │                         │
-   │                         │                         │                         │
-   │ 9. Send URL to User B   │                         │                         │
-   │ (via text/email)        │                         │                         │
-   ├──────────────────────────────────────────────────────────────────────────────>
+   │                         │ 7. Subscribe broadcast  │                         │
+   │                         │    channel: family_plan:{id}                      │
+   │                         ├────────────────────────────────────────────────────>│
    │                         │                         │                         │
 
 ┌──────┐                ┌──────────┐              ┌──────────┐              ┌─────────┐
 │User B│                │ Frontend │              │  Backend │              │Supabase │
 └──┬───┘                └────┬─────┘              └────┬─────┘              └────┬────┘
    │                         │                         │                         │
-   │ 10. Open share URL      │                         │                         │
+   │ 8. Open invite URL      │                         │                         │
    ├────────────────────────>│                         │                         │
    │                         │                         │                         │
-   │                         │ 11. GET /by-share-id/{id}                         │
+   │                         │ 9. GET /by-invite-code/{code}                     │
    │                         ├────────────────────────>│                         │
    │                         │                         │                         │
-   │                         │                         │ 12. SELECT plan         │
-   │                         │                         ├────────────────────────>│
-   │                         │                         │                         │
-   │                         │                         │ 13. Plan data           │
-   │                         │                         │<────────────────────────┤
-   │                         │                         │                         │
-   │                         │ 14. Plan data           │                         │
-   │                         │<────────────────────────┤                         │
-   │                         │                         │                         │
-   │                         │ 15. POST /join          │                         │
+   │                         │ 10. POST /join          │                         │
    │                         ├────────────────────────>│                         │
    │                         │                         │                         │
-   │                         │                         │ 16. INSERT plan_member  │
-   │                         │                         │     (User B as member)  │
-   │                         │                         ├────────────────────────>│
-   │                         │                         │                         │
-   │ 17. Show plan           │                         │                         │
+   │ 11. Show plan           │                         │                         │
    │<────────────────────────┤                         │                         │
    │                         │                         │                         │
-   │ 18. Make changes        │                         │                         │
+   │                         │ 12. Subscribe broadcast │                         │
+   │                         │     channel: family_plan:{id}                     │
+   │                         ├────────────────────────────────────────────────────>│
+   │                         │                         │                         │
+   │ 13. Replace a meal      │                         │                         │
    ├────────────────────────>│                         │                         │
    │                         │                         │                         │
-   │                         │ 19. PUT /collaborative-plans/{id}                 │
+   │                         │ 14. PUT /family-plans/{id}                        │
    │                         ├────────────────────────>│                         │
    │                         │                         │                         │
-   │                         │                         │ 20. UPDATE plan         │
+   │                         │                         │ 15. UPDATE plan in DB   │
    │                         │                         ├────────────────────────>│
    │                         │                         │                         │
-   │                         │                         │ 21. Success             │
-   │                         │                         │<────────────────────────┤
+   │                         │                         │ 16. POST /realtime/     │
+   │                         │                         │     broadcast (async)   │
+   │                         │                         ├────────────────────────>│
    │                         │                         │                         │
-   │ 22. Changes saved       │                         │                         │
-   │<────────────────────────┤                         │                         │
+   │                         │                         │ 17. Broadcast to        │
+   │                         │                         │     all subscribers     │
+   │                         │                         │         ┌───────────────┤
+   │                         │                         │         │               │
+   │                         │                         │         ▼               │
+   │                         │                         │   User A's Frontend     │
+   │                         │                         │   receives broadcast    │
+   │                         │                         │                         │
 ```
 
+User A receives the broadcast, `handleRemoteData` filters out self-updates via `modified_by`, applies the change, and shows a toast.
+
 **Key Points**:
-- Share ID is short and readable (12-char hex)
-- User B must be authenticated to access
-- Both users can edit the same plan
-- Changes sync on page refresh (real-time in future)
+- Invite code is a full UUID for uniqueness
+- Real-time updates via Supabase Broadcast REST API (not WebSocket from backend)
+- Backend broadcasts as fire-and-forget via `BackgroundTasks`
+- 30s poll as safety net catches any missed broadcasts
+- `activePlanId` persisted so sync survives page refresh
+- Self-update filtering prevents echo loops
 
 ### Scenario 4: Cross-Device Synchronization
 

@@ -5,7 +5,7 @@ import { supabase } from '../config/supabase';
 // Empty string from build means env var wasn't set, so fall back to localhost
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
-export type DataType = 'family' | 'preferences' | 'meal_plan' | 'prep_tasks' | 'grocery_items' | 'invalidation_state' | 'has_plan' | 'current_stage';
+export type DataType = 'family' | 'preferences' | 'meal_plan' | 'prep_tasks' | 'grocery_items' | 'invalidation_state' | 'has_plan' | 'current_stage' | 'active_plan_id';
 
 interface UserData {
   id?: string;
@@ -216,7 +216,8 @@ class DataService {
         { key: 'fmp_grocery_items', dataType: 'grocery_items' },
         { key: 'fmp_invalidation_state', dataType: 'invalidation_state' },
         { key: 'fmp_has_plan', dataType: 'has_plan' },
-        { key: 'fmp_current_stage', dataType: 'current_stage' }
+        { key: 'fmp_current_stage', dataType: 'current_stage' },
+        { key: 'fmp_active_plan_id', dataType: 'active_plan_id' }
       ];
 
       let migratedCount = 0;
@@ -258,6 +259,7 @@ class DataService {
       'fmp_invalidation_state',
       'fmp_has_plan',
       'fmp_current_stage',
+      'fmp_active_plan_id',
       'fmp_schema_version'
     ];
 

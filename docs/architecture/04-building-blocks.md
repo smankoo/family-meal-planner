@@ -104,7 +104,7 @@ services/
 ├── apiService.ts              # Backend API client
 │   ├── Authentication methods
 │   ├── User data CRUD
-│   └── Collaborative plans
+│   └── Family plans
 │
 ├── dataService.ts             # Data persistence
 │   ├── Cloud-first storage
@@ -144,6 +144,12 @@ hooks/
 │   ├── Loads from Supabase
 │   ├── Saves to Supabase
 │   └── Automatic migration
+│
+├── useFamilyPlan.ts           # Real-time family sync
+│   ├── Supabase Broadcast subscription
+│   ├── 30s poll safety net
+│   ├── Debounced outbound save
+│   └── Self-update filtering
 │
 └── useAnalytics.ts            # Analytics tracking
     ├── trackEvent()
@@ -251,14 +257,19 @@ backend/
 │   │   ├── PUT /user-data/{type}
 │   │   └── DELETE /user-data/{type}
 │   │
-│   └── collaborative_plans.py # Plan sharing
-│       ├── POST /collaborative-plans/
-│       ├── GET /collaborative-plans/my-plans
-│       ├── GET /collaborative-plans/by-share-id/{id}
-│       ├── POST /collaborative-plans/join
-│       ├── PUT /collaborative-plans/{id}
-│       ├── POST /collaborative-plans/{id}/leave
-│       └── DELETE /collaborative-plans/{id}
+│   └── family_plans.py        # Family plan sharing + real-time broadcast
+│       ├── POST /family-plans/
+│       ├── GET /family-plans/my-plans
+│       ├── GET /family-plans/by-invite-code/{code}
+│       ├── POST /family-plans/join
+│       ├── GET /family-plans/{id}
+│       ├── PUT /family-plans/{id}          # Broadcasts via Supabase
+│       ├── POST /family-plans/{id}/leave
+│       └── DELETE /family-plans/{id}
+│
+├── realtime_broadcast.py      # Supabase Broadcast REST client
+│   ├── broadcast_plan_update()
+│   └── Fire-and-forget via httpx
 │
 ├── models.py                  # SQLAlchemy models
 │   ├── Profile
@@ -314,16 +325,17 @@ GET    /user-data/export/all   # Export all data
 POST   /user-data/import/all   # Import data
 ```
 
-#### Collaborative Plan Endpoints
+#### Family Plan Endpoints
 
 ```python
-POST   /collaborative-plans/                # Create shared plan
-GET    /collaborative-plans/my-plans        # Get user's plans
-GET    /collaborative-plans/by-share-id/{id} # Get plan by share ID
-POST   /collaborative-plans/join            # Join plan
-PUT    /collaborative-plans/{id}            # Update plan
-POST   /collaborative-plans/{id}/leave      # Leave plan
-DELETE /collaborative-plans/{id}            # Delete plan (owner only)
+POST   /family-plans/                       # Create family plan
+GET    /family-plans/my-plans               # Get user's plans
+GET    /family-plans/by-invite-code/{code}  # Get plan by invite code
+POST   /family-plans/join                   # Join family
+GET    /family-plans/{id}                   # Get plan (member only)
+PUT    /family-plans/{id}                   # Update plan + broadcast
+POST   /family-plans/{id}/leave             # Leave family
+DELETE /family-plans/{id}                   # Delete plan (owner only)
 ```
 
 ### Database Models
@@ -398,7 +410,8 @@ CREATE TABLE user_data (
     user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     data_type TEXT NOT NULL CHECK (data_type IN (
         'family', 'preferences', 'meal_plan', 'prep_tasks',
-        'grocery_items', 'invalidation_state', 'has_plan', 'current_stage'
+        'grocery_items', 'invalidation_state', 'has_plan', 'current_stage',
+        'active_plan_id'
     )),
     data JSONB NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),

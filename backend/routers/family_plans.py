@@ -1,13 +1,17 @@
 """
 Family meal plan routes - enables real-time plan sharing and collaboration among family members.
 Multiple users can share and edit the same meal plan.
+
+Real-time updates are pushed to connected clients via Supabase Broadcast REST API
+after every write operation. This ensures all family members see changes instantly.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime
 
 import uuid
+import logging
 
 from database import get_db
 from models import CollaborativePlan, PlanMember, Profile
@@ -20,6 +24,9 @@ from schemas import (
     UserResponse
 )
 from supabase_auth import get_current_user_id
+from realtime_broadcast import broadcast_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/family-plans", tags=["family-plans"])
 
@@ -29,9 +36,55 @@ def generate_invite_code() -> str:
     return str(uuid.uuid4())
 
 
+def _plan_broadcast_payload(plan: CollaborativePlan) -> dict:
+    """Build the broadcast payload from a plan model. Reused across endpoints."""
+    return {
+        "plan_data": plan.plan_data,
+        "family_data": plan.family_data,
+        "preferences_data": plan.preferences_data,
+        "prep_tasks": plan.prep_tasks,
+        "grocery_items": plan.grocery_items,
+        "invalidation_state": plan.invalidation_state,
+        "has_plan": str(plan.has_plan) if plan.has_plan is not None else "true",
+        "current_stage": str(plan.current_stage) if plan.current_stage is not None else "0",
+        "updated_at": plan.updated_at.isoformat() if plan.updated_at else None,
+    }
+
+
+def _plan_response(plan: CollaborativePlan, members: list[PlanMember]) -> FamilyPlanResponse:
+    """Build a FamilyPlanResponse from a plan model. DRY helper for all endpoints."""
+    return FamilyPlanResponse(
+        id=str(plan.id),
+        invite_code=plan.share_id,
+        plan_data=plan.plan_data,
+        family_data=plan.family_data,
+        preferences_data=plan.preferences_data,
+        prep_tasks=plan.prep_tasks,
+        grocery_items=plan.grocery_items,
+        invalidation_state=plan.invalidation_state,
+        has_plan=str(plan.has_plan) if plan.has_plan is not None else "true",
+        current_stage=str(plan.current_stage) if plan.current_stage is not None else "0",
+        title=plan.title,
+        created_by=str(plan.created_by),
+        created_at=plan.created_at,
+        updated_at=plan.updated_at,
+        last_modified_by=str(plan.last_modified_by) if plan.last_modified_by else None,
+        members=[
+            PlanMemberResponse(
+                id=str(m.id),
+                user_id=str(m.user_id),
+                role=m.role,
+                joined_at=m.joined_at,
+                last_viewed_at=m.last_viewed_at
+            ) for m in members
+        ]
+    )
+
+
 @router.post("/", response_model=FamilyPlanResponse)
 async def create_family_plan(
     plan_data: FamilyPlanCreate,
+    background_tasks: BackgroundTasks,
     user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
@@ -74,36 +127,9 @@ async def create_family_plan(
     db.commit()
     db.refresh(family_plan)
 
-    # Load members
     members = db.query(PlanMember).filter(PlanMember.plan_id == family_plan.id).all()
 
-    # Manually construct response to handle UUID conversion
-    return FamilyPlanResponse(
-        id=str(family_plan.id),
-        invite_code=family_plan.share_id,  # Map DB share_id to invite_code
-        plan_data=family_plan.plan_data,
-        family_data=family_plan.family_data,
-        preferences_data=family_plan.preferences_data,
-        prep_tasks=family_plan.prep_tasks,
-        grocery_items=family_plan.grocery_items,
-        invalidation_state=family_plan.invalidation_state,
-        has_plan=str(family_plan.has_plan) if family_plan.has_plan is not None else "true",
-        current_stage=str(family_plan.current_stage) if family_plan.current_stage is not None else "0",
-        title=family_plan.title,
-        created_by=str(family_plan.created_by),
-        created_at=family_plan.created_at,
-        updated_at=family_plan.updated_at,
-        last_modified_by=str(family_plan.last_modified_by) if family_plan.last_modified_by else None,
-        members=[
-            PlanMemberResponse(
-                id=str(m.id),
-                user_id=str(m.user_id),
-                role=m.role,
-                joined_at=m.joined_at,
-                last_viewed_at=m.last_viewed_at
-            ) for m in members
-        ]
-    )
+    return _plan_response(family_plan, members)
 
 
 @router.get("/my-plans", response_model=List[FamilyPlanResponse])
@@ -112,7 +138,6 @@ async def get_my_family_plans(
     db: Session = Depends(get_db)
 ):
     """Get all family plans the user is a member of"""
-    # Find all plans where user is a member
     memberships = db.query(PlanMember).filter(PlanMember.user_id == user_id).all()
     plan_ids = [m.plan_id for m in memberships]
 
@@ -124,33 +149,7 @@ async def get_my_family_plans(
     result = []
     for plan in plans:
         members = db.query(PlanMember).filter(PlanMember.plan_id == plan.id).all()
-        response_data = FamilyPlanResponse(
-            id=str(plan.id),
-            invite_code=plan.share_id,
-            plan_data=plan.plan_data,
-            family_data=plan.family_data,
-            preferences_data=plan.preferences_data,
-            prep_tasks=plan.prep_tasks,
-            grocery_items=plan.grocery_items,
-            invalidation_state=plan.invalidation_state,
-            has_plan=str(plan.has_plan) if plan.has_plan is not None else "true",
-            current_stage=str(plan.current_stage) if plan.current_stage is not None else "0",
-            title=plan.title,
-            created_by=str(plan.created_by),
-            created_at=plan.created_at,
-            updated_at=plan.updated_at,
-            last_modified_by=str(plan.last_modified_by) if plan.last_modified_by else None,
-            members=[
-                PlanMemberResponse(
-                    id=str(m.id),
-                    user_id=str(m.user_id),
-                    role=m.role,
-                    joined_at=m.joined_at,
-                    last_viewed_at=m.last_viewed_at
-                ) for m in members
-            ]
-        )
-        result.append(response_data)
+        result.append(_plan_response(plan, members))
 
     return result
 
@@ -173,35 +172,8 @@ async def get_plan_by_invite_code(
             detail="Family plan not found"
         )
 
-    # Load members
     members = db.query(PlanMember).filter(PlanMember.plan_id == plan.id).all()
-
-    return FamilyPlanResponse(
-        id=str(plan.id),
-        invite_code=plan.share_id,
-        plan_data=plan.plan_data,
-        family_data=plan.family_data,
-        preferences_data=plan.preferences_data,
-        prep_tasks=plan.prep_tasks,
-        grocery_items=plan.grocery_items,
-        invalidation_state=plan.invalidation_state,
-        has_plan=str(plan.has_plan) if plan.has_plan is not None else "true",
-        current_stage=str(plan.current_stage) if plan.current_stage is not None else "0",
-        title=plan.title,
-        created_by=str(plan.created_by),
-        created_at=plan.created_at,
-        updated_at=plan.updated_at,
-        last_modified_by=str(plan.last_modified_by) if plan.last_modified_by else None,
-        members=[
-            PlanMemberResponse(
-                id=str(m.id),
-                user_id=str(m.user_id),
-                role=m.role,
-                joined_at=m.joined_at,
-                last_viewed_at=m.last_viewed_at
-            ) for m in members
-        ]
-    )
+    return _plan_response(plan, members)
 
 
 @router.post("/join", response_model=dict)
@@ -248,18 +220,16 @@ async def join_family(
     return {"message": "Successfully joined family", "plan_id": str(plan.id)}
 
 
-@router.put("/{plan_id}", response_model=FamilyPlanResponse)
-async def update_family_plan(
+@router.get("/{plan_id}", response_model=FamilyPlanResponse)
+async def get_family_plan(
     plan_id: str,
-    updates: FamilyPlanUpdate,
     user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
     """
-    Update a family plan. Any member can update.
-    Changes are reflected for all family members in real-time.
+    Get a family plan by ID.
+    User must be a member of the plan.
     """
-    # Find the plan
     plan = db.query(CollaborativePlan).filter(CollaborativePlan.id == plan_id).first()
 
     if not plan:
@@ -268,7 +238,42 @@ async def update_family_plan(
             detail="Family plan not found"
         )
 
-    # Check if user is a member
+    member = db.query(PlanMember).filter(
+        PlanMember.plan_id == plan_id,
+        PlanMember.user_id == user_id
+    ).first()
+
+    if not member:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not a member of this family"
+        )
+
+    members = db.query(PlanMember).filter(PlanMember.plan_id == plan.id).all()
+    return _plan_response(plan, members)
+
+
+@router.put("/{plan_id}", response_model=FamilyPlanResponse)
+async def update_family_plan(
+    plan_id: str,
+    updates: FamilyPlanUpdate,
+    background_tasks: BackgroundTasks,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    """
+    Update a family plan. Any member can update.
+    After DB commit, broadcasts the change to all connected family members
+    via Supabase Realtime so they see updates instantly.
+    """
+    plan = db.query(CollaborativePlan).filter(CollaborativePlan.id == plan_id).first()
+
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Family plan not found"
+        )
+
     member = db.query(PlanMember).filter(
         PlanMember.plan_id == plan_id,
         PlanMember.user_id == user_id
@@ -305,35 +310,18 @@ async def update_family_plan(
     db.commit()
     db.refresh(plan)
 
-    # Load members
-    members = db.query(PlanMember).filter(PlanMember.plan_id == plan.id).all()
-
-    return FamilyPlanResponse(
-        id=str(plan.id),
-        invite_code=plan.share_id,
-        plan_data=plan.plan_data,
-        family_data=plan.family_data,
-        preferences_data=plan.preferences_data,
-        prep_tasks=plan.prep_tasks,
-        grocery_items=plan.grocery_items,
-        invalidation_state=plan.invalidation_state,
-        has_plan=str(plan.has_plan) if plan.has_plan is not None else "true",
-        current_stage=str(plan.current_stage) if plan.current_stage is not None else "0",
-        title=plan.title,
-        created_by=str(plan.created_by),
-        created_at=plan.created_at,
-        updated_at=plan.updated_at,
-        last_modified_by=str(plan.last_modified_by) if plan.last_modified_by else None,
-        members=[
-            PlanMemberResponse(
-                id=str(m.id),
-                user_id=str(m.user_id),
-                role=m.role,
-                joined_at=m.joined_at,
-                last_viewed_at=m.last_viewed_at
-            ) for m in members
-        ]
+    # Broadcast the change to other family members (fire-and-forget via background task)
+    broadcast_payload = _plan_broadcast_payload(plan)
+    background_tasks.add_task(
+        broadcast_service.broadcast_plan_update,
+        plan_id=str(plan.id),
+        event="plan_updated",
+        payload=broadcast_payload,
+        modified_by=user_id,
     )
+
+    members = db.query(PlanMember).filter(PlanMember.plan_id == plan.id).all()
+    return _plan_response(plan, members)
 
 
 @router.delete("/{plan_id}")

@@ -61,7 +61,11 @@ class ApiService {
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || errorData.message || `HTTP ${response.status}`);
+      const error: any = new Error(errorData.detail || errorData.message || `HTTP ${response.status}`);
+      error.status = response.status;
+      error.code = errorData.code;
+      error.retryAfter = errorData.retry_after;
+      throw error;
     }
 
     return response.json();
@@ -211,6 +215,15 @@ class ApiService {
 
   async getMyFamilyPlans(): Promise<any[]> {
     const response = await fetch(`${API_BASE_URL}/family-plans/my-plans`, {
+      method: 'GET',
+      headers: await this.getHeaders(),
+    });
+
+    return this.handleResponse(response);
+  }
+
+  async getFamilyPlan(planId: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/family-plans/${planId}`, {
       method: 'GET',
       headers: await this.getHeaders(),
     });

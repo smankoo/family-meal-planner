@@ -302,10 +302,17 @@ const App: React.FC = () => {
     DEFAULT_INVALIDATION_STATE
   );
 
+  // Active family plan ID - persisted so family sync works across page refreshes
+  const [activePlanId, setActivePlanId, activePlanIdLoading] = usePersistedState<string | null>(
+    'fmp_active_plan_id',
+    'active_plan_id',
+    null
+  );
+
   // Check if any data is still loading
   const isDataLoading = familyLoading || preferencesLoading || hasPlanLoading ||
                        stageLoading || planHistoryLoading || prepTasksLoading ||
-                       groceryItemsLoading || invalidationLoading;
+                       groceryItemsLoading || invalidationLoading || activePlanIdLoading;
 
   const [viewMode, setViewMode] = useState<ViewMode>(() =>
      // If we have a plan generated, default to planning view
@@ -350,7 +357,6 @@ const App: React.FC = () => {
   const [familyInviteModalOpen, setFamilyInviteModalOpen] = useState(false);
   const [inviteUrl, setInviteUrl] = useState('');
   const [isCreatingInvite, setIsCreatingInvite] = useState(false);
-  const [activePlanId, setActivePlanId] = useState<string | null>(null);
 
   // Handler for remote updates from collaborators
   const handleRemoteUpdate = React.useCallback((data: {
@@ -421,6 +427,15 @@ const App: React.FC = () => {
     saveToFamilyPlan
   ]);
 
+  // Flush pending family plan saves on tab close / navigation
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      flushSync();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [flushSync]);
+
   // --- Analytics Initialization ---
   useEffect(() => {
     const initializeAnalytics = async () => {
@@ -454,6 +469,57 @@ const App: React.FC = () => {
 
   // --- Persistence Effects ---
   // Note: Persistence is now handled by usePersistedState hook
+
+  // Load family plan data when activePlanId is set on startup
+  // This ensures users in a family always see the shared plan data
+  const [familyPlanLoaded, setFamilyPlanLoaded] = useState(false);
+
+  useEffect(() => {
+    const loadFamilyPlanData = async () => {
+      // Wait for initial data to load and ensure we have a valid activePlanId
+      if (isDataLoading || !activePlanId || !user || familyPlanLoaded) return;
+
+      try {
+        console.log('[App] Loading family plan data for plan:', activePlanId);
+        const plan = await apiService.getFamilyPlan(activePlanId);
+
+        if (plan) {
+          // Update state with family plan data, skip save to avoid circular updates
+          setPlanHistory({
+            past: [],
+            present: plan.plan_data,
+            future: []
+          }, true); // Skip save - data is already in collaborative_plans
+
+          setFamily(plan.family_data || INITIAL_FAMILY, true);
+          setPreferences(plan.preferences_data || INITIAL_PREFERENCES, true);
+          setPrepTasks(plan.prep_tasks || [], true);
+          setGroceryItems(plan.grocery_items || [], true);
+          setInvalidationState(plan.invalidation_state || DEFAULT_INVALIDATION_STATE, true);
+          setHasPlanGenerated(plan.has_plan === 'true', true);
+          setCurrentStage(parseInt(plan.current_stage) || Stage.MEAL_PLANNING, true);
+
+          setFamilyPlanLoaded(true);
+          console.log('[App] Family plan data loaded successfully');
+        }
+      } catch (error) {
+        console.error('[App] Failed to load family plan:', error);
+        // If plan doesn't exist anymore, clear the activePlanId
+        if ((error as any)?.status === 404) {
+          console.log('[App] Family plan not found, clearing activePlanId');
+          setActivePlanId(null);
+        }
+        setFamilyPlanLoaded(true); // Mark as loaded even on error to prevent retry loop
+      }
+    };
+
+    loadFamilyPlanData();
+  }, [isDataLoading, activePlanId, user, familyPlanLoaded]);
+
+  // Reset familyPlanLoaded when activePlanId changes (e.g., user joins a new family)
+  useEffect(() => {
+    setFamilyPlanLoaded(false);
+  }, [activePlanId]);
 
   // Update viewMode when hasPlanGenerated changes
   useEffect(() => {
@@ -711,7 +777,17 @@ const App: React.FC = () => {
   // --- Family Invite Handlers ---
   const handleInviteToFamily = async () => {
     if (activePlanId) {
-      // Already has a family plan, just show the modal with existing URL
+      // Already has a family plan — fetch the invite code if we don't have the URL yet
+      if (!inviteUrl) {
+        try {
+          const plan = await apiService.getFamilyPlan(activePlanId);
+          if (plan?.invite_code) {
+            setInviteUrl(`${window.location.origin}/?invite=${plan.invite_code}`);
+          }
+        } catch (error) {
+          console.error('Failed to fetch invite code:', error);
+        }
+      }
       setFamilyInviteModalOpen(true);
       return;
     }

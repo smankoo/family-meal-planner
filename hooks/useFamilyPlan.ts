@@ -15,6 +15,7 @@ interface FamilyPlanState {
   current_stage: string;
   updated_at?: string;
   last_modified_by?: string;
+  modified_by?: string; // From broadcast payload
 }
 
 interface UseFamilyPlanOptions {
@@ -23,13 +24,24 @@ interface UseFamilyPlanOptions {
 }
 
 /**
- * Hook for managing family plan real-time sync
+ * Hook for managing family plan real-time sync.
  *
- * Features:
- * - Subscribes to Supabase Realtime for instant updates
- * - Debounces local changes before syncing to server
- * - Handles conflict detection (warns if remote update while editing)
- * - Provides sync status for UI feedback
+ * Architecture (3-layer reliability):
+ *
+ * 1. Supabase Broadcast (primary) — The backend broadcasts changes via
+ *    Supabase's REST API after every write. The frontend subscribes to
+ *    the broadcast channel for instant push updates. This is the fast path.
+ *
+ * 2. Periodic poll (safety net) — Every 30s, fetches the plan from the API
+ *    and compares `updated_at`. If the broadcast was missed (network blip,
+ *    tab backgrounded, etc.), the poll catches it. Like Apple's background
+ *    fetch — invisible to the user, always there.
+ *
+ * 3. Debounced save (outbound) — Local changes are debounced and sent to
+ *    the backend via PUT. The backend then broadcasts to other clients.
+ *
+ * The broadcast is fire-and-forget from the backend's perspective.
+ * The poll is the guarantee. Together they give instant + reliable.
  */
 export function useFamilyPlan(
   activePlanId: string | null,
@@ -41,13 +53,21 @@ export function useFamilyPlan(
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const pendingUpdateRef = useRef<Partial<FamilyPlanState> | null>(null);
-  const lastKnownVersionRef = useRef<string | null>(null);
+  const lastKnownUpdatedAtRef = useRef<string | null>(null);
 
-  // Cleanup function
+  // Stable refs for callbacks to avoid re-subscribing on every render
+  const onRemoteUpdateRef = useRef(onRemoteUpdate);
+  onRemoteUpdateRef.current = onRemoteUpdate;
+  const userIdRef = useRef(userId);
+  userIdRef.current = userId;
+
+  // --- Cleanup ---
   const cleanup = useCallback(() => {
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
@@ -57,89 +77,141 @@ export function useFamilyPlan(
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
     }
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    setIsConnected(false);
   }, []);
 
-  // Subscribe to real-time updates
+  // --- Handle incoming remote data (shared by broadcast + poll) ---
+  const handleRemoteData = useCallback((data: FamilyPlanState, source: string) => {
+    const modifiedBy = data.last_modified_by || data.modified_by;
+
+    // Skip if this update was from the current user
+    if (modifiedBy === userIdRef.current) {
+      console.log(`[FamilyPlan] Skipping own update via ${source}`);
+      return;
+    }
+
+    // Skip if we've already seen this version
+    if (data.updated_at && data.updated_at === lastKnownUpdatedAtRef.current) {
+      return;
+    }
+
+    console.log(`[FamilyPlan] Applying remote update via ${source}`);
+    lastKnownUpdatedAtRef.current = data.updated_at || null;
+
+    onRemoteUpdateRef.current({
+      plan_data: data.plan_data,
+      family_data: data.family_data,
+      preferences_data: data.preferences_data,
+      prep_tasks: data.prep_tasks || [],
+      grocery_items: data.grocery_items || [],
+      invalidation_state: data.invalidation_state,
+      has_plan: String(data.has_plan),
+      current_stage: String(data.current_stage),
+      updated_at: data.updated_at,
+      last_modified_by: modifiedBy,
+    });
+
+    showToast('Plan updated by family member', 'info', 3000);
+  }, [showToast]);
+
+  // --- Poll for updates (safety net) ---
+  const pollForUpdates = useCallback(async () => {
+    if (!activePlanId) return;
+
+    try {
+      const plan = await apiService.getFamilyPlan(activePlanId);
+      if (!plan) return;
+
+      const remoteUpdatedAt = plan.updated_at;
+      const remoteModifiedBy = plan.last_modified_by;
+
+      // Only apply if newer than what we know and not from us
+      if (
+        remoteUpdatedAt &&
+        remoteUpdatedAt !== lastKnownUpdatedAtRef.current &&
+        remoteModifiedBy !== userIdRef.current
+      ) {
+        console.log('[FamilyPlan] Poll detected newer version');
+        handleRemoteData({
+          plan_data: plan.plan_data,
+          family_data: plan.family_data,
+          preferences_data: plan.preferences_data,
+          prep_tasks: plan.prep_tasks || [],
+          grocery_items: plan.grocery_items || [],
+          invalidation_state: plan.invalidation_state,
+          has_plan: String(plan.has_plan),
+          current_stage: String(plan.current_stage),
+          updated_at: remoteUpdatedAt,
+          last_modified_by: remoteModifiedBy,
+        }, 'poll');
+      }
+    } catch (error) {
+      // Silent — poll failures are expected (offline, etc.)
+      console.debug('[FamilyPlan] Poll failed:', error);
+    }
+  }, [activePlanId, handleRemoteData]);
+
+  // --- Subscribe to Supabase Broadcast + start poll ---
   useEffect(() => {
     if (!activePlanId) {
       cleanup();
       return;
     }
 
-    console.log(`[FamilyPlan] Subscribing to plan: ${activePlanId}`);
+    const topic = `family_plan:${activePlanId}`;
+    console.log(`[FamilyPlan] Subscribing to broadcast: ${topic}`);
 
-    // Create a channel for this specific plan
-    // Note: Table is still 'collaborative_plans' in DB, but we use family terminology in code
     const channel = supabase
-      .channel(`family_plan:${activePlanId}`)
+      .channel(topic)
       .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'collaborative_plans',
-          filter: `id=eq.${activePlanId}`
-        },
+        'broadcast',
+        { event: 'plan_updated' },
         (payload) => {
-          console.log('[FamilyPlan] Received real-time update:', payload);
-
-          const newData = payload.new as any;
-
-          // Skip if this update was from the current user
-          if (newData.last_modified_by === userId) {
-            console.log('[FamilyPlan] Skipping own update');
-            return;
+          console.log('[FamilyPlan] Received broadcast:', payload);
+          const data = payload.payload as any;
+          if (data) {
+            handleRemoteData(data, 'broadcast');
           }
-
-          // Update last known version
-          lastKnownVersionRef.current = newData.updated_at;
-
-          // Notify parent component of remote update
-          onRemoteUpdate({
-            plan_data: newData.plan_data,
-            family_data: newData.family_data,
-            preferences_data: newData.preferences_data,
-            prep_tasks: newData.prep_tasks || [],
-            grocery_items: newData.grocery_items || [],
-            invalidation_state: newData.invalidation_state,
-            has_plan: String(newData.has_plan),
-            current_stage: String(newData.current_stage),
-            updated_at: newData.updated_at,
-            last_modified_by: newData.last_modified_by
-          });
-
-          showToast('Plan updated by family member', 'info', 3000);
         }
       )
       .subscribe((status) => {
-        console.log(`[FamilyPlan] Subscription status: ${status}`);
+        console.log(`[FamilyPlan] Channel status: ${status}`);
         if (status === 'SUBSCRIBED') {
-          console.log('[FamilyPlan] Successfully subscribed to real-time updates');
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('[FamilyPlan] Failed to subscribe to real-time updates');
-          setSyncError('Failed to connect to real-time updates');
+          setIsConnected(true);
+          setSyncError(null);
+          console.log('[FamilyPlan] ✓ Connected to broadcast channel');
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          setIsConnected(false);
+          setSyncError('Connection lost — using polling');
+          console.warn(`[FamilyPlan] Channel ${status}, falling back to poll`);
         }
       });
 
     channelRef.current = channel;
 
-    return cleanup;
-  }, [activePlanId, userId, onRemoteUpdate, showToast, cleanup]);
+    // Start polling as safety net (every 30s)
+    pollIntervalRef.current = setInterval(pollForUpdates, 30_000);
 
-  // Save to family plan with debouncing
+    return cleanup;
+  }, [activePlanId, handleRemoteData, pollForUpdates, cleanup]);
+
+  // --- Save to family plan with debouncing (outbound) ---
   const saveToFamilyPlan = useCallback(async (
     updates: Partial<FamilyPlanState>,
     immediate: boolean = false
   ) => {
     if (!activePlanId) return;
 
-    // Store pending update
+    // Merge with any pending update
     pendingUpdateRef.current = {
       ...pendingUpdateRef.current,
-      ...updates
+      ...updates,
     };
 
-    // Clear existing timeout
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
@@ -154,13 +226,18 @@ export function useFamilyPlan(
       setSyncError(null);
 
       try {
-        await apiService.updateFamilyPlan(activePlanId, dataToSave);
+        const response = await apiService.updateFamilyPlan(activePlanId, dataToSave);
         setLastSyncTime(new Date());
+
+        // Track the version we just saved so we don't re-apply our own broadcast
+        if (response?.updated_at) {
+          lastKnownUpdatedAtRef.current = response.updated_at;
+        }
+
         console.log('[FamilyPlan] ✓ Synced to family plan');
       } catch (error) {
         console.error('[FamilyPlan] Failed to sync:', error);
         setSyncError('Failed to sync changes');
-        // Don't show toast for background sync failures
       } finally {
         setIsSyncing(false);
       }
@@ -169,12 +246,12 @@ export function useFamilyPlan(
     if (immediate) {
       await performSave();
     } else {
-      // Debounce saves to avoid overwhelming the server
+      // 1s debounce — fast enough to feel instant, slow enough to batch rapid changes
       saveTimeoutRef.current = setTimeout(performSave, 1000);
     }
   }, [activePlanId]);
 
-  // Force immediate sync (useful before navigation)
+  // --- Flush pending saves (before navigation, tab close, etc.) ---
   const flushSync = useCallback(async () => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -187,8 +264,11 @@ export function useFamilyPlan(
 
       setIsSyncing(true);
       try {
-        await apiService.updateFamilyPlan(activePlanId, dataToSave);
+        const response = await apiService.updateFamilyPlan(activePlanId, dataToSave);
         setLastSyncTime(new Date());
+        if (response?.updated_at) {
+          lastKnownUpdatedAtRef.current = response.updated_at;
+        }
       } catch (error) {
         console.error('[FamilyPlan] Flush sync failed:', error);
       } finally {
@@ -203,6 +283,6 @@ export function useFamilyPlan(
     isSyncing,
     lastSyncTime,
     syncError,
-    isConnected: !!channelRef.current
+    isConnected,
   };
 }
