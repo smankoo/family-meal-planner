@@ -6,24 +6,24 @@ Family Plans enable multiple family members to collaborate on meal planning in r
 
 ## Architecture
 
-### 3-Layer Reliability Model
+### Optimistic Updates + Instant Sync Model
 
-Real-time sync uses a layered approach for instant + reliable updates:
+Real-time sync uses optimistic updates with immediate synchronization:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Layer 1: Supabase Broadcast (instant, primary)             │
-│  Backend POSTs to Supabase REST API after every DB write.   │
-│  Frontend subscribes to broadcast channel.                  │
-│  Fire-and-forget — if it fails, Layer 2 catches it.         │
+│  Layer 1: Optimistic Updates (instant UI)                   │
+│  Local changes applied immediately to UI for instant feel.  │
+│  Changes sent to backend without debouncing.                │
 ├─────────────────────────────────────────────────────────────┤
-│  Layer 2: Periodic Poll (safety net, every 30s)             │
+│  Layer 2: Supabase Broadcast (instant, primary)             │
+│  Backend awaits broadcast before returning API response.    │
+│  Frontend subscribes with ack:true for reliability.         │
+│  Broadcast includes last_modified_by for filtering.         │
+├─────────────────────────────────────────────────────────────┤
+│  Layer 3: Periodic Poll (safety net, every 10s)             │
 │  Frontend fetches plan via GET /family-plans/{id} and       │
 │  compares updated_at. Catches missed broadcasts.            │
-├─────────────────────────────────────────────────────────────┤
-│  Layer 3: Debounced Save (outbound, 1s debounce)            │
-│  Local changes are batched and sent via PUT to backend.     │
-│  Backend saves to DB, then broadcasts to other clients.     │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -34,15 +34,19 @@ User A: Replace meal → setPlanHistory() updates state
   ↓
 Sync effect fires (planHistory.present changed)
   ↓
-saveToFamilyPlan() debounces 1s, calls PUT /family-plans/{id}
+saveToFamilyPlan() immediately calls PUT /family-plans/{id}
   ↓
-Backend saves to DB, broadcasts via BackgroundTasks
+Backend saves to DB, awaits broadcast completion
   ↓
 broadcast_service POSTs to Supabase /realtime/v1/api/broadcast
+  ↓
+Backend returns response after broadcast sent
   ↓
 User B's useFamilyPlan hook receives broadcast on channel
   ↓
 handleRemoteData() checks modified_by !== userId (not own update)
+  ↓
+isApplyingRemoteUpdateRef prevents feedback loop
   ↓
 onRemoteUpdate callback updates all state with skipSave=true
   ↓
@@ -56,17 +60,18 @@ User B sees updated meal + toast "Plan updated by family member"
    - Shows invite URL with copy functionality
 
 2. **useFamilyPlan Hook** (`hooks/useFamilyPlan.ts`)
-   - Subscribes to Supabase Broadcast channel (`family_plan:{planId}`)
-   - Runs 30s poll as safety net
-   - Debounces outbound saves (1s)
+   - Subscribes to Supabase Broadcast channel with `ack: true` for reliability
+   - Runs 10s poll as safety net (faster recovery than 30s)
+   - Immediate saves (no debouncing) for instant sync
    - Deduplicates via `lastKnownUpdatedAtRef` (skips already-seen versions)
    - Filters own updates via `modified_by` check
-   - Exposes `flushSync()` for tab-close scenarios
+   - Prevents save loops via `isSavingRef` guard
 
 3. **Broadcast Service** (`backend/realtime_broadcast.py`)
    - Singleton `broadcast_service` using `httpx.AsyncClient`
    - POSTs to Supabase `/realtime/v1/api/broadcast` REST API
-   - Fire-and-forget — failures are logged, not thrown
+   - Awaited in request handler (not background task) for reliability
+   - Failures are logged but don't fail the request (poll catches it)
    - Requires `SUPABASE_URL` and `SUPABASE_ANON_KEY` env vars
    - Client closed on app shutdown via FastAPI `on_event("shutdown")`
 
@@ -85,7 +90,7 @@ All endpoints are under `/family-plans/`:
 | `DELETE` | `/{plan_id}` | Delete family plan (owner only) |
 | `POST` | `/{plan_id}/leave` | Leave a family |
 
-The `PUT /{plan_id}` endpoint broadcasts changes via `BackgroundTasks` after DB commit.
+The `PUT /{plan_id}` endpoint awaits broadcast completion before returning response, ensuring reliable delivery.
 
 ### State Persistence
 
@@ -94,9 +99,10 @@ The `PUT /{plan_id}` endpoint broadcasts changes via `BackgroundTasks` after DB 
 ### Database
 
 Uses the `collaborative_plans` table in Supabase:
-- `share_id` column stores the invite code (full UUID for uniqueness)
-- `plan_members` table tracks family membership
+- `share_id` column stores the invite code (full UUID for uniqueness and persistence)
+- `plan_members` table tracks family membership with roles (owner/member)
 - `last_modified_by` tracks who made the last change (used for broadcast filtering)
+- Each user can only own ONE family plan (enforced in `create_family_plan` endpoint)
 
 ## User Flow
 
@@ -104,9 +110,13 @@ Uses the `collaborative_plans` table in Supabase:
 
 1. User clicks "Invite to Family" button
 2. Frontend calls `POST /family-plans/` with current plan data
-3. Backend generates UUID invite code and creates plan
-4. User receives shareable URL with invite code
+3. Backend checks if user already owns a plan:
+   - If yes: Updates existing plan, returns same invite code
+   - If no: Generates new UUID invite code and creates plan
+4. User receives shareable URL with persistent invite code
 5. `activePlanId` is persisted — sync begins
+
+**Key behavior**: Each family has ONE persistent invite code that never changes, even if the user clicks "Invite" multiple times.
 
 ### Joining a Family
 
@@ -119,12 +129,13 @@ Uses the `collaborative_plans` table in Supabase:
 
 ### Real-Time Sync
 
-1. `useFamilyPlan` hook subscribes to Supabase Broadcast channel
-2. Any state change triggers debounced save (1s) to backend
-3. Backend saves to DB, broadcasts via Supabase REST API
-4. Other family members receive broadcast instantly
-5. Poll every 30s catches any missed broadcasts
-6. Toast notification shows "Plan updated by family member"
+1. `useFamilyPlan` hook subscribes to Supabase Broadcast channel with acknowledgment
+2. Any state change triggers immediate save to backend (no debounce)
+3. Backend saves to DB, awaits broadcast via Supabase REST API
+4. Other family members receive broadcast instantly (typically <100ms)
+5. Poll every 10s catches any missed broadcasts
+6. `isApplyingRemoteUpdateRef` prevents feedback loops
+7. Toast notification shows "Plan updated by family member"
 
 ## Environment Configuration
 

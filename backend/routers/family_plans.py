@@ -48,6 +48,7 @@ def _plan_broadcast_payload(plan: CollaborativePlan) -> dict:
         "has_plan": str(plan.has_plan) if plan.has_plan is not None else "true",
         "current_stage": str(plan.current_stage) if plan.current_stage is not None else "0",
         "updated_at": plan.updated_at.isoformat() if plan.updated_at else None,
+        "last_modified_by": str(plan.last_modified_by) if plan.last_modified_by else None,
     }
 
 
@@ -89,17 +90,60 @@ async def create_family_plan(
     db: Session = Depends(get_db)
 ):
     """
-    Create a new family plan and make the creator the owner.
-    This is called when a user wants to invite family members to their plan.
+    Create or update a family plan for the user.
+    If the user is already an owner of a plan, update that plan and return its existing invite code.
+    If not, create a new plan with a new invite code.
+
+    This ensures each family has ONE persistent invite code that doesn't change.
     """
-    # Generate unique invite_code
+    # Check if user is already an owner of a plan
+    existing_membership = db.query(PlanMember).filter(
+        PlanMember.user_id == user_id,
+        PlanMember.role == "owner"
+    ).first()
+
+    if existing_membership:
+        # User already owns a plan - update it instead of creating a new one
+        family_plan = db.query(CollaborativePlan).filter(
+            CollaborativePlan.id == existing_membership.plan_id
+        ).first()
+
+        if family_plan:
+            # Update the existing plan with new data
+            family_plan.plan_data = plan_data.plan_data
+            family_plan.family_data = plan_data.family_data
+            family_plan.preferences_data = plan_data.preferences_data
+            family_plan.prep_tasks = plan_data.prep_tasks
+            family_plan.grocery_items = plan_data.grocery_items
+            family_plan.invalidation_state = plan_data.invalidation_state
+            family_plan.has_plan = plan_data.has_plan
+            family_plan.current_stage = plan_data.current_stage
+            family_plan.title = plan_data.title
+            family_plan.last_modified_by = user_id
+
+            db.commit()
+            db.refresh(family_plan)
+
+            # Broadcast the update
+            broadcast_payload = _plan_broadcast_payload(family_plan)
+            background_tasks.add_task(
+                broadcast_service.broadcast_plan_update,
+                plan_id=str(family_plan.id),
+                event="plan_updated",
+                payload=broadcast_payload,
+                modified_by=user_id,
+            )
+
+            members = db.query(PlanMember).filter(PlanMember.plan_id == family_plan.id).all()
+            return _plan_response(family_plan, members)
+
+    # No existing plan - create a new one
     invite_code = generate_invite_code()
     while db.query(CollaborativePlan).filter(CollaborativePlan.share_id == invite_code).first():
         invite_code = generate_invite_code()
 
-    # Create the family plan (using CollaborativePlan model - DB table unchanged)
     family_plan = CollaborativePlan(
-        share_id=invite_code,  # DB column is still share_id
+        share_id=invite_code,
         plan_data=plan_data.plan_data,
         family_data=plan_data.family_data,
         preferences_data=plan_data.preferences_data,
@@ -114,7 +158,7 @@ async def create_family_plan(
     )
 
     db.add(family_plan)
-    db.flush()  # Get the ID without committing
+    db.flush()
 
     # Add creator as owner
     member = PlanMember(
@@ -310,15 +354,22 @@ async def update_family_plan(
     db.commit()
     db.refresh(plan)
 
-    # Broadcast the change to other family members (fire-and-forget via background task)
+    # Broadcast the change to other family members IMMEDIATELY (not in background)
+    # This ensures the broadcast happens before we return the response
     broadcast_payload = _plan_broadcast_payload(plan)
-    background_tasks.add_task(
-        broadcast_service.broadcast_plan_update,
-        plan_id=str(plan.id),
-        event="plan_updated",
-        payload=broadcast_payload,
-        modified_by=user_id,
-    )
+
+    try:
+        # Await the broadcast to ensure it completes
+        await broadcast_service.broadcast_plan_update(
+            plan_id=str(plan.id),
+            event="plan_updated",
+            payload=broadcast_payload,
+            modified_by=user_id,
+        )
+        logger.info(f"[FamilyPlan] Broadcast sent for plan {plan.id}")
+    except Exception as e:
+        logger.error(f"[FamilyPlan] Broadcast failed for plan {plan.id}: {e}")
+        # Don't fail the request if broadcast fails - clients will get it via poll
 
     members = db.query(PlanMember).filter(PlanMember.plan_id == plan.id).all()
     return _plan_response(plan, members)

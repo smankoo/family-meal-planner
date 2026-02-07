@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import StageStepper from './components/StageStepper';
 import MealGrid from './components/MealGrid';
 import ChatInterface from './components/ChatInterface';
@@ -358,6 +358,9 @@ const App: React.FC = () => {
   const [inviteUrl, setInviteUrl] = useState('');
   const [isCreatingInvite, setIsCreatingInvite] = useState(false);
 
+  // Track if we're applying a remote update to prevent feedback loop
+  const isApplyingRemoteUpdateRef = useRef(false);
+
   // Handler for remote updates from collaborators
   const handleRemoteUpdate = React.useCallback((data: {
     plan_data: any;
@@ -370,6 +373,9 @@ const App: React.FC = () => {
     current_stage: string;
   }) => {
     console.log('[App] Received remote update from collaborator');
+
+    // Set flag to prevent sync loop
+    isApplyingRemoteUpdateRef.current = true;
 
     // Update all state from remote - skip save since this is from the server
     setPlanHistory({
@@ -385,6 +391,11 @@ const App: React.FC = () => {
     setInvalidationState(data.invalidation_state || DEFAULT_INVALIDATION_STATE, true);
     setHasPlanGenerated(data.has_plan === 'true', true);
     setCurrentStage(parseInt(data.current_stage) || Stage.MEAL_PLANNING, true);
+
+    // Reset flag after a short delay to allow all state updates to complete
+    setTimeout(() => {
+      isApplyingRemoteUpdateRef.current = false;
+    }, 100);
   }, [setPlanHistory, setFamily, setPreferences, setPrepTasks, setGroceryItems, setInvalidationState, setHasPlanGenerated, setCurrentStage]);
 
   // Family plan real-time sync hook
@@ -399,7 +410,10 @@ const App: React.FC = () => {
 
   // Effect to sync all changes to family plan
   React.useEffect(() => {
-    if (!activePlanId || isDataLoading || isLoading) return;
+    // Don't sync if no active plan, still loading, or applying a remote update
+    if (!activePlanId || isDataLoading || isLoading || isApplyingRemoteUpdateRef.current) {
+      return;
+    }
 
     // Sync current state to family plan
     saveToFamilyPlan({

@@ -26,22 +26,20 @@ interface UseFamilyPlanOptions {
 /**
  * Hook for managing family plan real-time sync.
  *
- * Architecture (3-layer reliability):
+ * Architecture (optimistic updates + instant sync):
  *
- * 1. Supabase Broadcast (primary) — The backend broadcasts changes via
+ * 1. Optimistic Updates — Local changes are applied immediately to the UI,
+ *    then sent to the server. This makes the app feel instant.
+ *
+ * 2. Supabase Broadcast (primary) — The backend broadcasts changes via
  *    Supabase's REST API after every write. The frontend subscribes to
- *    the broadcast channel for instant push updates. This is the fast path.
+ *    the broadcast channel for instant push updates from other users.
  *
- * 2. Periodic poll (safety net) — Every 30s, fetches the plan from the API
- *    and compares `updated_at`. If the broadcast was missed (network blip,
- *    tab backgrounded, etc.), the poll catches it. Like Apple's background
- *    fetch — invisible to the user, always there.
+ * 3. Periodic poll (safety net) — Every 10s, fetches the plan from the API
+ *    and compares `updated_at`. If the broadcast was missed, the poll catches it.
  *
- * 3. Debounced save (outbound) — Local changes are debounced and sent to
- *    the backend via PUT. The backend then broadcasts to other clients.
- *
- * The broadcast is fire-and-forget from the backend's perspective.
- * The poll is the guarantee. Together they give instant + reliable.
+ * 4. Immediate save (no debounce) — Changes are sent immediately to the backend
+ *    to ensure other users see updates as fast as possible.
  */
 export function useFamilyPlan(
   activePlanId: string | null,
@@ -56,10 +54,10 @@ export function useFamilyPlan(
   const [isConnected, setIsConnected] = useState(false);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const pendingUpdateRef = useRef<Partial<FamilyPlanState> | null>(null);
   const lastKnownUpdatedAtRef = useRef<string | null>(null);
+  const isSavingRef = useRef<boolean>(false);
 
   // Stable refs for callbacks to avoid re-subscribing on every render
   const onRemoteUpdateRef = useRef(onRemoteUpdate);
@@ -72,10 +70,6 @@ export function useFamilyPlan(
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
-    }
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = null;
     }
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
@@ -166,7 +160,11 @@ export function useFamilyPlan(
     console.log(`[FamilyPlan] Subscribing to broadcast: ${topic}`);
 
     const channel = supabase
-      .channel(topic)
+      .channel(topic, {
+        config: {
+          broadcast: { ack: true }, // Enable acknowledgment for reliability
+        },
+      })
       .on(
         'broadcast',
         { event: 'plan_updated' },
@@ -193,89 +191,46 @@ export function useFamilyPlan(
 
     channelRef.current = channel;
 
-    // Start polling as safety net (every 30s)
-    pollIntervalRef.current = setInterval(pollForUpdates, 30_000);
+    // Start polling as safety net (every 10s for faster recovery)
+    pollIntervalRef.current = setInterval(pollForUpdates, 10_000);
 
     return cleanup;
   }, [activePlanId, handleRemoteData, pollForUpdates, cleanup]);
 
-  // --- Save to family plan with debouncing (outbound) ---
+  // --- Save to family plan with immediate sync (no debounce) ---
   const saveToFamilyPlan = useCallback(async (
-    updates: Partial<FamilyPlanState>,
-    immediate: boolean = false
+    updates: Partial<FamilyPlanState>
   ) => {
-    if (!activePlanId) return;
+    if (!activePlanId || isSavingRef.current) return;
 
-    // Merge with any pending update
-    pendingUpdateRef.current = {
-      ...pendingUpdateRef.current,
-      ...updates,
-    };
+    isSavingRef.current = true;
+    setIsSyncing(true);
+    setSyncError(null);
 
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
+    try {
+      const response = await apiService.updateFamilyPlan(activePlanId, updates);
+      setLastSyncTime(new Date());
 
-    const performSave = async () => {
-      const dataToSave = pendingUpdateRef.current;
-      pendingUpdateRef.current = null;
-
-      if (!dataToSave) return;
-
-      setIsSyncing(true);
-      setSyncError(null);
-
-      try {
-        const response = await apiService.updateFamilyPlan(activePlanId, dataToSave);
-        setLastSyncTime(new Date());
-
-        // Track the version we just saved so we don't re-apply our own broadcast
-        if (response?.updated_at) {
-          lastKnownUpdatedAtRef.current = response.updated_at;
-        }
-
-        console.log('[FamilyPlan] ✓ Synced to family plan');
-      } catch (error) {
-        console.error('[FamilyPlan] Failed to sync:', error);
-        setSyncError('Failed to sync changes');
-      } finally {
-        setIsSyncing(false);
+      // Track the version we just saved so we don't re-apply our own broadcast
+      if (response?.updated_at) {
+        lastKnownUpdatedAtRef.current = response.updated_at;
       }
-    };
 
-    if (immediate) {
-      await performSave();
-    } else {
-      // 1s debounce — fast enough to feel instant, slow enough to batch rapid changes
-      saveTimeoutRef.current = setTimeout(performSave, 1000);
+      console.log('[FamilyPlan] ✓ Synced to family plan');
+    } catch (error) {
+      console.error('[FamilyPlan] Failed to sync:', error);
+      setSyncError('Failed to sync changes');
+      showToast('Failed to sync changes', 'error');
+    } finally {
+      setIsSyncing(false);
+      isSavingRef.current = false;
     }
-  }, [activePlanId]);
+  }, [activePlanId, showToast]);
 
-  // --- Flush pending saves (before navigation, tab close, etc.) ---
+  // --- Flush pending saves (no-op now since we don't debounce) ---
   const flushSync = useCallback(async () => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = null;
-    }
-
-    if (pendingUpdateRef.current && activePlanId) {
-      const dataToSave = pendingUpdateRef.current;
-      pendingUpdateRef.current = null;
-
-      setIsSyncing(true);
-      try {
-        const response = await apiService.updateFamilyPlan(activePlanId, dataToSave);
-        setLastSyncTime(new Date());
-        if (response?.updated_at) {
-          lastKnownUpdatedAtRef.current = response.updated_at;
-        }
-      } catch (error) {
-        console.error('[FamilyPlan] Flush sync failed:', error);
-      } finally {
-        setIsSyncing(false);
-      }
-    }
-  }, [activePlanId]);
+    // No-op since we save immediately
+  }, []);
 
   return {
     saveToFamilyPlan,
