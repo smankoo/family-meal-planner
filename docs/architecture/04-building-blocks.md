@@ -229,6 +229,7 @@ interface GroceryItem {
   category: string;
   quantity: string;
   checked: boolean;
+  relatedMeals?: string[];     // Meals that use this ingredient
 }
 
 interface InvalidationState {

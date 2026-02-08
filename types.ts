@@ -56,6 +56,7 @@ export interface GroceryItem {
   category: string;
   quantity?: string;
   checked: boolean;
+  relatedMeals?: string[]; // Which meals this ingredient is used for
 }
 
 export interface ChatMessage {

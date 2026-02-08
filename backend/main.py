@@ -1072,23 +1072,27 @@ async def generate_grocery(request: GroceryListRequest):
         Rules:
         - Group by category (Produce, Meat, Dairy, Pantry, etc.).
         - Estimate quantities reasonably for a family of 4 (unless context implies otherwise).
+        - For each item, include which meals it's used for (e.g., ["Monday Dinner", "Tuesday Lunch"]).
 
         IMPORTANT: Return EXACTLY this JSON structure:
         [
           {{
             "name": "Tomatoes",
             "category": "Produce",
-            "quantity": "2 lbs"
+            "quantity": "2 lbs",
+            "relatedMeals": ["Monday Dinner", "Wednesday Lunch"]
           }},
           {{
             "name": "Chicken Breast",
             "category": "Meat",
-            "quantity": "1.5 lbs"
+            "quantity": "1.5 lbs",
+            "relatedMeals": ["Tuesday Dinner", "Thursday Dinner"]
           }},
           {{
             "name": "Milk",
             "category": "Dairy",
-            "quantity": "1 gallon"
+            "quantity": "1 gallon",
+            "relatedMeals": ["Monday Breakfast", "Tuesday Breakfast", "Wednesday Breakfast"]
           }}
         ]
 
@@ -1096,6 +1100,7 @@ async def generate_grocery(request: GroceryListRequest):
         - "name": The grocery item name
         - "category": The grocery category (Produce, Meat, Dairy, Pantry, etc.)
         - "quantity": Estimated quantity needed (e.g., "2 lbs", "1 gallon", "3 pieces")
+        - "relatedMeals": Array of meal references (e.g., ["Monday Dinner", "Tuesday Lunch"])
         """
 
         response = client.models.generate_content(
@@ -1161,20 +1166,21 @@ async def generate_grocery_stream(request: GroceryListRequest):
             Rules:
             - Group by category (Produce, Meat, Dairy, Pantry, etc.).
             - Estimate quantities reasonably for a family of 4 (unless context implies otherwise).
+            - For each item, include which meals it's used for (e.g., ["Monday Dinner", "Tuesday Lunch"]).
 
             IMPORTANT: Generate each item in this exact format, one item at a time:
 
             ITEM: Produce-1
-            {{"name": "Tomatoes", "category": "Produce", "quantity": "2 lbs"}}
+            {{"name": "Tomatoes", "category": "Produce", "quantity": "2 lbs", "relatedMeals": ["Monday Dinner", "Wednesday Lunch"]}}
 
             ITEM: Meat-1
-            {{"name": "Chicken Breast", "category": "Meat", "quantity": "1.5 lbs"}}
+            {{"name": "Chicken Breast", "category": "Meat", "quantity": "1.5 lbs", "relatedMeals": ["Tuesday Dinner", "Thursday Dinner"]}}
 
             ITEM: Dairy-1
-            {{"name": "Milk", "category": "Dairy", "quantity": "1 gallon"}}
+            {{"name": "Milk", "category": "Dairy", "quantity": "1 gallon", "relatedMeals": ["Monday Breakfast", "Tuesday Breakfast"]}}
 
             Continue this pattern for all grocery items.
-            Each item must have "name", "category", and "quantity" fields.
+            Each item must have "name", "category", "quantity", and "relatedMeals" fields.
             """
 
             # Use text mode instead of JSON mode for streaming
@@ -1210,7 +1216,8 @@ async def generate_grocery_stream(request: GroceryListRequest):
                 logger.info(f"Complete JSON parsing failed: {e}, trying item-by-item regex extraction...")
 
                 # Strategy 2: Extract individual item objects using regex
-                item_pattern = r'ITEM: ([^-]+)-(\d+)\s*\n(\{[^{}]*"name"[^{}]*"category"[^{}]*"quantity"[^{}]*\})'
+                # Updated pattern to handle arrays in relatedMeals
+                item_pattern = r'ITEM: ([^-]+)-(\d+)\s*\n(\{[^\}]*"name"[^\}]*"category"[^\}]*"quantity"[^\}]*"relatedMeals"[^\}]*\[[^\]]*\][^\}]*\})'
                 potential_items = re.findall(item_pattern, response_text, re.DOTALL)
 
                 logger.info(f"Found {len(potential_items)} potential item objects")
@@ -1223,7 +1230,7 @@ async def generate_grocery_stream(request: GroceryListRequest):
                             item_json += '}'
 
                         item_data = json.loads(item_json)
-                        if 'name' in item_data and 'category' in item_data and 'quantity' in item_data:
+                        if 'name' in item_data and 'category' in item_data and 'quantity' in item_data and 'relatedMeals' in item_data:
                             logger.info(f"Successfully parsed and streaming item: {item_data['category']} - {item_data['name']}")
                             yield f"data: {json.dumps(item_data)}\n\n"
                             items_sent += 1

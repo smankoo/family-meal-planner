@@ -500,9 +500,9 @@ POST /api/generate-grocery-stream
 
 **Response** (SSE):
 ```
-data: {"id": "1", "name": "Milk", "category": "Dairy"}
+data: {"id": "1", "name": "Milk", "category": "Dairy", "quantity": "1 gallon", "relatedMeals": ["Monday Breakfast", "Tuesday Breakfast"]}
 
-data: {"id": "2", "name": "Bread", "category": "Bakery"}
+data: {"id": "2", "name": "Bread", "category": "Bakery", "quantity": "1 loaf", "relatedMeals": ["Monday Lunch", "Wednesday Lunch"]}
 
 data: {"status": "complete"}
 ```

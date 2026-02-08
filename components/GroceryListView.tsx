@@ -1,10 +1,12 @@
 import React, { useState, useRef, useLayoutEffect } from 'react';
-import { GroceryItem } from '../types';
+import { GroceryItem, WeekPlan } from '../types';
 import { Check, ShoppingBag, RotateCcw, Loader2, ArrowRight } from 'lucide-react';
 import InvalidationBanner from './InvalidationBanner';
+import { resolveMealName } from '../utils/mealResolver';
 
 interface GroceryListViewProps {
   items: GroceryItem[];
+  mealPlan?: WeekPlan; // Add meal plan to resolve meal names
   onRegenerate: () => void;
   onGenerate: () => void;
   onNavigateToMealPlan: () => void;
@@ -17,6 +19,7 @@ interface GroceryListViewProps {
 
 const GroceryListView: React.FC<GroceryListViewProps> = ({
   items: initialItems,
+  mealPlan,
   onRegenerate,
   onGenerate,
   onNavigateToMealPlan,
@@ -308,8 +311,8 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
                         ${item.checked ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-100'}
                       `}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
+                      <div className="flex gap-4">
+                        <div className="mt-1">
                           <div className={`
                             w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300
                             ${item.checked
@@ -318,15 +321,33 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
                           `}>
                             {item.checked && <Check size={12} className="text-white" strokeWidth={3} />}
                           </div>
-                          <span className={`text-lg font-semibold leading-snug transition-colors ${item.checked ? 'text-zinc-400 line-through' : 'text-zinc-800'}`}>
-                            {item.name}
-                          </span>
                         </div>
-                        {item.quantity && (
-                          <span className={`text-sm font-medium ${item.checked ? 'text-zinc-300' : 'text-zinc-500'}`}>
-                            {item.quantity}
-                          </span>
-                        )}
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className={`text-lg font-semibold leading-snug transition-colors ${item.checked ? 'text-zinc-400 line-through' : 'text-zinc-800'}`}>
+                              {item.name}
+                            </span>
+                            {item.quantity && (
+                              <span className={`text-sm font-medium ml-3 ${item.checked ? 'text-zinc-300' : 'text-zinc-500'}`}>
+                                {item.quantity}
+                              </span>
+                            )}
+                          </div>
+
+                          {item.relatedMeals && Array.isArray(item.relatedMeals) && item.relatedMeals.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              {item.relatedMeals.map((meal, idx) => {
+                                const resolvedMealName = resolveMealName(meal, mealPlan);
+                                return (
+                                  <span key={idx} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${item.checked ? 'bg-zinc-50 border-zinc-100 text-zinc-400' : 'bg-zinc-50 border-zinc-100'}`}>
+                                    <ArrowRight size={10} className="text-zinc-400" />
+                                    <span className={`text-[10px] font-medium ${item.checked ? 'text-zinc-400' : 'text-zinc-500'}`}>{resolvedMealName}</span>
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                     );
@@ -358,28 +379,48 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
                         ref={(el) => registerItemRef(itemKey, el)}
                         onClick={() => toggleItem(item.id)}
                         className={`
-                          group px-6 py-4 flex items-center justify-between cursor-pointer transition-all duration-200
+                          group px-6 py-4 cursor-pointer transition-all duration-200
                           ${item.checked ? 'bg-zinc-50' : 'hover:bg-zinc-50/50'}
                         `}
                       >
-                        <div className="flex items-center gap-4">
-                          <div className={`
-                            w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300
-                            ${item.checked
-                                ? 'bg-zinc-400 border-zinc-400'
-                                : 'bg-transparent border-zinc-300 group-hover:border-zinc-400'}
-                          `}>
-                            {item.checked && <Check size={12} className="text-white" strokeWidth={3} />}
+                        <div className="flex gap-4">
+                          <div className="mt-1">
+                            <div className={`
+                              w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300
+                              ${item.checked
+                                  ? 'bg-zinc-400 border-zinc-400'
+                                  : 'bg-transparent border-zinc-300 group-hover:border-zinc-400'}
+                            `}>
+                              {item.checked && <Check size={12} className="text-white" strokeWidth={3} />}
+                            </div>
                           </div>
-                          <span className={`text-base font-medium transition-colors ${item.checked ? 'text-zinc-400 line-through' : 'text-zinc-800'}`}>
-                            {item.name}
-                          </span>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className={`text-base font-medium transition-colors ${item.checked ? 'text-zinc-400 line-through' : 'text-zinc-800'}`}>
+                                {item.name}
+                              </span>
+                              {item.quantity && (
+                                <span className={`text-sm font-medium ml-3 ${item.checked ? 'text-zinc-300' : 'text-zinc-500'}`}>
+                                  {item.quantity}
+                                </span>
+                              )}
+                            </div>
+
+                            {item.relatedMeals && Array.isArray(item.relatedMeals) && item.relatedMeals.length > 0 && (
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {item.relatedMeals.map((meal, idx) => {
+                                  const resolvedMealName = resolveMealName(meal, mealPlan);
+                                  return (
+                                    <span key={idx} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${item.checked ? 'bg-zinc-50 border-zinc-100 text-zinc-400' : 'bg-zinc-50 border-zinc-100'}`}>
+                                      <ArrowRight size={10} className="text-zinc-400" />
+                                      <span className={`text-[10px] font-medium ${item.checked ? 'text-zinc-400' : 'text-zinc-500'}`}>{resolvedMealName}</span>
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        {item.quantity && (
-                          <span className={`text-sm font-medium ${item.checked ? 'text-zinc-300' : 'text-zinc-500'}`}>
-                            {item.quantity}
-                          </span>
-                        )}
                       </div>
                       );
                     })}

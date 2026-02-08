@@ -11,6 +11,7 @@ Backend:
 - Activate virtual environment in the backend directory to find the right "python" command and all dependencies
 
 General Development Practices:
+- Start by reading relevant documentation in 'docs' folder. It is detailed and up to date, and follows industry standards (C4 model + Arc42).
 - When implementing a functionality, lookup the internet for reputed and reliable sources on best practices and examples of the implementation, also look up documentation of the authoritative sources for the technologies about to be used.
 - You have chrome-devtools tool available. Use it to test or verify functionality as needed.
 - There will be no synchronous calls anywhere in the application. Everything will be asynchronous by design and fault tolerant.

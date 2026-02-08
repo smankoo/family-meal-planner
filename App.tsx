@@ -1285,7 +1285,8 @@ const App: React.FC = () => {
               name: itemData.name,
               category: itemData.category,
               quantity: itemData.quantity,
-              checked: false
+              checked: false,
+              relatedMeals: itemData.relatedMeals // Include related meals from backend
             };
 
             // Track newly received item for animation using the same key format as component
@@ -1527,7 +1528,8 @@ const App: React.FC = () => {
             name: itemData.name,
             category: itemData.category,
             quantity: itemData.quantity,
-            checked: false
+            checked: false,
+            relatedMeals: itemData.relatedMeals // Include related meals from backend
           };
 
           // Track newly received item for animation
@@ -1867,6 +1869,7 @@ const App: React.FC = () => {
 
                     <GroceryListView
                          items={groceryItems}
+                         mealPlan={planHistory.present}
                          onRegenerate={handleRegenerateGrocery}
                          onGenerate={handleRegenerateGrocery}
                          onNavigateToMealPlan={() => setCurrentStage(Stage.MEAL_PLANNING)}

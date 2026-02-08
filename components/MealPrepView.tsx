@@ -2,6 +2,7 @@ import React, { useState, useRef, useLayoutEffect } from 'react';
 import { PrepTask, WeekPlan } from '../types';
 import { Check, Clock, ArrowRight, RotateCcw, Loader2 } from 'lucide-react';
 import InvalidationBanner from './InvalidationBanner';
+import { resolveMealName } from '../utils/mealResolver';
 
 interface MealPrepViewProps {
   tasks: PrepTask[];
@@ -37,43 +38,6 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
   React.useEffect(() => {
     setTasks(initialTasks);
   }, [initialTasks]);
-
-  // Helper function to resolve meal names from generic references
-  const resolveMealName = (mealRef: string): string => {
-    if (!mealPlan) return mealRef;
-
-    // Try to parse references like "monday dinner", "Tuesday Lunch", etc.
-    const parts = mealRef.toLowerCase().split(' ');
-    if (parts.length >= 2) {
-      const dayPart = parts[0];
-      const mealPart = parts[1];
-
-      // Find the day in the meal plan
-      const dayPlan = mealPlan.find(day =>
-        day.day.toLowerCase().startsWith(dayPart) ||
-        day.day.toLowerCase() === dayPart
-      );
-
-      if (dayPlan) {
-        // Find the meal type
-        const mealTypes = ['breakfast', 'lunch', 'snack', 'dinner'];
-        const mealType = mealTypes.find(type =>
-          type.startsWith(mealPart) || mealPart.startsWith(type)
-        );
-
-        if (mealType) {
-          const mealKey = mealType.charAt(0).toUpperCase() + mealType.slice(1);
-          const meal = dayPlan.meals[mealKey as keyof typeof dayPlan.meals];
-          if (meal && meal.name && meal.name.trim()) {
-            return meal.name;
-          }
-        }
-      }
-    }
-
-    // If we can't resolve it, return the original reference
-    return mealRef;
-  };
 
   // Handle new tasks that should animate using direct DOM manipulation
   useLayoutEffect(() => {
@@ -339,7 +303,7 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
                         {task.relatedMeals && Array.isArray(task.relatedMeals) && task.relatedMeals.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-3">
                             {task.relatedMeals.map((meal, idx) => {
-                              const resolvedMealName = resolveMealName(meal);
+                              const resolvedMealName = resolveMealName(meal, mealPlan);
                               return (
                                 <span key={idx} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${task.completed ? 'bg-zinc-50 border-zinc-100 text-zinc-400' : 'bg-zinc-50 border-zinc-100'}`}>
                                   <ArrowRight size={10} className="text-zinc-400" />
@@ -404,7 +368,7 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
                       {task.relatedMeals && Array.isArray(task.relatedMeals) && task.relatedMeals.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-3">
                           {task.relatedMeals.map((meal, idx) => {
-                            const resolvedMealName = resolveMealName(meal);
+                            const resolvedMealName = resolveMealName(meal, mealPlan);
                             return (
                               <span key={idx} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${task.completed ? 'bg-zinc-50 border-zinc-100 text-zinc-400' : 'bg-zinc-50 border-zinc-100'}`}>
                                 <ArrowRight size={10} className="text-zinc-400" />
