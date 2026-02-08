@@ -1,19 +1,44 @@
-import React, { useState } from 'react';
-import { User, LogOut, Edit3, Check, X, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, LogOut, Edit3, Check, X, Loader2, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import FamilyMemberList, { FamilyMemberData } from './FamilyMemberList';
+import { apiService } from '../services/apiService';
 
 interface UserProfileProps {
   className?: string;
+  activePlanId?: string;
 }
 
-const UserProfile: React.FC<UserProfileProps> = ({ className = '' }) => {
+const UserProfile: React.FC<UserProfileProps> = ({ className = '', activePlanId }) => {
   const { user, signOut, updateProfile } = useAuth();
   const { showToast } = useToast();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(user?.user_metadata?.name || '');
   const [loading, setLoading] = useState(false);
+  const [familyMembers, setFamilyMembers] = useState<FamilyMemberData[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+
+  useEffect(() => {
+    const fetchFamilyMembers = async () => {
+      if (!activePlanId) return;
+
+      setLoadingMembers(true);
+      try {
+        const plan = await apiService.getFamilyPlan(activePlanId);
+        if (plan?.members) {
+          setFamilyMembers(plan.members);
+        }
+      } catch (error) {
+        console.error('Failed to fetch family members:', error);
+      } finally {
+        setLoadingMembers(false);
+      }
+    };
+
+    fetchFamilyMembers();
+  }, [activePlanId]);
 
   if (!user) return null;
 
@@ -168,6 +193,34 @@ const UserProfile: React.FC<UserProfileProps> = ({ className = '' }) => {
           </p>
         </div>
       </div>
+
+      {/* Family Members Section */}
+      {activePlanId && (
+        <div className="mt-6 pt-6 border-t border-primary-200">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="heading-card flex items-center gap-2">
+              <Users size={18} />
+              Family Members
+            </h3>
+          </div>
+
+          {loadingMembers ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 size={24} className="animate-spin text-primary-400" />
+            </div>
+          ) : familyMembers.length > 0 ? (
+            <FamilyMemberList
+              members={familyMembers}
+              currentUserId={user.id}
+              showRole={true}
+            />
+          ) : (
+            <div className="text-center py-6 text-primary-500 text-sm">
+              No family members yet
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

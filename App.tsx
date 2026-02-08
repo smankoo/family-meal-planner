@@ -9,6 +9,7 @@ import ToastContainer from './components/Toast';
 import ErrorModal from './components/ErrorModal';
 import ConfirmationModal from './components/ConfirmationModal';
 import FamilyInviteModal from './components/FamilyInviteModal';
+import FamilyMemberList from './components/FamilyMemberList';
 import Footer from './components/Footer';
 import LoadingScreen from './components/LoadingScreen';
 import { ToastProvider, useToast } from './contexts/ToastContext';
@@ -357,6 +358,7 @@ const App: React.FC = () => {
   const [familyInviteModalOpen, setFamilyInviteModalOpen] = useState(false);
   const [inviteUrl, setInviteUrl] = useState('');
   const [isCreatingInvite, setIsCreatingInvite] = useState(false);
+  const [familyMembers, setFamilyMembers] = useState<any[]>([]);
 
   // Track if we're applying a remote update to prevent feedback loop
   const isApplyingRemoteUpdateRef = useRef(false);
@@ -791,16 +793,17 @@ const App: React.FC = () => {
   // --- Family Invite Handlers ---
   const handleInviteToFamily = async () => {
     if (activePlanId) {
-      // Already has a family plan — fetch the invite code if we don't have the URL yet
-      if (!inviteUrl) {
-        try {
-          const plan = await apiService.getFamilyPlan(activePlanId);
-          if (plan?.invite_code) {
-            setInviteUrl(`${window.location.origin}/?invite=${plan.invite_code}`);
-          }
-        } catch (error) {
-          console.error('Failed to fetch invite code:', error);
+      // Already has a family plan — fetch the invite code and members if we don't have them yet
+      try {
+        const plan = await apiService.getFamilyPlan(activePlanId);
+        if (plan?.invite_code && !inviteUrl) {
+          setInviteUrl(`${window.location.origin}/?invite=${plan.invite_code}`);
         }
+        if (plan?.members) {
+          setFamilyMembers(plan.members);
+        }
+      } catch (error) {
+        console.error('Failed to fetch plan details:', error);
       }
       setFamilyInviteModalOpen(true);
       return;
@@ -823,6 +826,9 @@ const App: React.FC = () => {
       setActivePlanId(response.id);
       const url = `${window.location.origin}/?invite=${response.invite_code}`;
       setInviteUrl(url);
+      if (response.members) {
+        setFamilyMembers(response.members);
+      }
       setFamilyInviteModalOpen(true);
 
       await analyticsService.trackEngagement('family_invite_created', {
@@ -1644,6 +1650,8 @@ const App: React.FC = () => {
         inviteUrl={inviteUrl}
         onCreateInvite={handleInviteToFamily}
         isCreatingInvite={isCreatingInvite}
+        members={familyMembers}
+        currentUserId={user?.id}
       />
 
       {/* Header - Apple-like frosted glass effect */}
@@ -1703,6 +1711,7 @@ const App: React.FC = () => {
                onSave={handleSaveSetup}
                isFirstRun={!hasPlanGenerated}
                isLoading={isLoading}
+               activePlanId={activePlanId}
              />
 
              <Footer className="mt-12" />
@@ -1746,8 +1755,17 @@ const App: React.FC = () => {
                                disabled={isCreatingInvite}
                                className="flex items-center gap-2 px-3 md:px-4 py-2 bg-white border border-zinc-200 text-zinc-600 rounded-full text-xs md:text-sm font-semibold hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                               <UserPlus size={12} className="md:w-[14px] md:h-[14px]" />
-                               {isCreatingInvite ? 'Creating...' : 'Invite'}
+                               {familyMembers.length > 0 ? (
+                                 <>
+                                   <FamilyMemberList members={familyMembers} compact maxDisplay={3} />
+                                   <span className="ml-1">{familyMembers.length}</span>
+                                 </>
+                               ) : (
+                                 <>
+                                   <UserPlus size={12} className="md:w-[14px] md:h-[14px]" />
+                                   {isCreatingInvite ? 'Creating...' : 'Invite'}
+                                 </>
+                               )}
                             </button>
                             <button onClick={handleRegeneratePlan} className="flex items-center gap-2 px-3 md:px-4 py-2 bg-zinc-100 text-zinc-600 rounded-full text-xs md:text-sm font-semibold hover:bg-zinc-200 transition-colors">
                                <RotateCcw size={12} className="md:w-[14px] md:h-[14px]" /> Regenerate
@@ -1767,11 +1785,16 @@ const App: React.FC = () => {
                          <button
                             onClick={handleInviteToFamily}
                             disabled={isCreatingInvite}
-                            className="w-8 h-8 flex items-center justify-center bg-white border border-zinc-200 text-zinc-600 rounded-full hover:bg-zinc-50 transition-colors disabled:opacity-50"
+                            className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white border border-zinc-200 text-zinc-600 rounded-full hover:bg-zinc-50 transition-colors disabled:opacity-50"
                             title="Invite to Family"
                          >
                             {isCreatingInvite ? (
                                <Loader2 size={14} className="animate-spin" />
+                            ) : familyMembers.length > 0 ? (
+                               <>
+                                 <FamilyMemberList members={familyMembers} compact maxDisplay={2} />
+                                 <span className="text-xs font-semibold">{familyMembers.length}</span>
+                               </>
                             ) : (
                                <UserPlus size={14} />
                             )}

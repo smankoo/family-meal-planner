@@ -76,7 +76,18 @@ def _plan_response(plan: CollaborativePlan, members: list[PlanMember]) -> Family
                 user_id=str(m.user_id),
                 role=m.role,
                 joined_at=m.joined_at,
-                last_viewed_at=m.last_viewed_at
+                last_viewed_at=m.last_viewed_at,
+                user=UserResponse(
+                    id=str(m.user.id),
+                    email=m.user.email,
+                    name=m.user.name,
+                    avatar_url=m.user.avatar_url,
+                    provider="email",  # Default, actual provider is in auth.users
+                    is_active=True,
+                    email_verified=True,
+                    created_at=m.user.created_at,
+                    last_login=None
+                ) if m.user else None
             ) for m in members
         ]
     )

@@ -73,10 +73,12 @@ components/
 │   ├── AuthCallback.tsx       # OAuth callback handler
 │   ├── ProtectedRoute.tsx     # Route guard
 │   ├── UserMenu.tsx           # User dropdown menu
-│   └── UserProfile.tsx        # Profile management
+│   ├── UserProfile.tsx        # Profile management
+│   └── FamilyMemberList.tsx   # Reusable member display
 │
 ├── Core Features
 │   ├── FamilySetup.tsx        # Family member configuration
+│   ├── FamilyInviteModal.tsx  # Family invite & member display
 │   ├── MealGrid.tsx           # 7-day meal plan display
 │   ├── ChatInterface.tsx      # LLM conversation UI
 │   ├── MealPrepView.tsx       # Prep task management
@@ -84,7 +86,7 @@ components/
 │
 ├── Shared Components
 │   ├── StageStepper.tsx       # Multi-stage navigation
-│   ├── ShareModal.tsx         # Plan sharing UI
+│   ├── FamilyInviteModal.tsx  # Plan sharing & member display
 │   ├── ConfirmationModal.tsx  # Confirmation dialogs
 │   ├── ErrorModal.tsx         # Error display
 │   ├── Toast.tsx              # Notifications
@@ -330,13 +332,15 @@ POST   /user-data/import/all   # Import data
 ```python
 POST   /family-plans/                       # Create family plan
 GET    /family-plans/my-plans               # Get user's plans
-GET    /family-plans/by-invite-code/{code}  # Get plan by invite code
+GET    /family-plans/by-invite-code/{code}  # Get plan by invite code (with members)
 POST   /family-plans/join                   # Join family
-GET    /family-plans/{id}                   # Get plan (member only)
+GET    /family-plans/{id}                   # Get plan with member profiles
 PUT    /family-plans/{id}                   # Update plan + broadcast
 POST   /family-plans/{id}/leave             # Leave family
 DELETE /family-plans/{id}                   # Delete plan (owner only)
 ```
+
+**Note**: All family plan endpoints now include full user profile data (name, email, avatar_url) for each plan member, enabling rich member display in the UI.
 
 ### Database Models
 
