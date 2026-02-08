@@ -6,7 +6,7 @@ Real-time updates are pushed to connected clients via Supabase Broadcast REST AP
 after every write operation. This ensures all family members see changes instantly.
 """
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 from datetime import datetime
 
@@ -109,11 +109,18 @@ async def create_family_plan(
 
     This ensures each family has ONE persistent invite code that doesn't change.
     """
-    # Check if user is already an owner of a plan
-    existing_membership = db.query(PlanMember).filter(
-        PlanMember.user_id == user_id,
-        PlanMember.role == "owner"
-    ).first()
+    try:
+        # Check if user is already an owner of a plan
+        existing_membership = db.query(PlanMember).filter(
+            PlanMember.user_id == user_id,
+            PlanMember.role == "owner"
+        ).first()
+    except Exception as e:
+        logger.error(f"Error checking existing membership: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error: {str(e)}"
+        )
 
     if existing_membership:
         # User already owns a plan - update it instead of creating a new one
@@ -147,7 +154,7 @@ async def create_family_plan(
                 modified_by=user_id,
             )
 
-            members = db.query(PlanMember).filter(PlanMember.plan_id == family_plan.id).all()
+            members = db.query(PlanMember).options(joinedload(PlanMember.user)).filter(PlanMember.plan_id == family_plan.id).all()
             return _plan_response(family_plan, members)
 
     # No existing plan - create a new one
@@ -184,7 +191,7 @@ async def create_family_plan(
     db.commit()
     db.refresh(family_plan)
 
-    members = db.query(PlanMember).filter(PlanMember.plan_id == family_plan.id).all()
+    members = db.query(PlanMember).options(joinedload(PlanMember.user)).filter(PlanMember.plan_id == family_plan.id).all()
 
     return _plan_response(family_plan, members)
 
@@ -205,7 +212,7 @@ async def get_my_family_plans(
 
     result = []
     for plan in plans:
-        members = db.query(PlanMember).filter(PlanMember.plan_id == plan.id).all()
+        members = db.query(PlanMember).options(joinedload(PlanMember.user)).filter(PlanMember.plan_id == plan.id).all()
         result.append(_plan_response(plan, members))
 
     return result
@@ -229,7 +236,7 @@ async def get_plan_by_invite_code(
             detail="Family plan not found"
         )
 
-    members = db.query(PlanMember).filter(PlanMember.plan_id == plan.id).all()
+    members = db.query(PlanMember).options(joinedload(PlanMember.user)).filter(PlanMember.plan_id == plan.id).all()
     return _plan_response(plan, members)
 
 
@@ -306,7 +313,7 @@ async def get_family_plan(
             detail="You are not a member of this family"
         )
 
-    members = db.query(PlanMember).filter(PlanMember.plan_id == plan.id).all()
+    members = db.query(PlanMember).options(joinedload(PlanMember.user)).filter(PlanMember.plan_id == plan.id).all()
     return _plan_response(plan, members)
 
 
@@ -398,7 +405,7 @@ async def update_family_plan(
         logger.error(f"[FamilyPlan] Broadcast failed for plan {plan.id}: {e}")
         # Don't fail the request if broadcast fails - clients will get it via poll
 
-    members = db.query(PlanMember).filter(PlanMember.plan_id == plan.id).all()
+    members = db.query(PlanMember).options(joinedload(PlanMember.user)).filter(PlanMember.plan_id == plan.id).all()
     return _plan_response(plan, members)
 
 
