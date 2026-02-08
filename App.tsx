@@ -531,6 +531,11 @@ const App: React.FC = () => {
           setCurrentStage(parseInt(plan.current_stage) || Stage.MEAL_PLANNING, true);
           setIsPlanLocked(plan.is_locked ?? false);
 
+          // Load family members to display in header
+          if (plan.members) {
+            setFamilyMembers(plan.members);
+          }
+
           setFamilyPlanLoaded(true);
           console.log('[App] Family plan data loaded successfully');
         }
@@ -977,6 +982,11 @@ const App: React.FC = () => {
           setIsPlanLocked(plan.is_locked ?? false);
           setActivePlanId(plan.id);
           setViewMode('planning');
+
+          // Load family members to display in header
+          if (plan.members) {
+            setFamilyMembers(plan.members);
+          }
 
           // Set invite URL for the modal
           const url = `${window.location.origin}/?invite=${inviteCode}`;
