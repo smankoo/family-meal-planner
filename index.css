@@ -1071,6 +1071,46 @@
     @apply shadow-md;
     background-color: var(--surface-glass-heavy);
   }
+
+  /* ===== Plan Lock Slider Toggle (Apple-style) ===== */
+  .plan-lock-slider {
+    @apply relative inline-flex items-center w-11 h-6 rounded-full;
+    @apply transition-colors duration-300 ease-in-out cursor-pointer;
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-400;
+  }
+
+  .plan-lock-slider-unlocked {
+    @apply bg-gray-200 dark:bg-gray-700;
+    border: 1px solid var(--border-subtle);
+  }
+
+  .plan-lock-slider-locked {
+    @apply bg-amber-500;
+    border: 1px solid transparent;
+  }
+
+  .plan-lock-slider-thumb {
+    @apply absolute flex items-center justify-center w-5 h-5 rounded-full shadow-sm;
+    @apply transition-all duration-300 ease-in-out;
+    background-color: white;
+  }
+
+  .plan-lock-slider-unlocked .plan-lock-slider-thumb {
+    @apply left-0.5;
+    color: var(--text-tertiary);
+  }
+
+  .plan-lock-slider-locked .plan-lock-slider-thumb {
+    @apply left-[22px];
+    @apply text-amber-600;
+  }
+
+  .plan-lock-banner {
+    @apply flex items-center justify-center gap-2 px-4 py-2 rounded-xl;
+    @apply text-sm font-medium text-amber-600;
+    background-color: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+  }
 }
 
 @layer utilities {

@@ -260,6 +260,7 @@ class ApiService {
     has_plan?: string;
     current_stage?: string;
     title?: string;
+    is_locked?: boolean;
   }): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/family-plans/${planId}`, {
       method: 'PUT',

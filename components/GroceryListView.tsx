@@ -30,6 +30,7 @@ interface GroceryListViewProps {
   newlyReceivedItems?: Set<string>;
   isInvalidated?: boolean; // New prop to show invalidation banner
   onItemsChange?: (items: GroceryItem[]) => void; // Callback to persist changes
+  isLocked?: boolean;
 }
 
 const GroceryListView: React.FC<GroceryListViewProps> = ({
@@ -42,7 +43,8 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
   hasMealPlan,
   newlyReceivedItems = new Set(),
   isInvalidated = false,
-  onItemsChange
+  onItemsChange,
+  isLocked = false,
 }) => {
   const [items, setItems] = useState<GroceryItem[]>(initialItems);
 
@@ -91,6 +93,7 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
   };
 
   const toggleItem = (id: string) => {
+    if (isLocked) return;
     const updatedItems = items.map(item =>
       item.id === id ? { ...item, checked: !item.checked } : item
     );
@@ -220,13 +223,13 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
       {/* Header - Desktop Only */}
       <div className="hidden md:flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 max-w-4xl mx-auto px-4 md:px-8">
         <h2 className="text-xl md:text-2xl font-bold text-primary-900">Shopping List</h2>
-        {items.length > 0 && !isInvalidated && (
+        {items.length > 0 && !isInvalidated && !isLocked && (
           <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={true} />
         )}
       </div>
 
       {/* Mobile: Regenerate Button - Subtle, top-right corner */}
-      {items.length > 0 && !isInvalidated && (
+      {items.length > 0 && !isInvalidated && !isLocked && (
         <div className="md:hidden flex justify-end mb-4 px-4">
           <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={false} />
         </div>
@@ -317,7 +320,7 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
                       ref={(el) => registerItemRef(itemKey, el)}
                       onClick={() => toggleItem(item.id)}
                       className={`
-                        stagger-item relative rounded-2xl p-5 shadow-sm border transition-all active:scale-[0.98] cursor-pointer
+                        stagger-item relative rounded-2xl p-5 shadow-sm border transition-all active:scale-[0.98] ${isLocked ? 'cursor-default' : 'cursor-pointer'}
                         ${item.checked ? 'border-emerald-200/50' : 'border-primary-100'}
                       `}
                       style={{ animationDelay: `${itemIdx * 40}ms`, backgroundColor: 'var(--surface-primary)' }}
@@ -327,6 +330,7 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
                           <div className={`
                             checkbox-enhanced
                             ${item.checked ? 'checkbox-checked' : 'checkbox-unchecked'}
+                            ${isLocked ? 'opacity-60' : ''}
                           `}>
                             {item.checked && <Check size={12} className="text-white" strokeWidth={3} />}
                           </div>
@@ -389,7 +393,7 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
                         ref={(el) => registerItemRef(itemKey, el)}
                         onClick={() => toggleItem(item.id)}
                         className={`
-                          stagger-item group px-6 py-4 cursor-pointer transition-all duration-200
+                          stagger-item group px-6 py-4 ${isLocked ? 'cursor-default' : 'cursor-pointer'} transition-all duration-200
                           ${item.checked ? '' : 'hover:bg-primary-50/50'}
                         `}
                         style={{ animationDelay: `${itemIdx * 40}ms`, backgroundColor: item.checked ? 'var(--surface-secondary)' : undefined }}
@@ -399,6 +403,7 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
                             <div className={`
                               checkbox-enhanced
                               ${item.checked ? 'checkbox-checked' : 'checkbox-unchecked'}
+                              ${isLocked ? 'opacity-60' : ''}
                             `}>
                               {item.checked && <Check size={12} className="text-white" strokeWidth={3} />}
                             </div>

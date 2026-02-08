@@ -272,6 +272,7 @@ All visual properties are defined in `index.css` as CSS variables and Tailwind t
 - **Skeletons**: `skeleton-shimmer`, `skeleton-block`, `skeleton-block-light`
 - **Animations**: `stagger-item`, `stage-enter`, `strikethrough-animate`
 - **Navigation**: `stage-stepper`, `stage-stepper-tab`, `stage-stepper-tab-active`, `stage-stepper-tab-idle`, `stage-stepper-tab-disabled`
+- **Plan Lock**: `plan-lock-slider`, `plan-lock-slider-locked`, `plan-lock-slider-unlocked`, `plan-lock-slider-thumb`, `plan-lock-banner`
 - **Utilities**: `loading-pill`, `auth-divider-text`, `theme-toggle`, `section-divider`
 
 **Glassmorphism Utilities**:

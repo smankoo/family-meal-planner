@@ -2,7 +2,7 @@
 Database models for the Family Meal Planner.
 Supabase-compatible models using SQLAlchemy ORM.
 """
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, JSON, CheckConstraint, Index
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, JSON, CheckConstraint, Index, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -87,6 +87,7 @@ class CollaborativePlan(Base):
     has_plan = Column(String, default="true")
     current_stage = Column(String, default="0")
     title = Column(Text, nullable=True)
+    is_locked = Column(Boolean, default=False, nullable=False, server_default="false")
 
     # Metadata
     created_by = Column(UUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)

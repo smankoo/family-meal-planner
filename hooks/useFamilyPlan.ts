@@ -13,6 +13,7 @@ interface FamilyPlanState {
   invalidation_state: any;
   has_plan: string;
   current_stage: string;
+  is_locked?: boolean;
   updated_at?: string;
   last_modified_by?: string;
   modified_by?: string; // From broadcast payload
@@ -105,6 +106,7 @@ export function useFamilyPlan(
       invalidation_state: data.invalidation_state,
       has_plan: String(data.has_plan),
       current_stage: String(data.current_stage),
+      is_locked: data.is_locked ?? false,
       updated_at: data.updated_at,
       last_modified_by: modifiedBy,
     });
@@ -139,6 +141,7 @@ export function useFamilyPlan(
           invalidation_state: plan.invalidation_state,
           has_plan: String(plan.has_plan),
           current_stage: String(plan.current_stage),
+          is_locked: plan.is_locked ?? false,
           updated_at: remoteUpdatedAt,
           last_modified_by: remoteModifiedBy,
         }, 'poll');
@@ -218,9 +221,15 @@ export function useFamilyPlan(
 
       console.log('[FamilyPlan] ✓ Synced to family plan');
     } catch (error) {
-      console.error('[FamilyPlan] Failed to sync:', error);
-      setSyncError('Failed to sync changes');
-      showToast('Failed to sync changes', 'error');
+      const status = (error as any)?.status;
+      if (status === 423) {
+        // Plan is locked — don't show error, this is expected
+        console.log('[FamilyPlan] Plan is locked, skipping sync');
+      } else {
+        console.error('[FamilyPlan] Failed to sync:', error);
+        setSyncError('Failed to sync changes');
+        showToast('Failed to sync changes', 'error');
+      }
     } finally {
       setIsSyncing(false);
       isSavingRef.current = false;

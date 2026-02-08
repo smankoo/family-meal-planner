@@ -10,6 +10,7 @@ interface MealGridProps {
   isStreaming?: boolean;
   newlyReceivedCards?: Set<string>;
   replacingMeals?: Set<string>;
+  isLocked?: boolean;
 }
 
 const MealGrid: React.FC<MealGridProps> = ({
@@ -20,6 +21,7 @@ const MealGrid: React.FC<MealGridProps> = ({
   isStreaming = false,
   newlyReceivedCards = new Set(),
   replacingMeals = new Set(),
+  isLocked = false,
 }) => {
   const mealTimes = [MealTime.BREAKFAST, MealTime.LUNCH, MealTime.SNACK, MealTime.DINNER];
 
@@ -72,15 +74,28 @@ const MealGrid: React.FC<MealGridProps> = ({
   // Use ref to track which cards have already been animated to prevent re-animation
   const animatedCardsRef = useRef<Set<string>>(new Set());
   const cardRefsRef = useRef<Map<string, HTMLDivElement>>(new Map());
+  const hasInitialLoadCompleted = useRef(false);
 
-  // Reset animated cards when starting a new plan generation
+  // Mark initial load as complete after first render with data
+  useEffect(() => {
+    const hasData = plan.some(day =>
+      Object.values(day.meals).some(meal => meal.name && meal.name.trim() !== '')
+    );
+
+    if (hasData && !hasInitialLoadCompleted.current) {
+      hasInitialLoadCompleted.current = true;
+    }
+  }, [plan]);
+
+  // Reset on new plan generation
   useEffect(() => {
     if (isStreaming && plan.every(day =>
       Object.values(day.meals).every(meal => !meal.name || meal.name.trim() === '')
     )) {
-      // This is a fresh plan generation, reset animated cards
+      // This is a fresh plan generation, reset everything
       animatedCardsRef.current = new Set();
       cardRefsRef.current.clear();
+      hasInitialLoadCompleted.current = false;
     }
   }, [isStreaming, plan]);
 
@@ -185,18 +200,18 @@ const MealGrid: React.FC<MealGridProps> = ({
                                 key={time}
                                 ref={(el) => registerCardRef(cardKey, el)}
                                 className={`
-                                  stagger-item relative rounded-2xl p-5 shadow-sm border transition-all duration-500 active:scale-[0.98]
+                                  ${!hasInitialLoadCompleted.current ? 'stagger-item' : ''} relative rounded-2xl p-5 shadow-sm border transition-all duration-500 active:scale-[0.98]
                                   ${getMealTypeClass(time)}
                                   ${isChanged ? 'ring-2 ring-indigo-200' : ''}
                                   ${replacingMeals.has(cardKey) ? 'opacity-60' : ''}
                                 `}
-                                style={{ animationDelay: `${staggerDelay}ms` }}
+                                style={{ animationDelay: !hasInitialLoadCompleted.current ? `${staggerDelay}ms` : '0ms' }}
                               >
                                 <div className="flex justify-between items-start mb-2">
                                   <span className={getMealTypePillClass(time)}>{time}</span>
                                   <div className="flex items-center gap-2">
                                     {isChanged && <Sparkles size={14} className="text-indigo-500 animate-pulse" />}
-                                    {!isEmpty && onReplaceMeal && (
+                                    {!isEmpty && onReplaceMeal && !isLocked && (
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
@@ -280,21 +295,21 @@ const MealGrid: React.FC<MealGridProps> = ({
                                 key={`${dayPlan.day}-${time}`}
                                 ref={(el) => registerCardRef(cardKey, el)}
                                 className={`
-                                    stagger-item relative p-4 xl:p-5 rounded-2xl border transition-all duration-500 group
+                                    ${!hasInitialLoadCompleted.current ? 'stagger-item' : ''} relative p-4 xl:p-5 rounded-2xl border transition-all duration-500 group
                                     flex flex-col h-full min-h-[140px] xl:min-h-[160px]
                                     hover:-translate-y-1
                                     ${getMealTypeClass(time)}
                                     ${isChanged ? 'ring-2 ring-indigo-200' : ''}
                                     ${replacingMeals.has(cardKey) ? 'opacity-60' : ''}
                                 `}
-                                style={{ animationDelay: `${staggerDelay}ms` }}
+                                style={{ animationDelay: !hasInitialLoadCompleted.current ? `${staggerDelay}ms` : '0ms' }}
                             >
                                 {/* Meal Time Label inside card for context */}
                                 <div className="flex justify-between items-start mb-2">
                                     <span className={getMealTypePillClass(time)}>{time}</span>
                                     <div className="flex items-center gap-2">
                                         {isChanged && <Sparkles size={14} className="text-indigo-400 animate-pulse" />}
-                                        {!isEmpty && onReplaceMeal && (
+                                        {!isEmpty && onReplaceMeal && !isLocked && (
                                           <button
                                             onClick={(e) => {
                                               e.stopPropagation();

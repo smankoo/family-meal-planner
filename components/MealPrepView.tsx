@@ -17,6 +17,7 @@ interface MealPrepViewProps {
   newlyReceivedTasks?: Set<string>;
   isInvalidated?: boolean; // New prop to show invalidation banner
   onTasksChange?: (tasks: PrepTask[]) => void; // Callback to persist changes
+  isLocked?: boolean;
 }
 
 const MealPrepView: React.FC<MealPrepViewProps> = ({
@@ -29,7 +30,8 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
   hasMealPlan,
   newlyReceivedTasks = new Set(),
   isInvalidated = false,
-  onTasksChange
+  onTasksChange,
+  isLocked = false,
 }) => {
   const [tasks, setTasks] = useState<PrepTask[]>(initialTasks);
 
@@ -78,6 +80,7 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
   };
 
   const toggleTask = (id: string) => {
+    if (isLocked) return;
     const updatedTasks = tasks.map(task =>
       task.id === id ? { ...task, completed: !task.completed } : task
     );
@@ -179,13 +182,13 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
       {/* Header - Desktop Only */}
       <div className="hidden md:flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 max-w-4xl mx-auto px-4 md:px-8">
         <h2 className="text-xl md:text-2xl font-bold text-primary-900">Prep Strategy</h2>
-        {tasks.length > 0 && !isInvalidated && (
+        {tasks.length > 0 && !isInvalidated && !isLocked && (
           <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={true} />
         )}
       </div>
 
       {/* Mobile: Regenerate Button - Subtle, top-right corner */}
-      {tasks.length > 0 && !isInvalidated && (
+      {tasks.length > 0 && !isInvalidated && !isLocked && (
         <div className="md:hidden flex justify-end mb-4 px-4">
           <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={false} />
         </div>
@@ -272,7 +275,7 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
                     ref={(el) => registerTaskRef(taskKey, el)}
                     onClick={() => toggleTask(task.id)}
                     className={`
-                      stagger-item relative rounded-2xl p-5 shadow-sm border transition-all active:scale-[0.98] cursor-pointer
+                      stagger-item relative rounded-2xl p-5 shadow-sm border transition-all active:scale-[0.98] ${isLocked ? 'cursor-default' : 'cursor-pointer'}
                       ${task.completed ? 'border-emerald-200/50' : 'border-primary-100'}
                     `}
                     style={{ animationDelay: `${taskIdx * 50}ms`, backgroundColor: 'var(--surface-primary)' }}
@@ -282,6 +285,7 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
                         <div className={`
                           checkbox-enhanced
                           ${task.completed ? 'checkbox-checked' : 'checkbox-unchecked'}
+                          ${isLocked ? 'opacity-60' : ''}
                         `}>
                           {task.completed && <Check size={12} className="text-white" strokeWidth={3} />}
                         </div>
@@ -338,7 +342,7 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
                   ref={(el) => registerTaskRef(taskKey, el)}
                   onClick={() => toggleTask(task.id)}
                   className={`
-                    stagger-item relative rounded-2xl p-5 shadow-sm border transition-all hover:shadow-md cursor-pointer
+                    stagger-item relative rounded-2xl p-5 shadow-sm border transition-all hover:shadow-md ${isLocked ? 'cursor-default' : 'cursor-pointer'}
                     ${task.completed ? 'border-emerald-200/50' : 'border-primary-100'}
                   `}
                   style={{ animationDelay: `${taskIdx * 50}ms`, backgroundColor: 'var(--surface-primary)' }}
@@ -348,6 +352,7 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
                       <div className={`
                         checkbox-enhanced
                         ${task.completed ? 'checkbox-checked' : 'checkbox-unchecked'}
+                        ${isLocked ? 'opacity-60' : ''}
                       `}>
                         {task.completed && <Check size={12} className="text-white" strokeWidth={3} />}
                       </div>

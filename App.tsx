@@ -46,7 +46,7 @@ import { getAnalyticsConfig, validateAnalyticsConfig } from './config/analytics'
 import { Undo2, Sparkles, ChefHat, ArrowLeft, ArrowRight, X, RotateCcw, Loader2, UserPlus } from 'lucide-react';
 import UserMenu from './components/UserMenu';
 import UserProfile from './components/UserProfile';
-import ThemeToggle from './components/ThemeToggle';
+import PlanLockToggle from './components/PlanLockToggle';
 
 // Helper function to handle API errors consistently
 const handleApiError = (error: any, showToast: any, setErrorModal: any, onRetry?: () => void) => {
@@ -360,8 +360,14 @@ const App: React.FC = () => {
   const [isCreatingInvite, setIsCreatingInvite] = useState(false);
   const [familyMembers, setFamilyMembers] = useState<any[]>([]);
 
+  // Plan lock state - synced via family plan
+  const [isPlanLocked, setIsPlanLocked] = useState(false);
+
   // Track if we're applying a remote update to prevent feedback loop
   const isApplyingRemoteUpdateRef = useRef(false);
+
+  // Track if we're toggling the lock to prevent sync effect from interfering
+  const isTogglingLockRef = useRef(false);
 
   // Handler for remote updates from collaborators
   const handleRemoteUpdate = React.useCallback((data: {
@@ -373,6 +379,7 @@ const App: React.FC = () => {
     invalidation_state: any;
     has_plan: string;
     current_stage: string;
+    is_locked?: boolean;
   }) => {
     console.log('[App] Received remote update from collaborator');
 
@@ -393,6 +400,7 @@ const App: React.FC = () => {
     setInvalidationState(data.invalidation_state || DEFAULT_INVALIDATION_STATE, true);
     setHasPlanGenerated(data.has_plan === 'true', true);
     setCurrentStage(parseInt(data.current_stage) || Stage.MEAL_PLANNING, true);
+    setIsPlanLocked(data.is_locked ?? false);
 
     // Reset flag after a short delay to allow all state updates to complete
     setTimeout(() => {
@@ -412,12 +420,17 @@ const App: React.FC = () => {
 
   // Effect to sync all changes to family plan
   React.useEffect(() => {
-    // Don't sync if no active plan, still loading, or applying a remote update
-    if (!activePlanId || isDataLoading || isLoading || isApplyingRemoteUpdateRef.current) {
+    // Don't sync if no active plan, still loading, applying a remote update, or toggling lock
+    if (!activePlanId || isDataLoading || isLoading || isApplyingRemoteUpdateRef.current || isTogglingLockRef.current) {
       return;
     }
 
-    // Sync current state to family plan
+    // If plan is locked, don't sync any changes (lock state is handled by handleTogglePlanLock)
+    if (isPlanLocked) {
+      return;
+    }
+
+    // Sync current state to family plan (including lock state)
     saveToFamilyPlan({
       plan_data: planHistory.present,
       family_data: family,
@@ -426,7 +439,8 @@ const App: React.FC = () => {
       grocery_items: groceryItems,
       invalidation_state: invalidationState,
       has_plan: hasPlanGenerated ? 'true' : 'false',
-      current_stage: currentStage.toString()
+      current_stage: currentStage.toString(),
+      is_locked: isPlanLocked
     });
   }, [
     activePlanId,
@@ -440,6 +454,7 @@ const App: React.FC = () => {
     currentStage,
     isDataLoading,
     isLoading,
+    isPlanLocked,
     saveToFamilyPlan
   ]);
 
@@ -514,6 +529,7 @@ const App: React.FC = () => {
           setInvalidationState(plan.invalidation_state || DEFAULT_INVALIDATION_STATE, true);
           setHasPlanGenerated(plan.has_plan === 'true', true);
           setCurrentStage(parseInt(plan.current_stage) || Stage.MEAL_PLANNING, true);
+          setIsPlanLocked(plan.is_locked ?? false);
 
           setFamilyPlanLoaded(true);
           console.log('[App] Family plan data loaded successfully');
@@ -741,6 +757,10 @@ const App: React.FC = () => {
   };
 
   const handleRegeneratePlan = async () => {
+    if (isPlanLocked) {
+      showToast('Plan is locked. Unlock it to make changes.', 'warning');
+      return;
+    }
     setConfirmationModal({
       isOpen: true,
       title: 'Regenerate Plan?',
@@ -789,6 +809,38 @@ const App: React.FC = () => {
       if (hasPlanGenerated) {
           setViewMode('planning');
       }
+  };
+
+  // --- Plan Lock Toggle ---
+  const handleTogglePlanLock = async () => {
+    const newLockState = !isPlanLocked;
+
+    // Set flag to prevent sync effect from interfering
+    isTogglingLockRef.current = true;
+
+    // Optimistic update
+    setIsPlanLocked(newLockState);
+
+    if (activePlanId) {
+      try {
+        await apiService.updateFamilyPlan(activePlanId, { is_locked: newLockState });
+      } catch (error) {
+        // Revert on failure
+        setIsPlanLocked(!newLockState);
+        console.error('Failed to toggle plan lock:', error);
+        showToast('Failed to update lock state', 'error');
+      } finally {
+        // Reset flag after a short delay to allow state to settle
+        setTimeout(() => {
+          isTogglingLockRef.current = false;
+        }, 100);
+      }
+    } else {
+      // Reset flag
+      setTimeout(() => {
+        isTogglingLockRef.current = false;
+      }, 100);
+    }
   };
 
   // --- Family Invite Handlers ---
@@ -886,6 +938,7 @@ const App: React.FC = () => {
           setInvalidationState(plan.invalidation_state || DEFAULT_INVALIDATION_STATE); // Persist
           setHasPlanGenerated(plan.has_plan === 'true'); // Persist
           setCurrentStage(parseInt(plan.current_stage) || Stage.MEAL_PLANNING); // Persist
+          setIsPlanLocked(plan.is_locked ?? false);
           setActivePlanId(plan.id);
           setViewMode('planning');
 
@@ -916,6 +969,10 @@ const App: React.FC = () => {
   }, [isDataLoading, user]);
 
   const handlePlanUpdate = async (userMessage: string) => {
+    if (isPlanLocked) {
+      showToast('Plan is locked. Unlock it to make changes.', 'warning');
+      return;
+    }
     setIsLoading(true);
     const newMsgId = Date.now().toString();
     const userMsg: ChatMessage = { id: newMsgId, role: 'user', content: userMessage, timestamp: Date.now() };
@@ -998,6 +1055,10 @@ const App: React.FC = () => {
   };
 
   const handleReplaceMeal = async (day: string, mealType: MealTime) => {
+    if (isPlanLocked) {
+      showToast('Plan is locked. Unlock it to make changes.', 'warning');
+      return;
+    }
     const cardKey = `${day}-${mealType}`;
 
     // Mark this meal as being replaced
@@ -1396,6 +1457,10 @@ const App: React.FC = () => {
   };
 
   const handleRegeneratePrep = async () => {
+    if (isPlanLocked) {
+      showToast('Plan is locked. Unlock it to make changes.', 'warning');
+      return;
+    }
     setIsLoading(true);
 
     await analyticsService.trackMealPlanningEvent('prep_regeneration_started');
@@ -1505,6 +1570,10 @@ const App: React.FC = () => {
   };
 
   const handleRegenerateGrocery = async () => {
+    if (isPlanLocked) {
+      showToast('Plan is locked. Unlock it to make changes.', 'warning');
+      return;
+    }
     setIsLoading(true);
 
     await analyticsService.trackMealPlanningEvent('grocery_regeneration_started');
@@ -1683,8 +1752,13 @@ const App: React.FC = () => {
 
           {/* Right: App Actions + User Menu */}
           <div className="pointer-events-auto flex items-center gap-2">
-              {/* Theme Toggle */}
-              <ThemeToggle />
+              {/* Plan Lock Toggle - visible on all screen sizes when plan exists */}
+              {viewMode === 'planning' && hasPlanGenerated && (
+                <PlanLockToggle
+                  isLocked={isPlanLocked}
+                  onToggle={handleTogglePlanLock}
+                />
+              )}
 
               {/* Invite (app-level action) */}
               {viewMode === 'planning' && hasPlanGenerated && (
@@ -1778,7 +1852,9 @@ const App: React.FC = () => {
                               <UserPlus size={16} />
                             )}
                           </button>
-                          <RegenerateButton onRegenerate={handleRegeneratePlan} isLoading={isLoading} showText={false} />
+                          {!isPlanLocked && (
+                            <RegenerateButton onRegenerate={handleRegeneratePlan} isLoading={isLoading} showText={false} />
+                          )}
                         </div>
                       )}
                     </div>
@@ -1787,18 +1863,18 @@ const App: React.FC = () => {
 
                       {/* Page-level actions - Desktop */}
                       <div className="hidden md:flex justify-end items-center gap-3 mb-4">
-                            {planHistory.past.length > 0 && (
+                            {planHistory.past.length > 0 && !isPlanLocked && (
                                <button onClick={handleUndo} className="btn-glass flex items-center gap-2 px-3 py-1.5 text-primary-600 text-sm font-semibold">
                                    <Undo2 size={14} /> Undo
                                </button>
                             )}
-                            {hasPlanGenerated && (
+                            {hasPlanGenerated && !isPlanLocked && (
                               <RegenerateButton onRegenerate={handleRegeneratePlan} isLoading={isLoading} showText={true} />
                             )}
                       </div>
                       {/* Mobile Header - Undo button */}
                       <div className="md:hidden flex justify-start mb-6 px-4">
-                         {planHistory.past.length > 0 && (
+                         {planHistory.past.length > 0 && !isPlanLocked && (
                             <button onClick={handleUndo} className="btn-glass flex items-center gap-1.5 px-3 py-1.5 text-primary-600 text-xs font-semibold">
                                 <Undo2 size={12} /> Undo
                             </button>
@@ -1818,6 +1894,7 @@ const App: React.FC = () => {
                            newlyReceivedCards={newlyReceivedCards}
                            onReplaceMeal={handleReplaceMeal}
                            replacingMeals={replacingMeals}
+                           isLocked={isPlanLocked}
                          />
                       )}
                     </div>
@@ -1851,6 +1928,7 @@ const App: React.FC = () => {
                          newlyReceivedTasks={newlyReceivedTasks}
                          isInvalidated={isPrepPlanInvalidated()}
                          onTasksChange={setPrepTasks}
+                         isLocked={isPlanLocked}
                     />
                     <Footer className="mt-16" />
                   </div>
@@ -1882,6 +1960,7 @@ const App: React.FC = () => {
                          newlyReceivedItems={newlyReceivedItems}
                          isInvalidated={isGroceryListInvalidated()}
                          onItemsChange={setGroceryItems}
+                         isLocked={isPlanLocked}
                     />
                     <Footer className="mt-16" />
                   </div>

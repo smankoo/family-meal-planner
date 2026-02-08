@@ -171,6 +171,7 @@ interface FamilyPlanResponse {
   invalidation_state: InvalidationState;
   has_plan: string;
   current_stage: string;
+  is_locked: boolean;  // Plan lock state
   title: string;
   created_by: string;
   created_at: string;
@@ -179,3 +180,52 @@ interface FamilyPlanResponse {
   members: PlanMember[];
 }
 ```
+
+## Plan Locking
+
+### Overview
+
+Plan locking prevents accidental changes to finalized meal plans. Once a family has completed their planning and shopping list, they can lock the plan to prevent any modifications until explicitly unlocked.
+
+### Features
+
+- **Apple-style toggle**: Visual slider toggle in the app header shows lock state
+- **Collaborative**: Lock state syncs across all family members in real-time
+- **Comprehensive protection**: When locked, prevents:
+  - Meal replacements
+  - Plan regeneration
+  - Prep plan regeneration
+  - Grocery list regeneration
+  - Manual edits to any plan component
+
+### Implementation
+
+**Backend** (`backend/models.py`, `backend/schemas.py`, `backend/routers/family_plans.py`):
+- `is_locked` boolean column in `CollaborativePlan` model (default `false`)
+- Migration: `add_is_locked_to_collaborative_plans.py`
+- `PUT /family-plans/{id}` returns HTTP 423 (Locked) if plan is locked and request isn't a lock toggle
+- Lock state included in broadcast payload for real-time sync
+
+**Frontend** (`App.tsx`, `components/PlanLockToggle.tsx`):
+- `PlanLockToggle` component: Apple-style slider with lock/unlock icons
+- Lock guards in mutation handlers prevent changes when locked
+- `MealGrid`, `MealPrepView`, `GroceryListView` accept `isLocked` prop
+- Replace buttons hidden, checkboxes dimmed when locked
+- Optimistic updates with error handling and revert on failure
+
+**Sync Behavior**:
+- Lock state changes handled directly by `handleTogglePlanLock` (not sync effect)
+- `isTogglingLockRef` prevents sync effect interference during toggle
+- When locked, sync effect skips all content syncs (lock state only)
+- Lock state synced via real-time broadcast to all family members
+
+### User Experience
+
+1. User clicks lock toggle in header
+2. Toggle animates to locked state (amber background)
+3. All mutation buttons/actions become disabled
+4. Other family members see lock state update instantly
+5. User clicks toggle again to unlock
+6. All mutation actions become available again
+
+**Design**: Lock toggle uses centralized CSS classes (`plan-lock-slider`, `plan-lock-slider-locked`, `plan-lock-slider-unlocked`) with gray background when unlocked and amber when locked.
