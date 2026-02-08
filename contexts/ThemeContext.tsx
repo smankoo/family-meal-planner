@@ -34,8 +34,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setResolvedTheme(resolved);
 
     const root = document.documentElement;
-    root.classList.remove('light', 'dark');
-    root.classList.add(resolved);
+
+    // Only update if the class needs to change (prevents flash on initial mount)
+    if (!root.classList.contains(resolved)) {
+      root.classList.remove('light', 'dark');
+      root.classList.add(resolved);
+    }
 
     // Update body classes for legacy support
     document.body.style.backgroundColor = '';
