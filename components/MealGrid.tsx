@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { WeekPlan, MealTime } from '../types';
-import { Users, Sparkles, ChevronRight, ChevronLeft, Loader2, RefreshCw } from 'lucide-react';
+import { Users, Sparkles, ChevronRight, ChevronLeft, Loader2, RefreshCw, Sunrise, Sun, Cookie, Moon } from 'lucide-react';
 
 interface MealGridProps {
   plan: WeekPlan;
@@ -68,6 +68,22 @@ const MealGrid: React.FC<MealGridProps> = ({
         return 'meal-type-pill meal-type-pill-dinner';
       default:
         return '';
+    }
+  };
+
+  const getMealTypeIcon = (time: MealTime) => {
+    const iconProps = { size: 11, strokeWidth: 2.5 };
+    switch (time) {
+      case MealTime.BREAKFAST:
+        return <Sunrise {...iconProps} />;
+      case MealTime.LUNCH:
+        return <Sun {...iconProps} />;
+      case MealTime.SNACK:
+        return <Cookie {...iconProps} />;
+      case MealTime.DINNER:
+        return <Moon {...iconProps} />;
+      default:
+        return null;
     }
   };
 
@@ -171,9 +187,9 @@ const MealGrid: React.FC<MealGridProps> = ({
         {plan.map((dayPlan, dayIdx) => (
             <div key={dayPlan.day} className="mb-8">
 
-                {/* Sticky Day Header - Apple-style section header */}
+                {/* Subtle Day Header */}
                 <div className="sticky-header-mobile">
-                    <h3 className="text-xl font-bold text-primary-900 tracking-tight">
+                    <h3 className="text-xs font-bold text-primary-500 uppercase tracking-[0.2em]">
                         {dayPlan.day}
                     </h3>
                 </div>
@@ -208,7 +224,10 @@ const MealGrid: React.FC<MealGridProps> = ({
                                 style={{ animationDelay: !hasInitialLoadCompleted.current ? `${staggerDelay}ms` : '0ms' }}
                               >
                                 <div className="flex justify-between items-start mb-2">
-                                  <span className={getMealTypePillClass(time)}>{time}</span>
+                                  <span className={getMealTypePillClass(time)}>
+                                    {getMealTypeIcon(time)}
+                                    {time}
+                                  </span>
                                   <div className="flex items-center gap-2">
                                     {isChanged && <Sparkles size={14} className="text-indigo-500 animate-pulse" />}
                                     {!isEmpty && onReplaceMeal && !isLocked && (
@@ -266,9 +285,9 @@ const MealGrid: React.FC<MealGridProps> = ({
         {/* Render each Day as a Row */}
         {plan.map((dayPlan, dayIdx) => (
             <div key={dayPlan.day} className="w-full">
-                {/* Sticky Row Header */}
-                <div className="sticky-header-mobile flex items-center justify-between">
-                    <span className="text-base font-bold text-primary-900 uppercase tracking-widest">{dayPlan.day}</span>
+                {/* Subtle Row Header */}
+                <div className="sticky-header-mobile">
+                    <span className="text-xs font-bold text-primary-500 uppercase tracking-[0.2em]">{dayPlan.day}</span>
                 </div>
 
                 {/* Adaptive Grid - Apple-like responsive behavior */}
@@ -306,7 +325,10 @@ const MealGrid: React.FC<MealGridProps> = ({
                             >
                                 {/* Meal Time Label inside card for context */}
                                 <div className="flex justify-between items-start mb-2">
-                                    <span className={getMealTypePillClass(time)}>{time}</span>
+                                    <span className={getMealTypePillClass(time)}>
+                                      {getMealTypeIcon(time)}
+                                      {time}
+                                    </span>
                                     <div className="flex items-center gap-2">
                                         {isChanged && <Sparkles size={14} className="text-indigo-400 animate-pulse" />}
                                         {!isEmpty && onReplaceMeal && !isLocked && (

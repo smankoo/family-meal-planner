@@ -292,83 +292,63 @@
     opacity: 0.95;
   }
 
-  /* Meal Type Specific Cards - BOLD with colored left accent + gradient */
+  /* Meal Type Specific Cards - Subtle, sophisticated with minimal color accent */
   .meal-card-breakfast {
     @apply backdrop-blur-sm;
-    background: linear-gradient(135deg, rgba(254, 243, 199, 0.6) 0%, var(--surface-primary) 40%);
-    border-color: rgba(252, 211, 77, 0.5);
-    border-left: 4px solid #f59e0b;
+    background-color: var(--surface-primary);
+    border: 1px solid var(--border-primary);
+    box-shadow: var(--shadow-card);
   }
   .meal-card-breakfast:hover {
-    background: linear-gradient(135deg, rgba(254, 243, 199, 0.75) 0%, var(--surface-primary) 40%);
-    box-shadow: var(--shadow-warm);
+    box-shadow: var(--shadow-card-hover);
   }
 
   .meal-card-lunch {
     @apply backdrop-blur-sm;
-    background: linear-gradient(135deg, rgba(236, 253, 245, 0.6) 0%, var(--surface-primary) 40%);
-    border-color: rgba(167, 243, 208, 0.5);
-    border-left: 4px solid #10b981;
+    background-color: var(--surface-primary);
+    border: 1px solid var(--border-primary);
+    box-shadow: var(--shadow-card);
   }
   .meal-card-lunch:hover {
-    background: linear-gradient(135deg, rgba(236, 253, 245, 0.75) 0%, var(--surface-primary) 40%);
-    box-shadow: var(--shadow-fresh);
+    box-shadow: var(--shadow-card-hover);
   }
 
   .meal-card-snack {
     @apply backdrop-blur-sm;
-    background: linear-gradient(135deg, rgba(255, 247, 237, 0.6) 0%, var(--surface-primary) 40%);
-    border-color: rgba(254, 215, 170, 0.5);
-    border-left: 4px solid #f97316;
+    background-color: var(--surface-primary);
+    border: 1px solid var(--border-primary);
+    box-shadow: var(--shadow-card);
   }
   .meal-card-snack:hover {
-    background: linear-gradient(135deg, rgba(255, 247, 237, 0.75) 0%, var(--surface-primary) 40%);
-    box-shadow: var(--shadow-appetite);
+    box-shadow: var(--shadow-card-hover);
   }
 
   .meal-card-dinner {
     @apply backdrop-blur-sm;
-    background: linear-gradient(135deg, rgba(238, 242, 255, 0.6) 0%, var(--surface-primary) 40%);
-    border-color: rgba(199, 210, 254, 0.5);
-    border-left: 4px solid #6366f1;
+    background-color: var(--surface-primary);
+    border: 1px solid var(--border-primary);
+    box-shadow: var(--shadow-card);
   }
   .meal-card-dinner:hover {
-    background: linear-gradient(135deg, rgba(238, 242, 255, 0.75) 0%, var(--surface-primary) 40%);
-    box-shadow: var(--shadow-accent);
+    box-shadow: var(--shadow-card-hover);
   }
 
   /* Dark mode meal card overrides */
   .dark .meal-card-breakfast {
-    background: linear-gradient(135deg, rgba(120, 53, 15, 0.3) 0%, var(--surface-primary) 40%);
-    border-color: rgba(251, 191, 36, 0.3);
-    border-left-color: #fbbf24;
-  }
-  .dark .meal-card-breakfast:hover {
-    background: linear-gradient(135deg, rgba(120, 53, 15, 0.45) 0%, var(--surface-primary) 40%);
+    background-color: var(--surface-primary);
+    border-color: var(--border-primary);
   }
   .dark .meal-card-lunch {
-    background: linear-gradient(135deg, rgba(6, 78, 59, 0.3) 0%, var(--surface-primary) 40%);
-    border-color: rgba(52, 211, 153, 0.3);
-    border-left-color: #34d399;
-  }
-  .dark .meal-card-lunch:hover {
-    background: linear-gradient(135deg, rgba(6, 78, 59, 0.45) 0%, var(--surface-primary) 40%);
+    background-color: var(--surface-primary);
+    border-color: var(--border-primary);
   }
   .dark .meal-card-snack {
-    background: linear-gradient(135deg, rgba(124, 45, 18, 0.3) 0%, var(--surface-primary) 40%);
-    border-color: rgba(251, 146, 60, 0.3);
-    border-left-color: #fb923c;
-  }
-  .dark .meal-card-snack:hover {
-    background: linear-gradient(135deg, rgba(124, 45, 18, 0.45) 0%, var(--surface-primary) 40%);
+    background-color: var(--surface-primary);
+    border-color: var(--border-primary);
   }
   .dark .meal-card-dinner {
-    background: linear-gradient(135deg, rgba(49, 46, 129, 0.3) 0%, var(--surface-primary) 40%);
-    border-color: rgba(129, 140, 248, 0.3);
-    border-left-color: #818cf8;
-  }
-  .dark .meal-card-dinner:hover {
-    background: linear-gradient(135deg, rgba(49, 46, 129, 0.45) 0%, var(--surface-primary) 40%);
+    background-color: var(--surface-primary);
+    border-color: var(--border-primary);
   }
 
   /* Meal Type Indicator Dots - Larger, bolder */
@@ -393,33 +373,41 @@
     @apply bg-[#6366f1] text-[#6366f1];
   }
 
-  /* Meal type pill badges */
+  /* Meal type pill badges - sophisticated, muted tones */
   .meal-type-pill {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider;
   }
   .meal-type-pill-breakfast {
-    @apply bg-amber-100 text-amber-700;
+    background-color: rgba(245, 158, 11, 0.12);
+    color: #d97706;
   }
   .dark .meal-type-pill-breakfast {
-    @apply bg-amber-900/40 text-amber-300;
+    background-color: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
   }
   .meal-type-pill-lunch {
-    @apply bg-emerald-100 text-emerald-700;
+    background-color: rgba(16, 185, 129, 0.12);
+    color: #059669;
   }
   .dark .meal-type-pill-lunch {
-    @apply bg-emerald-900/40 text-emerald-300;
+    background-color: rgba(52, 211, 153, 0.15);
+    color: #34d399;
   }
   .meal-type-pill-snack {
-    @apply bg-orange-100 text-orange-700;
+    background-color: rgba(249, 115, 22, 0.12);
+    color: #ea580c;
   }
   .dark .meal-type-pill-snack {
-    @apply bg-orange-900/40 text-orange-300;
+    background-color: rgba(251, 146, 60, 0.15);
+    color: #fb923c;
   }
   .meal-type-pill-dinner {
-    @apply bg-indigo-100 text-indigo-700;
+    background-color: rgba(99, 102, 241, 0.12);
+    color: #4f46e5;
   }
   .dark .meal-type-pill-dinner {
-    @apply bg-indigo-900/40 text-indigo-300;
+    background-color: rgba(129, 140, 248, 0.15);
+    color: #818cf8;
   }
 
   /* Card Variants */
@@ -641,13 +629,10 @@
 
   /* Mobile Optimizations */
   .sticky-header-mobile {
-    @apply sticky top-0 z-20 mb-4;
+    @apply sticky top-0 z-20 mb-6 -mx-4 px-4 py-4;
     @apply backdrop-blur-xl;
-    @apply shadow-md;
-    @apply rounded-2xl;
-    @apply px-5 py-3;
-    background-color: var(--surface-glass);
-    border: 1px solid var(--border-subtle);
+    background: linear-gradient(to bottom, var(--surface-bg) 0%, var(--surface-bg) 80%, transparent 100%);
+    border-bottom: 1px solid var(--border-primary);
   }
 
   .list-item-glass {
