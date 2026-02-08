@@ -31,8 +31,31 @@ export default {
         },
         accent: {
           50: 'var(--color-accent-50)',
+          100: 'var(--color-accent-100)',
+          200: 'var(--color-accent-200)',
           500: 'var(--color-accent-500)',
           600: 'var(--color-accent-600)',
+        },
+        warm: {
+          50: 'var(--color-warm-50)',
+          100: 'var(--color-warm-100)',
+          200: 'var(--color-warm-200)',
+          500: 'var(--color-warm-500)',
+          600: 'var(--color-warm-600)',
+        },
+        fresh: {
+          50: 'var(--color-fresh-50)',
+          100: 'var(--color-fresh-100)',
+          200: 'var(--color-fresh-200)',
+          500: 'var(--color-fresh-500)',
+          600: 'var(--color-fresh-600)',
+        },
+        appetite: {
+          50: 'var(--color-appetite-50)',
+          100: 'var(--color-appetite-100)',
+          200: 'var(--color-appetite-200)',
+          500: 'var(--color-appetite-500)',
+          600: 'var(--color-appetite-600)',
         },
       },
       borderRadius: {
@@ -50,6 +73,11 @@ export default {
         'card-hover': 'var(--shadow-card-hover)',
         'modal': 'var(--shadow-modal)',
         'float': 'var(--shadow-float)',
+        'subtle': 'var(--shadow-subtle)',
+        'warm': 'var(--shadow-warm)',
+        'fresh': 'var(--shadow-fresh)',
+        'appetite': 'var(--shadow-appetite)',
+        'accent': 'var(--shadow-accent)',
       },
       animation: {
         'stream-in': 'streamIn 0.6s ease-out',

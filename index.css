@@ -20,8 +20,31 @@
 
     /* Accent Colors */
     --color-accent-50: #eef2ff;
+    --color-accent-100: #e0e7ff;
+    --color-accent-200: #c7d2fe;
     --color-accent-500: #6366f1;
     --color-accent-600: #4f46e5;
+
+    /* Warm Accent Colors (Food-inspired - Breakfast) */
+    --color-warm-50: #fef3c7;
+    --color-warm-100: #fde68a;
+    --color-warm-200: #fcd34d;
+    --color-warm-500: #f59e0b;
+    --color-warm-600: #d97706;
+
+    /* Fresh/Healthy Green (Lunch) */
+    --color-fresh-50: #ecfdf5;
+    --color-fresh-100: #d1fae5;
+    --color-fresh-200: #a7f3d0;
+    --color-fresh-500: #10b981;
+    --color-fresh-600: #059669;
+
+    /* Appetizing Orange (Snack) */
+    --color-appetite-50: #fff7ed;
+    --color-appetite-100: #ffedd5;
+    --color-appetite-200: #fed7aa;
+    --color-appetite-500: #f97316;
+    --color-appetite-600: #ea580c;
 
     /* Border Radius */
     --radius-card: 1rem;        /* 16px - cards, containers */
@@ -34,10 +57,17 @@
     --spacing-section: 2rem;    /* 32px - section spacing */
 
     /* Shadows */
-    --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-    --shadow-card-hover: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    --shadow-modal: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-    --shadow-float: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-subtle: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-card: 0 2px 8px -2px rgb(0 0 0 / 0.08), 0 1px 3px -1px rgb(0 0 0 / 0.06);
+    --shadow-card-hover: 0 12px 24px -4px rgb(0 0 0 / 0.12), 0 4px 8px -2px rgb(0 0 0 / 0.08);
+    --shadow-float: 0 20px 25px -5px rgb(0 0 0 / 0.15), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-modal: 0 25px 50px -12px rgb(0 0 0 / 0.3);
+
+    /* Colored Shadows for Contextual Depth */
+    --shadow-warm: 0 8px 16px -4px rgb(245 158 11 / 0.15);
+    --shadow-fresh: 0 8px 16px -4px rgb(16 185 129 / 0.15);
+    --shadow-appetite: 0 8px 16px -4px rgb(249 115 22 / 0.15);
+    --shadow-accent: 0 8px 16px -4px rgb(99 102 241 / 0.15);
 
     /* Typography */
     --font-weight-regular: 400;
@@ -97,6 +127,84 @@
     @apply hover:bg-white hover:text-accent-600 hover:border-accent-600;
     @apply flex items-center justify-center transition-all;
     @apply active:scale-95;
+  }
+
+  /* Enhanced Buttons */
+  .btn-primary-enhanced {
+    @apply bg-gradient-to-r from-primary-900 to-primary-800;
+    @apply text-white rounded-button px-6 py-3 font-semibold;
+    @apply hover:from-primary-800 hover:to-primary-700;
+    @apply hover:shadow-lg hover:-translate-y-0.5;
+    @apply active:translate-y-0 active:shadow-md;
+    @apply transition-all duration-200;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none;
+  }
+
+  .btn-regenerate {
+    @apply bg-white border-2 border-primary-200;
+    @apply text-primary-700 rounded-full px-4 py-2.5 font-semibold text-sm;
+    @apply hover:border-accent-500 hover:text-accent-600 hover:bg-accent-50;
+    @apply hover:shadow-md hover:-translate-y-0.5;
+    @apply active:translate-y-0;
+    @apply transition-all duration-200;
+  }
+
+  /* Meal Type Specific Cards */
+  .meal-card-breakfast {
+    @apply bg-gradient-to-br from-[#fef3c7]/30 via-white to-white;
+    @apply border-[#fcd34d]/50;
+  }
+
+  .meal-card-breakfast:hover {
+    box-shadow: var(--shadow-warm);
+  }
+
+  .meal-card-lunch {
+    @apply bg-gradient-to-br from-[#ecfdf5]/30 via-white to-white;
+    @apply border-[#a7f3d0]/50;
+  }
+
+  .meal-card-lunch:hover {
+    box-shadow: var(--shadow-fresh);
+  }
+
+  .meal-card-snack {
+    @apply bg-gradient-to-br from-[#fff7ed]/30 via-white to-white;
+    @apply border-[#fed7aa]/50;
+  }
+
+  .meal-card-snack:hover {
+    box-shadow: var(--shadow-appetite);
+  }
+
+  .meal-card-dinner {
+    @apply bg-gradient-to-br from-[#eef2ff]/30 via-white to-white;
+    @apply border-[#c7d2fe]/50;
+  }
+
+  .meal-card-dinner:hover {
+    box-shadow: var(--shadow-accent);
+  }
+
+  /* Meal Type Indicator Dots */
+  .meal-type-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .meal-type-dot-breakfast {
+    @apply bg-[#f59e0b];
+  }
+
+  .meal-type-dot-lunch {
+    @apply bg-[#10b981];
+  }
+
+  .meal-type-dot-snack {
+    @apply bg-[#f97316];
+  }
+
+  .meal-type-dot-dinner {
+    @apply bg-[#6366f1];
   }
 
   /* Card Variants */
@@ -161,6 +269,14 @@
     @apply text-4xl font-bold text-primary-900 tracking-tight;
   }
 
+  .heading-page {
+    @apply text-3xl md:text-4xl font-bold text-primary-900 tracking-tight;
+    background: linear-gradient(135deg, #18181b 0%, #3f3f46 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
   .heading-section {
     @apply text-2xl font-bold text-primary-900;
   }
@@ -173,12 +289,87 @@
     @apply text-xs font-bold text-primary-400 uppercase tracking-widest;
   }
 
+  .label-category {
+    @apply text-xs font-extrabold text-primary-400 uppercase;
+    letter-spacing: 0.15em;
+  }
+
   .text-body {
     @apply text-primary-700 leading-relaxed;
   }
 
   .text-secondary {
     @apply text-primary-500 leading-relaxed;
+  }
+
+  /* Enhanced Checkbox */
+  .checkbox-enhanced {
+    @apply w-5 h-5 rounded-full border-2;
+    @apply transition-all duration-300;
+    @apply flex items-center justify-center;
+  }
+
+  .checkbox-unchecked {
+    @apply border-primary-300 bg-transparent;
+  }
+
+  .checkbox-checked {
+    @apply border-primary-400 bg-primary-400;
+  }
+
+  /* Section Headers */
+  .section-header-enhanced {
+    @apply flex items-center gap-3 mb-4;
+  }
+
+  .section-header-icon {
+    @apply w-8 h-8 rounded-lg flex items-center justify-center;
+    @apply bg-gradient-to-br from-primary-100 to-primary-50;
+    @apply border border-primary-200;
+    @apply text-lg;
+  }
+
+  .section-divider {
+    @apply h-[2px] flex-1;
+    background: linear-gradient(90deg,
+      rgb(228 228 231) 0%,
+      rgb(244 244 245) 50%,
+      transparent 100%
+    );
+  }
+
+  /* Enhanced Empty States */
+  .empty-state-icon-wrapper {
+    @apply w-20 h-20 rounded-3xl mb-6;
+    @apply bg-gradient-to-br from-primary-100 to-primary-50;
+    @apply border border-primary-200;
+    @apply flex items-center justify-center;
+    @apply shadow-lg;
+  }
+
+  /* Enhanced Loading Skeleton */
+  .skeleton-shimmer {
+    @apply relative overflow-hidden;
+    @apply bg-gradient-to-r from-primary-100 via-primary-50 to-primary-100;
+    background-size: 200% 100%;
+    animation: shimmer 2s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  /* Mobile Optimizations */
+  .sticky-header-mobile {
+    @apply sticky top-0 z-20 mb-4 px-4 py-3;
+    @apply bg-zinc-50/95 backdrop-blur-md;
+    @apply border-b border-zinc-200/30 shadow-sm;
+  }
+
+  .touch-feedback {
+    @apply active:scale-[0.98] active:shadow-sm;
+    @apply transition-transform duration-150;
   }
 
   /* Loading Screen */

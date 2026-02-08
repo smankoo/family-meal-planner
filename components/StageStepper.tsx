@@ -16,7 +16,8 @@ const StageStepper: React.FC<StageStepperProps> = ({ currentStage, setStage, has
   ];
 
   return (
-    <div className="inline-flex bg-primary-100/80 p-1 rounded-full">
+    <div className="flex flex-col items-center gap-2">
+      <div className="inline-flex bg-primary-100/80 p-1 rounded-full">
         {steps.map((step) => {
           const isActive = currentStage === step.id;
           // All stages are clickable if we have a meal plan
@@ -31,9 +32,9 @@ const StageStepper: React.FC<StageStepperProps> = ({ currentStage, setStage, has
               className={`
                 flex items-center gap-2 px-6 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition-all duration-300
                 ${isActive
-                  ? 'bg-white text-primary-900 shadow-sm'
+                  ? 'bg-white text-primary-900 shadow-lg'
                   : isClickable
-                    ? 'text-primary-500 hover:text-primary-700'
+                    ? 'text-primary-500 hover:text-primary-700 hover:bg-white/50'
                     : 'text-primary-300 cursor-not-allowed'}
               `}
             >
@@ -42,6 +43,29 @@ const StageStepper: React.FC<StageStepperProps> = ({ currentStage, setStage, has
             </button>
           );
         })}
+      </div>
+
+      {/* Progress Indicators */}
+      <div className="flex gap-1.5">
+        {steps.map((step) => {
+          const isActive = currentStage === step.id;
+          const isCompleted = hasMealPlan && step.id < currentStage;
+
+          return (
+            <div
+              key={`indicator-${step.id}`}
+              className={`
+                h-1.5 rounded-full transition-all duration-300
+                ${isActive
+                  ? 'w-6 bg-accent-600'
+                  : isCompleted
+                  ? 'w-1.5 bg-[#10b981]'
+                  : 'w-1.5 bg-primary-200'}
+              `}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 };

@@ -92,15 +92,14 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
     <div className={`
       relative bg-white rounded-2xl p-5 shadow-sm border border-zinc-100
       min-h-[100px] flex gap-4
-      ${isLoading ? 'animate-pulse' : ''}
     `}>
       <div className="mt-1">
-        <div className="w-5 h-5 rounded-full bg-zinc-200"></div>
+        <div className="w-5 h-5 rounded-full skeleton-shimmer"></div>
       </div>
-      <div className="flex-1">
-        <div className="w-3/4 h-5 bg-zinc-200 rounded mb-2"></div>
-        <div className="w-full h-3 bg-zinc-100 rounded mb-1"></div>
-        <div className="w-2/3 h-3 bg-zinc-100 rounded"></div>
+      <div className="flex-1 space-y-2">
+        <div className="w-3/4 h-5 skeleton-shimmer rounded"></div>
+        <div className="w-full h-3 skeleton-shimmer rounded"></div>
+        <div className="w-2/3 h-3 skeleton-shimmer rounded"></div>
         {isLoading && <Loader2 size={14} className="text-zinc-300 animate-spin mt-2" />}
       </div>
     </div>
@@ -186,9 +185,9 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
             <button
               onClick={onRegenerate}
               disabled={isLoading}
-              className="flex items-center gap-2 px-3 md:px-4 py-2 bg-zinc-100 text-zinc-600 rounded-full text-xs md:text-sm font-semibold hover:bg-zinc-200 transition-colors"
+              className="btn-regenerate flex items-center gap-2"
             >
-              <RotateCcw size={12} className="md:w-[14px] md:h-[14px]" /> Regenerate
+              <RotateCcw size={14} /> Regenerate
             </button>
           </div>
         )}
@@ -201,9 +200,9 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
             <button
               onClick={onRegenerate}
               disabled={isLoading}
-              className="flex items-center gap-2 px-3 py-2 bg-zinc-100 text-zinc-600 rounded-full text-xs font-semibold hover:bg-zinc-200 transition-colors disabled:opacity-50"
+              className="btn-regenerate flex items-center gap-2"
             >
-              <RotateCcw size={12} /> Regenerate
+              <RotateCcw size={14} /> Regenerate
             </button>
           </div>
         </div>
@@ -223,8 +222,8 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
 
       {tasks.length === 0 && !isLoading ? (
         <div className="h-[50vh] flex flex-col items-center justify-center px-4">
-          <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mb-6">
-            <Clock size={24} className="text-zinc-400" />
+          <div className="empty-state-icon-wrapper">
+            <Clock size={32} className="text-zinc-400" />
           </div>
 
           {!hasMealPlan ? (
@@ -326,18 +325,21 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
 
       {/* Desktop View - Consistent with mobile styling */}
       <div className="hidden md:block pb-20">
-        {Object.entries(groupedTasks).map(([day, dayTasks]) => (
-          <div key={day} className="mb-8">
+        <div className="max-w-4xl mx-auto px-4 md:px-8">
+          {Object.entries(groupedTasks).map(([day, dayTasks]) => (
+            <div key={day} className="mb-8">
 
-            {/* Day Header - Aligned with content */}
-            <div className="flex items-center gap-4 mb-4 max-w-4xl mx-auto px-4 md:px-8">
-              <span className="text-sm font-bold text-zinc-400 uppercase tracking-widest">{day}</span>
-              <div className="h-[1px] flex-1 bg-zinc-100"></div>
-            </div>
+              {/* Day Header - Sticky with backdrop blur */}
+              <div className="sticky top-0 z-20 mb-4 px-4 py-3 bg-zinc-50/95 backdrop-blur-md border-b border-zinc-200/30 shadow-sm">
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-bold text-zinc-400 uppercase tracking-widest">{day}</span>
+                  <div className="h-[1px] flex-1 bg-zinc-100"></div>
+                </div>
+              </div>
 
-            {/* Tasks for that day - Same card style as mobile */}
-            <div className="space-y-3 px-4 md:px-8 max-w-4xl mx-auto">
-              {dayTasks.map((task) => {
+              {/* Tasks for that day - Same card style as mobile */}
+              <div className="space-y-3">
+                {dayTasks.map((task) => {
                 const taskKey = `${task.day}-${task.id}`;
                 return (
                 <div
@@ -386,6 +388,7 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
             </div>
           </div>
         ))}
+        </div>
       </div>
     </div>
   );

@@ -1,8 +1,21 @@
 import React, { useState, useRef, useLayoutEffect } from 'react';
 import { GroceryItem, WeekPlan } from '../types';
-import { Check, ShoppingBag, RotateCcw, Loader2, ArrowRight } from 'lucide-react';
+import { Check, ShoppingBag, RotateCcw, Loader2, ArrowRight, Apple, Milk, Beef, Wheat, Package } from 'lucide-react';
 import InvalidationBanner from './InvalidationBanner';
 import { resolveMealName } from '../utils/mealResolver';
+
+// Category icon mapping - using filled Lucide icons with subtle color tints for distinction
+const categoryIcons: Record<string, React.ReactNode> = {
+  'Produce': <Apple size={16} strokeWidth={2} fill="currentColor" className="text-[#10b981]" />,
+  'Dairy': <Milk size={16} strokeWidth={2} fill="currentColor" className="text-[#6366f1]" />,
+  'Meat': <Beef size={16} strokeWidth={2} fill="currentColor" className="text-[#ef4444]" />,
+  'Bakery': <Wheat size={16} strokeWidth={2} fill="currentColor" className="text-[#f59e0b]" />,
+  'Pantry': <Package size={16} strokeWidth={2} fill="currentColor" className="text-[#8b5cf6]" />,
+  'Seafood': <Package size={16} strokeWidth={2} fill="currentColor" className="text-[#06b6d4]" />,
+  'Frozen': <Package size={16} strokeWidth={2} fill="currentColor" className="text-[#3b82f6]" />,
+  'Beverages': <Package size={16} strokeWidth={2} fill="currentColor" className="text-[#ec4899]" />,
+  'Snacks': <Package size={16} strokeWidth={2} fill="currentColor" className="text-[#f97316]" />,
+};
 
 interface GroceryListViewProps {
   items: GroceryItem[];
@@ -91,13 +104,12 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
   const ItemSkeleton: React.FC<{ isLoading?: boolean }> = ({ isLoading = false }) => (
     <div className={`
       group px-6 py-4 flex items-center justify-between cursor-pointer transition-all duration-200
-      ${isLoading ? 'animate-pulse' : ''}
     `}>
-      <div className="flex items-center gap-4">
-        <div className="w-5 h-5 rounded-full bg-zinc-200"></div>
-        <div className="w-32 h-4 bg-zinc-200 rounded"></div>
+      <div className="flex items-center gap-4 flex-1">
+        <div className="w-5 h-5 rounded-full skeleton-shimmer"></div>
+        <div className="w-32 h-4 skeleton-shimmer rounded"></div>
       </div>
-      <div className="w-16 h-3 bg-zinc-100 rounded"></div>
+      <div className="w-16 h-3 skeleton-shimmer rounded"></div>
       {isLoading && <Loader2 size={14} className="text-zinc-300 animate-spin ml-2" />}
     </div>
   );
@@ -211,9 +223,9 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
             <button
               onClick={onRegenerate}
               disabled={isLoading}
-              className="flex items-center gap-2 px-3 md:px-4 py-2 bg-zinc-100 text-zinc-600 rounded-full text-xs md:text-sm font-semibold hover:bg-zinc-200 transition-colors"
+              className="btn-regenerate flex items-center gap-2"
             >
-              <RotateCcw size={12} className="md:w-[14px] md:h-[14px]" /> Regenerate
+              <RotateCcw size={14} /> Regenerate
             </button>
           </div>
         )}
@@ -226,9 +238,9 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
             <button
               onClick={onRegenerate}
               disabled={isLoading}
-              className="flex items-center gap-2 px-3 py-2 bg-zinc-100 text-zinc-600 rounded-full text-xs font-semibold hover:bg-zinc-200 transition-colors disabled:opacity-50"
+              className="btn-regenerate flex items-center gap-2"
             >
-              <RotateCcw size={12} /> Regenerate
+              <RotateCcw size={14} /> Regenerate
             </button>
           </div>
         </div>
@@ -248,8 +260,8 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
 
       {items.length === 0 && !isLoading ? (
         <div className="h-[50vh] flex flex-col items-center justify-center px-4">
-          <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mb-6">
-            <ShoppingBag size={24} className="text-zinc-400" />
+          <div className="empty-state-icon-wrapper">
+            <ShoppingBag size={32} className="text-zinc-400" />
           </div>
 
           {!hasMealPlan ? (
@@ -291,10 +303,12 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
               <div key={category} className="mb-8">
 
                 {/* Category Header - Apple-style section header */}
-                <div className="sticky top-0 z-20 mb-4 px-4 py-3 bg-zinc-50/95 backdrop-blur-sm border-b border-zinc-200/30">
-                  <h3 className="text-xl font-bold text-zinc-900 tracking-tight">
-                    {category}
-                  </h3>
+                <div className="sticky top-0 z-20 mb-4 px-4 py-3 bg-zinc-50/95 backdrop-blur-md border-b border-zinc-200/30 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-xl font-bold text-zinc-900 tracking-tight">
+                      {category}
+                    </h3>
+                  </div>
                 </div>
 
                 {/* Items for that category */}
@@ -314,10 +328,8 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
                       <div className="flex gap-4">
                         <div className="mt-1">
                           <div className={`
-                            w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300
-                            ${item.checked
-                                ? 'bg-zinc-400 border-zinc-400'
-                                : 'bg-transparent border-zinc-300'}
+                            checkbox-enhanced
+                            ${item.checked ? 'checkbox-checked' : 'checkbox-unchecked'}
                           `}>
                             {item.checked && <Check size={12} className="text-white" strokeWidth={3} />}
                           </div>
@@ -362,10 +374,12 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
             {Object.entries(groupedItems).sort().map(([category, catItems]) => (
               <div key={category} className="mb-8">
 
-                {/* Category Header */}
-                <div className="flex items-center gap-4 mb-4">
-                  <span className="text-sm font-bold text-zinc-400 uppercase tracking-widest">{category}</span>
-                  <div className="h-[1px] flex-1 bg-zinc-100"></div>
+                {/* Category Header - Sticky */}
+                <div className="sticky top-0 z-20 mb-4 px-4 py-3 bg-zinc-50/95 backdrop-blur-md border-b border-zinc-200/30 shadow-sm">
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-bold text-zinc-400 uppercase tracking-widest">{category}</span>
+                    <div className="h-[1px] flex-1 bg-zinc-100"></div>
+                  </div>
                 </div>
 
                 {/* Grouped items in a clean card */}
@@ -386,10 +400,8 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
                         <div className="flex gap-4">
                           <div className="mt-1">
                             <div className={`
-                              w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300
-                              ${item.checked
-                                  ? 'bg-zinc-400 border-zinc-400'
-                                  : 'bg-transparent border-zinc-300 group-hover:border-zinc-400'}
+                              checkbox-enhanced
+                              ${item.checked ? 'checkbox-checked' : 'checkbox-unchecked'}
                             `}>
                               {item.checked && <Check size={12} className="text-white" strokeWidth={3} />}
                             </div>

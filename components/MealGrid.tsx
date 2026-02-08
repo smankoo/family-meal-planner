@@ -23,6 +23,37 @@ const MealGrid: React.FC<MealGridProps> = ({
 }) => {
   const mealTimes = [MealTime.BREAKFAST, MealTime.LUNCH, MealTime.SNACK, MealTime.DINNER];
 
+  // Helper functions for meal-type styling
+  const getMealTypeClass = (time: MealTime): string => {
+    switch (time) {
+      case MealTime.BREAKFAST:
+        return 'meal-card-breakfast';
+      case MealTime.LUNCH:
+        return 'meal-card-lunch';
+      case MealTime.SNACK:
+        return 'meal-card-snack';
+      case MealTime.DINNER:
+        return 'meal-card-dinner';
+      default:
+        return '';
+    }
+  };
+
+  const getMealTypeDotClass = (time: MealTime): string => {
+    switch (time) {
+      case MealTime.BREAKFAST:
+        return 'meal-type-dot-breakfast';
+      case MealTime.LUNCH:
+        return 'meal-type-dot-lunch';
+      case MealTime.SNACK:
+        return 'meal-type-dot-snack';
+      case MealTime.DINNER:
+        return 'meal-type-dot-dinner';
+      default:
+        return '';
+    }
+  };
+
   // Use ref to track which cards have already been animated to prevent re-animation
   const animatedCardsRef = useRef<Set<string>>(new Set());
   const cardRefsRef = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -92,17 +123,16 @@ const MealGrid: React.FC<MealGridProps> = ({
     <div className={`
       relative bg-white rounded-2xl p-5 shadow-sm border border-zinc-100
       min-h-[140px] xl:min-h-[160px] flex flex-col
-      ${isLoading ? 'animate-pulse' : ''}
     `}>
       <div className="flex justify-between items-start mb-2">
-        <div className="w-8 h-2 bg-zinc-200 rounded"></div>
+        <div className="w-8 h-2 skeleton-shimmer rounded"></div>
         {isLoading && <Loader2 size={14} className="text-zinc-300 animate-spin" />}
       </div>
 
-      <div className="flex-1">
-        <div className="w-3/4 h-4 bg-zinc-200 rounded mb-2"></div>
-        <div className="w-full h-3 bg-zinc-100 rounded mb-1"></div>
-        <div className="w-2/3 h-3 bg-zinc-100 rounded"></div>
+      <div className="flex-1 space-y-2">
+        <div className="w-3/4 h-4 skeleton-shimmer rounded"></div>
+        <div className="w-full h-3 skeleton-shimmer rounded"></div>
+        <div className="w-2/3 h-3 skeleton-shimmer rounded"></div>
       </div>
     </div>
   );
@@ -115,7 +145,7 @@ const MealGrid: React.FC<MealGridProps> = ({
             <div key={dayPlan.day} className="mb-8">
 
                 {/* Sticky Day Header - Apple-style section header */}
-                <div className="sticky top-0 z-20 mb-4 px-4 py-3 bg-zinc-50/95 backdrop-blur-sm border-b border-zinc-200/30">
+                <div className="sticky-header-mobile">
                     <h3 className="text-xl font-bold text-zinc-900 tracking-tight">
                         {dayPlan.day}
                     </h3>
@@ -142,15 +172,17 @@ const MealGrid: React.FC<MealGridProps> = ({
                                 key={time}
                                 ref={(el) => registerCardRef(cardKey, el)}
                                 className={`
-                                  relative bg-white rounded-2xl p-5 shadow-sm border transition-all duration-500 active:scale-[0.98]
-                                  ${isChanged
-                                    ? 'border-indigo-100 bg-indigo-50/20'
-                                    : 'border-zinc-100'}
+                                  relative rounded-2xl p-5 shadow-sm border transition-all duration-500 active:scale-[0.98]
+                                  ${getMealTypeClass(time)}
+                                  ${isChanged ? 'ring-2 ring-indigo-200' : ''}
                                   ${replacingMeals.has(cardKey) ? 'opacity-60' : ''}
                                 `}
                               >
                                 <div className="flex justify-between items-start mb-2">
-                                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{time}</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`meal-type-dot ${getMealTypeDotClass(time)}`}></span>
+                                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{time}</span>
+                                  </div>
                                   <div className="flex items-center gap-2">
                                     {isChanged && <Sparkles size={14} className="text-indigo-500 animate-pulse" />}
                                     {!isEmpty && onReplaceMeal && (
@@ -207,7 +239,7 @@ const MealGrid: React.FC<MealGridProps> = ({
         {plan.map((dayPlan, dayIdx) => (
             <div key={dayPlan.day} className="w-full">
                 {/* Sticky Row Header */}
-                <div className="sticky top-0 z-20 flex items-center gap-4 mb-4 px-4 py-3 bg-zinc-50/95 backdrop-blur-sm border-b border-zinc-200/30 -mx-4">
+                <div className="sticky-header-mobile flex items-center gap-4 -mx-4">
                     <span className="text-sm font-bold text-zinc-900 uppercase tracking-widest">{dayPlan.day}</span>
                     <div className="h-[1px] flex-1 bg-zinc-200/50"></div>
                 </div>
@@ -235,20 +267,22 @@ const MealGrid: React.FC<MealGridProps> = ({
                                 key={`${dayPlan.day}-${time}`}
                                 ref={(el) => registerCardRef(cardKey, el)}
                                 className={`
-                                    relative p-4 xl:p-5 bg-white rounded-2xl border transition-all duration-500 group
+                                    relative p-4 xl:p-5 rounded-2xl border transition-all duration-500 group
                                     flex flex-col h-full min-h-[140px] xl:min-h-[160px]
-                                    hover:-translate-y-1 hover:shadow-lg hover:shadow-zinc-200/50
-                                    ${isChanged
-                                        ? 'border-indigo-100 bg-gradient-to-br from-indigo-50/30 to-white'
-                                        : 'border-zinc-100 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.03)]'}
+                                    hover:-translate-y-1
+                                    ${getMealTypeClass(time)}
+                                    ${isChanged ? 'ring-2 ring-indigo-200' : ''}
                                     ${replacingMeals.has(cardKey) ? 'opacity-60' : ''}
                                 `}
                             >
                                 {/* Meal Time Label inside card for context */}
                                 <div className="flex justify-between items-start mb-2">
-                                    <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-wider">
-                                        {time}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`meal-type-dot ${getMealTypeDotClass(time)}`}></span>
+                                        <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-wider">
+                                            {time}
+                                        </span>
+                                    </div>
                                     <div className="flex items-center gap-2">
                                         {isChanged && <Sparkles size={14} className="text-indigo-400 animate-pulse" />}
                                         {!isEmpty && onReplaceMeal && (
