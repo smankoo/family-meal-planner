@@ -69,19 +69,19 @@ const AuthCallback: React.FC = () => {
   // Show password reset form for recovery
   if (isRecovery) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 space-y-6">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4" style={{ backgroundColor: 'var(--surface-bg)' }}>
+        <div className="w-full max-w-md rounded-2xl shadow-xl p-8 space-y-6" style={{ backgroundColor: 'var(--surface-primary)', border: '1px solid var(--border-subtle)' }}>
           <div className="text-center space-y-2">
-            <div className="w-16 h-16 bg-zinc-900 rounded-2xl flex items-center justify-center shadow-lg mx-auto">
-              <Lock size={24} className="text-white" strokeWidth={2.5} />
+            <div className="w-16 h-16 bg-primary-900 rounded-2xl flex items-center justify-center shadow-lg mx-auto">
+              <Lock size={24} className="text-white dark:text-primary-50" strokeWidth={2.5} />
             </div>
-            <h2 className="text-2xl font-semibold text-zinc-900">Reset Password</h2>
-            <p className="text-sm text-zinc-600">Enter your new password below</p>
+            <h2 className="text-2xl font-semibold text-primary-900">Reset Password</h2>
+            <p className="text-sm text-primary-500">Enter your new password below</p>
           </div>
 
           <form onSubmit={handlePasswordUpdate} className="space-y-4">
             <div>
-              <label htmlFor="new-password" className="block text-sm font-medium text-zinc-700 mb-2">
+              <label htmlFor="new-password" className="block text-sm font-medium text-primary-700 mb-2">
                 New Password
               </label>
               <input
@@ -91,13 +91,13 @@ const AuthCallback: React.FC = () => {
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-colors"
+                className="form-field"
                 placeholder="Enter new password"
               />
             </div>
 
             <div>
-              <label htmlFor="confirm-password" className="block text-sm font-medium text-zinc-700 mb-2">
+              <label htmlFor="confirm-password" className="block text-sm font-medium text-primary-700 mb-2">
                 Confirm Password
               </label>
               <input
@@ -107,7 +107,7 @@ const AuthCallback: React.FC = () => {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-colors"
+                className="form-field"
                 placeholder="Confirm new password"
               />
             </div>
@@ -115,7 +115,7 @@ const AuthCallback: React.FC = () => {
             <button
               type="submit"
               disabled={updating || !newPassword || !confirmPassword}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-900 text-white rounded-xl font-medium hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary w-full flex items-center justify-center gap-2"
             >
               {updating ? (
                 <Loader2 size={20} className="animate-spin" />
@@ -131,14 +131,14 @@ const AuthCallback: React.FC = () => {
 
   // Show loading state for regular callbacks
   return (
-    <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center">
+    <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: 'var(--surface-bg)' }}>
       <div className="text-center space-y-4">
-        <div className="w-16 h-16 bg-zinc-900 rounded-2xl flex items-center justify-center shadow-lg">
-          <ChefHat size={24} className="text-white" strokeWidth={2.5} />
+        <div className="w-16 h-16 bg-primary-900 rounded-2xl flex items-center justify-center shadow-lg">
+          <ChefHat size={24} className="text-white dark:text-primary-50" strokeWidth={2.5} />
         </div>
         <div className="space-y-2">
-          <Loader2 size={24} className="animate-spin text-zinc-400 mx-auto" />
-          <p className="text-zinc-600 font-medium">Completing sign in...</p>
+          <Loader2 size={24} className="animate-spin text-primary-400 mx-auto" />
+          <p className="text-primary-500 font-medium">Completing sign in...</p>
         </div>
       </div>
     </div>

@@ -141,12 +141,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md bg-white/95 backdrop-blur-xl rounded-modal shadow-modal border border-white/50 ring-1 ring-black/5 overflow-hidden animate-modal-in">
+      <div className="relative w-full max-w-md modal-container overflow-hidden animate-modal-in">
         {/* Header */}
-        <div className="relative px-8 pt-8 pb-6 bg-white/50 backdrop-blur-sm">
+        <div className="relative px-8 pt-8 pb-6 backdrop-blur-sm" style={{ backgroundColor: 'var(--surface-glass)' }}>
           <button
             onClick={onClose}
-            className="absolute top-6 right-6 w-10 h-10 rounded-full hover:bg-white/80 text-primary-400 hover:text-primary-600 flex items-center justify-center transition-all"
+            className="absolute top-6 right-6 w-10 h-10 rounded-full text-primary-400 hover:text-primary-600 flex items-center justify-center transition-all"
+            style={{ backgroundColor: 'transparent' }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--surface-secondary)'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
             aria-label="Close"
           >
             <X size={20} />
@@ -216,7 +219,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 <div className="w-full border-t border-primary-200"></div>
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="px-3 bg-white text-primary-400 uppercase tracking-wide font-medium">OR</span>
+                <span className="auth-divider-text">OR</span>
               </div>
             </div>
           )}
@@ -226,7 +229,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             <button
               onClick={handleGoogleSignIn}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3.5 bg-white border border-primary-300 rounded-button font-medium text-primary-900 hover:bg-primary-50 hover:border-primary-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow"
+              className="w-full flex items-center justify-center gap-3 px-4 py-3.5 border border-primary-300 rounded-button font-medium text-primary-900 hover:bg-primary-50 hover:border-primary-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow"
+              style={{ backgroundColor: 'var(--surface-primary)' }}
             >
               {loading ? (
                 <Loader2 size={20} className="animate-spin" />

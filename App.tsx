@@ -46,6 +46,7 @@ import { getAnalyticsConfig, validateAnalyticsConfig } from './config/analytics'
 import { Undo2, Sparkles, ChefHat, ArrowLeft, ArrowRight, X, RotateCcw, Loader2, UserPlus } from 'lucide-react';
 import UserMenu from './components/UserMenu';
 import UserProfile from './components/UserProfile';
+import ThemeToggle from './components/ThemeToggle';
 
 // Helper function to handle API errors consistently
 const handleApiError = (error: any, showToast: any, setErrorModal: any, onRetry?: () => void) => {
@@ -316,10 +317,8 @@ const App: React.FC = () => {
                        stageLoading || planHistoryLoading || prepTasksLoading ||
                        groceryItemsLoading || invalidationLoading || activePlanIdLoading;
 
-  const [viewMode, setViewMode] = useState<ViewMode>(() =>
-     // If we have a plan generated, default to planning view
-     hasPlanGenerated ? 'planning' : 'household'
-  );
+  // viewMode is set once data finishes loading — never flips during initial mount
+  const [viewMode, setViewMode] = useState<ViewMode | null>(null);
 
   // Runtime UI state (not persisted)
   const [isLoading, setIsLoading] = useState(false);
@@ -538,12 +537,13 @@ const App: React.FC = () => {
     setFamilyPlanLoaded(false);
   }, [activePlanId]);
 
-  // Update viewMode when hasPlanGenerated changes
+  // Set viewMode once when data finishes loading for the first time
+  // Subsequent changes to hasPlanGenerated are handled by explicit setViewMode calls
   useEffect(() => {
-    if (!isDataLoading) {
+    if (!isDataLoading && viewMode === null) {
       setViewMode(hasPlanGenerated ? 'planning' : 'household');
     }
-  }, [hasPlanGenerated, isDataLoading]);
+  }, [isDataLoading, hasPlanGenerated, viewMode]);
 
 
   // --- Actions ---
@@ -1616,13 +1616,13 @@ const App: React.FC = () => {
 
   // --- Render ---
 
-  // Show loading state while data is being loaded
-  if (isDataLoading) {
+  // Show loading state while data is being loaded or viewMode hasn't settled
+  if (isDataLoading || viewMode === null) {
     return <LoadingScreen />;
   }
 
   return (
-    <div className="flex flex-col h-screen bg-zinc-50 font-sans">
+    <div className="flex flex-col h-screen font-sans" style={{ backgroundColor: 'var(--surface-bg)', color: 'var(--text-primary)' }}>
 
       {/* Error Modal */}
       <ErrorModal
@@ -1660,16 +1660,16 @@ const App: React.FC = () => {
       {/* Header - Apple-like frosted glass effect */}
       <header className="frosted-header fixed top-0 left-0 right-0 z-50 h-16 md:h-20 pointer-events-none">
         {/* Backdrop blur background */}
-        <div className="absolute inset-0 bg-white/70 backdrop-blur-xl border-b border-white/40 shadow-sm"></div>
+        <div className="absolute inset-0 backdrop-blur-xl border-b shadow-sm" style={{ backgroundColor: 'var(--surface-glass)', borderColor: 'var(--border-subtle)' }}></div>
 
         {/* Content layer - same max-width as main content */}
         <div className="relative h-full max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 flex items-center justify-between">
           {/* Left: Brand - Cleaner, Apple-like */}
           <div className="pointer-events-auto flex items-center gap-2 md:gap-2.5">
-              <div className="w-7 h-7 md:w-8 md:h-8 bg-zinc-900/90 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-md shadow-zinc-900/10">
-                  <ChefHat size={16} className="md:w-[18px] md:h-[18px] text-white" strokeWidth={2.5} />
+              <div className="w-7 h-7 md:w-8 md:h-8 rounded-xl flex items-center justify-center shadow-md" style={{ backgroundColor: 'var(--text-primary)' }}>
+                  <ChefHat size={16} className="md:w-[18px] md:h-[18px]" strokeWidth={2.5} style={{ color: 'var(--text-inverted)' }} />
               </div>
-              <h1 className="text-base md:text-lg font-semibold text-zinc-900 tracking-tight">Meal Planner</h1>
+              <h1 className="text-base md:text-lg font-semibold text-primary-900 tracking-tight">Meal Planner</h1>
           </div>
 
           {/* Center: Stepper (Only visible in Planning Mode on larger screens) */}
@@ -1683,13 +1683,16 @@ const App: React.FC = () => {
 
           {/* Right: App Actions + User Menu */}
           <div className="pointer-events-auto flex items-center gap-2">
+              {/* Theme Toggle */}
+              <ThemeToggle />
+
               {/* Invite (app-level action) */}
               {viewMode === 'planning' && hasPlanGenerated && (
                 <div className="hidden md:flex items-center gap-2">
                     <button
                        onClick={handleInviteToFamily}
                        disabled={isCreatingInvite}
-                       className="btn-glass flex items-center gap-2 px-3 py-1.5 text-zinc-600 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                       className="btn-glass flex items-center gap-2 px-3 py-1.5 text-primary-600 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                        {familyMembers.length > 0 ? (
                          <>
@@ -1711,7 +1714,7 @@ const App: React.FC = () => {
                   viewMode === 'household' && hasPlanGenerated ? (
                       <button
                           onClick={handleCloseSetup}
-                          className="w-9 h-9 md:w-10 md:h-10 bg-white/70 backdrop-blur-sm shadow-sm border border-white/50 rounded-full flex items-center justify-center text-zinc-500 hover:text-red-600 hover:bg-white/90 transition-all"
+                          className="btn-icon w-9 h-9 md:w-10 md:h-10"
                           title="Close Settings"
                       >
                           <X size={18} className="md:w-5 md:h-5" />
@@ -1749,7 +1752,7 @@ const App: React.FC = () => {
              {/* Planning Stage Content - Each stage gets its own scroll container */}
              {currentStage === Stage.MEAL_PLANNING && (
                 <div className="h-full overflow-y-auto no-scrollbar">
-                  <div className="max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pb-40 pt-6 md:pt-8">
+                  <div key={`stage-${Stage.MEAL_PLANNING}`} className="stage-enter max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pb-40 pt-6 md:pt-8">
                     {/* Mobile Stepper with Action Buttons (visible only on small screens) */}
                     <div className="md:hidden mb-6 px-4">
                       <div className="flex justify-center mb-4">
@@ -1785,7 +1788,7 @@ const App: React.FC = () => {
                       {/* Page-level actions - Desktop */}
                       <div className="hidden md:flex justify-end items-center gap-3 mb-4">
                             {planHistory.past.length > 0 && (
-                               <button onClick={handleUndo} className="btn-glass flex items-center gap-2 px-3 py-1.5 text-zinc-600 text-sm font-semibold">
+                               <button onClick={handleUndo} className="btn-glass flex items-center gap-2 px-3 py-1.5 text-primary-600 text-sm font-semibold">
                                    <Undo2 size={14} /> Undo
                                </button>
                             )}
@@ -1796,7 +1799,7 @@ const App: React.FC = () => {
                       {/* Mobile Header - Undo button */}
                       <div className="md:hidden flex justify-start mb-6 px-4">
                          {planHistory.past.length > 0 && (
-                            <button onClick={handleUndo} className="btn-glass flex items-center gap-1.5 px-3 py-1.5 text-zinc-600 text-xs font-semibold">
+                            <button onClick={handleUndo} className="btn-glass flex items-center gap-1.5 px-3 py-1.5 text-primary-600 text-xs font-semibold">
                                 <Undo2 size={12} /> Undo
                             </button>
                          )}
@@ -1804,8 +1807,8 @@ const App: React.FC = () => {
 
                       {isLoading && planHistory.present === EMPTY_PLAN ? (
                          <div className="h-[50vh] flex flex-col items-center justify-center">
-                             <ChefHat className="animate-bounce mb-4 text-zinc-300" size={48} />
-                             <p className="text-zinc-400 font-medium">Designing your week...</p>
+                             <ChefHat className="animate-bounce mb-4 text-primary-300" size={48} />
+                             <p className="text-primary-400 font-medium">Designing your week...</p>
                          </div>
                       ) : (
                          <MealGrid
@@ -1825,7 +1828,7 @@ const App: React.FC = () => {
 
              {currentStage === Stage.MEAL_PREP && (
                 <div className="h-full overflow-y-auto no-scrollbar">
-                  <div className="max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pb-40 pt-6 md:pt-8">
+                  <div key={`stage-${Stage.MEAL_PREP}`} className="stage-enter max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pb-40 pt-6 md:pt-8">
                     {/* Mobile Stepper (visible only on small screens) */}
                     <div className="md:hidden mb-6 relative flex justify-center">
                       <StageStepper
@@ -1856,7 +1859,7 @@ const App: React.FC = () => {
 
              {currentStage === Stage.GROCERY_LIST && (
                 <div className="h-full overflow-y-auto no-scrollbar">
-                  <div className="max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pb-40 pt-6 md:pt-8">
+                  <div key={`stage-${Stage.GROCERY_LIST}`} className="stage-enter max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pb-40 pt-6 md:pt-8">
                     {/* Mobile Stepper (visible only on small screens) */}
                     <div className="md:hidden mb-6 relative flex justify-center">
                       <StageStepper
@@ -1900,7 +1903,8 @@ const App: React.FC = () => {
                 {currentStage !== Stage.MEAL_PLANNING ? (
                      <button
                         onClick={() => handleStageChange(currentStage - 1)}
-                        className="w-12 h-12 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-md shadow-lg border border-white/50 text-zinc-600 hover:bg-white hover:text-zinc-900 transition-all active:scale-95"
+                        className="w-12 h-12 flex items-center justify-center rounded-full shadow-lg transition-all active:scale-95"
+                        style={{ backgroundColor: 'var(--surface-glass)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}
                         title="Back"
                     >
                         <ArrowLeft size={20} />
@@ -1914,10 +1918,11 @@ const App: React.FC = () => {
                     <button
                         onClick={() => handleStageChange(Stage.MEAL_PREP)}
                         disabled={isLoading}
-                        className="group flex items-center gap-3 bg-zinc-900 text-white px-8 py-4 rounded-full shadow-xl shadow-zinc-900/20 hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-80 disabled:hover:scale-100 disabled:cursor-wait"
+                        className="group flex items-center gap-3 px-8 py-4 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-80 disabled:hover:scale-100 disabled:cursor-wait"
+                        style={{ backgroundColor: 'var(--text-primary)', color: 'var(--text-inverted)' }}
                     >
                         {isLoading ? (
-                            <Loader2 size={18} className="animate-spin text-zinc-400" />
+                            <Loader2 size={18} className="animate-spin text-primary-400" />
                         ) : (
                             <>
                                 <span className="font-bold text-sm tracking-wide">Prep Strategy</span>
@@ -1930,10 +1935,11 @@ const App: React.FC = () => {
                     <button
                         onClick={() => handleStageChange(Stage.GROCERY_LIST)}
                         disabled={isLoading}
-                        className="group flex items-center gap-3 bg-zinc-900 text-white px-8 py-4 rounded-full shadow-xl shadow-zinc-900/20 hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-80 disabled:hover:scale-100 disabled:cursor-wait"
+                        className="group flex items-center gap-3 px-8 py-4 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-80 disabled:hover:scale-100 disabled:cursor-wait"
+                        style={{ backgroundColor: 'var(--text-primary)', color: 'var(--text-inverted)' }}
                     >
                          {isLoading ? (
-                            <Loader2 size={18} className="animate-spin text-zinc-400" />
+                            <Loader2 size={18} className="animate-spin text-primary-400" />
                         ) : (
                             <>
                                 <span className="font-bold text-sm tracking-wide">Shopping List</span>
@@ -1943,7 +1949,7 @@ const App: React.FC = () => {
                     </button>
                 )}
                 {currentStage === Stage.GROCERY_LIST && (
-                    <div className="bg-zinc-100/80 backdrop-blur-md text-zinc-400 px-6 py-3 rounded-full font-bold text-xs tracking-widest border border-white/50 cursor-default">
+                    <div className="backdrop-blur-md text-primary-400 px-6 py-3 rounded-full font-bold text-xs tracking-widest cursor-default" style={{ backgroundColor: 'var(--surface-glass)', border: '1px solid var(--border-subtle)' }}>
                         ALL DONE
                     </div>
                 )}
@@ -1964,9 +1970,14 @@ const App: React.FC = () => {
                     className={`
                         w-14 h-14 flex items-center justify-center rounded-full shadow-xl transition-all duration-300
                         ${isChatOpen
-                            ? 'bg-zinc-800 text-white shadow-inner scale-95 ring-4 ring-white/20'
-                            : 'bg-zinc-900 text-white hover:scale-110 active:scale-95 shadow-zinc-900/30'}
+                            ? 'scale-95 ring-4 ring-primary-200/20'
+                            : 'hover:scale-110 active:scale-95'}
                     `}
+                    style={{
+                      backgroundColor: isChatOpen ? 'var(--text-primary)' : 'var(--text-primary)',
+                      color: 'var(--text-inverted)',
+                      opacity: isChatOpen ? 0.85 : 1
+                    }}
                     title={isChatOpen ? "Minimize Assistant" : "Open Assistant"}
                 >
                     <Sparkles size={20} className="fill-current" />

@@ -58,21 +58,21 @@ class ErrorBoundary extends Component<Props, State> {
 
       // Default elegant error UI
       return (
-        <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/40 p-8 text-center">
+        <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--surface-bg)' }}>
+          <div className="max-w-md w-full modal-container p-8 text-center">
 
             {/* Icon */}
-            <div className="w-16 h-16 mx-auto mb-6 bg-red-50 rounded-full flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center" style={{ backgroundColor: 'color-mix(in srgb, #ef4444 15%, var(--surface-secondary))' }}>
               <AlertTriangle size={32} className="text-red-500" />
             </div>
 
             {/* Title */}
-            <h1 className="text-xl font-bold text-zinc-900 mb-4">
+            <h1 className="heading-card text-xl mb-4">
               Something went wrong
             </h1>
 
             {/* Message */}
-            <p className="text-zinc-600 mb-8 leading-relaxed">
+            <p className="text-body mb-8">
               The app encountered an unexpected error. This is usually temporary and can be fixed by refreshing the page.
             </p>
 
@@ -80,14 +80,14 @@ class ErrorBoundary extends Component<Props, State> {
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={this.handleReload}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-zinc-900 text-white rounded-2xl font-semibold hover:bg-black transition-colors"
+                className="btn-retry-modal"
               >
                 <RefreshCw size={16} />
                 Refresh Page
               </button>
               <button
                 onClick={this.handleReset}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-zinc-100 text-zinc-600 rounded-2xl font-semibold hover:bg-zinc-200 transition-colors"
+                className="btn-close-modal"
               >
                 <Home size={16} />
                 Try Again
@@ -97,11 +97,11 @@ class ErrorBoundary extends Component<Props, State> {
             {/* Error Details (Development) */}
             {process.env.NODE_ENV === 'development' && this.state.error && (
               <details className="mt-8 text-left">
-                <summary className="text-sm font-semibold text-zinc-500 cursor-pointer hover:text-zinc-700">
+                <summary className="text-sm font-semibold text-primary-500 cursor-pointer hover:text-primary-700">
                   Error Details (Development)
                 </summary>
-                <div className="mt-4 p-4 bg-zinc-50 rounded-2xl">
-                  <pre className="text-xs text-zinc-600 overflow-auto max-h-40">
+                <div className="mt-4 error-detail-box">
+                  <pre className="text-xs text-primary-600 overflow-auto max-h-40">
                     {this.state.error.toString()}
                     {this.state.errorInfo?.componentStack}
                   </pre>

@@ -20,17 +20,17 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   // Show auth modal if not authenticated
   if (!user) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4" style={{ backgroundColor: 'var(--surface-bg)' }}>
         {/* Welcome Screen */}
         <div className="text-center space-y-8 max-w-md mx-auto">
           {/* Logo */}
           <div className="space-y-4">
-            <div className="w-20 h-20 bg-zinc-900 rounded-2xl flex items-center justify-center shadow-xl mx-auto">
-              <ChefHat size={32} className="text-white" strokeWidth={2.5} />
+            <div className="w-20 h-20 bg-primary-900 rounded-2xl flex items-center justify-center shadow-xl mx-auto">
+              <ChefHat size={32} className="text-white dark:text-primary-50" strokeWidth={2.5} />
             </div>
             <div className="space-y-2">
-              <h1 className="text-3xl font-bold text-zinc-900">Meal Planner</h1>
-              <p className="text-zinc-600 text-lg">
+              <h1 className="text-3xl font-bold text-primary-900">Meal Planner</h1>
+              <p className="text-primary-500 text-lg">
                 Your AI-powered family meal planning assistant
               </p>
             </div>
@@ -39,20 +39,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
           {/* Features */}
           <div className="space-y-4 text-left">
             <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-zinc-900 rounded-full mt-2 flex-shrink-0" />
-              <p className="text-zinc-700">
+              <div className="w-2 h-2 bg-primary-900 rounded-full mt-2 flex-shrink-0" />
+              <p className="text-primary-600">
                 <span className="font-medium">Smart meal planning</span> tailored to your family's preferences
               </p>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-zinc-900 rounded-full mt-2 flex-shrink-0" />
-              <p className="text-zinc-700">
+              <div className="w-2 h-2 bg-primary-900 rounded-full mt-2 flex-shrink-0" />
+              <p className="text-primary-600">
                 <span className="font-medium">Automated prep strategies</span> to save you time
               </p>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-zinc-900 rounded-full mt-2 flex-shrink-0" />
-              <p className="text-zinc-700">
+              <div className="w-2 h-2 bg-primary-900 rounded-full mt-2 flex-shrink-0" />
+              <p className="text-primary-600">
                 <span className="font-medium">Smart grocery lists</span> organized by category
               </p>
             </div>
@@ -61,13 +61,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
           {/* CTA */}
           <button
             onClick={() => setShowAuthModal(true)}
-            className="w-full bg-zinc-900 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-zinc-800 transition-colors shadow-lg"
+            className="btn-primary w-full px-8 py-4 text-lg shadow-lg"
           >
             Get Started
           </button>
 
           {/* Privacy Note */}
-          <p className="text-xs text-zinc-500 leading-relaxed">
+          <p className="text-xs text-primary-400 leading-relaxed">
             Your meal plans and preferences are securely stored and never shared.
             Sign in to sync across all your devices.
           </p>

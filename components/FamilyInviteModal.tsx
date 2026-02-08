@@ -84,7 +84,7 @@ const FamilyInviteModal: React.FC<FamilyInviteModalProps> = ({
                   {/* What they'll get */}
                   <div className="space-y-3">
                     <div className="flex items-start gap-3 p-3 bg-primary-50 rounded-xl">
-                      <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm" style={{ backgroundColor: 'var(--surface-primary)' }}>
                         <Users size={16} className="text-primary-600" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -96,7 +96,7 @@ const FamilyInviteModal: React.FC<FamilyInviteModalProps> = ({
                     </div>
 
                     <div className="flex items-start gap-3 p-3 bg-primary-50 rounded-xl">
-                      <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm" style={{ backgroundColor: 'var(--surface-primary)' }}>
                         <Zap size={16} className="text-primary-600" />
                       </div>
                       <div className="flex-1 min-w-0">

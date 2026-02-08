@@ -3,6 +3,7 @@ import { GroceryItem, WeekPlan } from '../types';
 import { Check, ShoppingBag, Loader2, ArrowRight, Apple, Milk, Beef, Wheat, Package } from 'lucide-react';
 import InvalidationBanner from './InvalidationBanner';
 import RegenerateButton from './RegenerateButton';
+import ProgressBar from './ProgressBar';
 import { resolveMealName } from '../utils/mealResolver';
 
 // Category icon mapping - using filled Lucide icons with subtle color tints for distinction
@@ -111,7 +112,7 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
         <div className="w-32 h-4 skeleton-shimmer rounded"></div>
       </div>
       <div className="w-16 h-3 skeleton-shimmer rounded"></div>
-      {isLoading && <Loader2 size={14} className="text-zinc-300 animate-spin ml-2" />}
+      {isLoading && <Loader2 size={14} className="text-primary-300 animate-spin ml-2" />}
     </div>
   );
 
@@ -120,48 +121,48 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
       <div className="animate-fade-in">
         {/* Header - Desktop Only */}
         <div className="hidden md:flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 max-w-4xl mx-auto px-4 md:px-8">
-          <h2 className="text-xl md:text-2xl font-bold text-zinc-900">Shopping List</h2>
+          <h2 className="text-xl md:text-2xl font-bold text-primary-900">Shopping List</h2>
         </div>
 
         {/* Skeleton Loading State - Mobile */}
         <div className="md:hidden flex flex-col pb-20">
           <div className="mb-8">
-            <div className="sticky top-0 z-20 mb-4 px-4 py-3 bg-zinc-50/95 backdrop-blur-sm border-b border-zinc-200/30">
-              <h3 className="text-xl font-bold text-zinc-900 tracking-tight">Produce</h3>
+            <div className="sticky-header-mobile">
+              <h3 className="text-xl font-bold text-primary-900 tracking-tight">Produce</h3>
             </div>
             <div className="space-y-3 px-4">
-              <div className="relative bg-white rounded-2xl p-5 shadow-sm border border-zinc-100 animate-pulse">
+              <div className="card rounded-2xl p-5 animate-pulse">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-5 h-5 rounded-full bg-zinc-200"></div>
-                    <div className="w-24 h-4 bg-zinc-200 rounded"></div>
+                    <div className="w-5 h-5 rounded-full skeleton-block"></div>
+                    <div className="w-24 h-4 skeleton-block rounded"></div>
                   </div>
-                  <div className="w-12 h-3 bg-zinc-100 rounded"></div>
+                  <div className="w-12 h-3 skeleton-block-light rounded"></div>
                 </div>
               </div>
-              <div className="relative bg-white rounded-2xl p-5 shadow-sm border border-zinc-100 animate-pulse">
+              <div className="card rounded-2xl p-5 animate-pulse">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-5 h-5 rounded-full bg-zinc-200"></div>
-                    <div className="w-32 h-4 bg-zinc-200 rounded"></div>
+                    <div className="w-5 h-5 rounded-full skeleton-block"></div>
+                    <div className="w-32 h-4 skeleton-block rounded"></div>
                   </div>
-                  <div className="w-16 h-3 bg-zinc-100 rounded"></div>
+                  <div className="w-16 h-3 skeleton-block-light rounded"></div>
                 </div>
               </div>
             </div>
           </div>
           <div className="mb-8">
-            <div className="sticky top-0 z-20 mb-4 px-4 py-3 bg-zinc-50/95 backdrop-blur-sm border-b border-zinc-200/30">
-              <h3 className="text-xl font-bold text-zinc-900 tracking-tight">Dairy</h3>
+            <div className="sticky-header-mobile">
+              <h3 className="text-xl font-bold text-primary-900 tracking-tight">Dairy</h3>
             </div>
             <div className="space-y-3 px-4">
-              <div className="relative bg-white rounded-2xl p-5 shadow-sm border border-zinc-100 animate-pulse">
+              <div className="card rounded-2xl p-5 animate-pulse">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-5 h-5 rounded-full bg-zinc-200"></div>
-                    <div className="w-20 h-4 bg-zinc-200 rounded"></div>
+                    <div className="w-5 h-5 rounded-full skeleton-block"></div>
+                    <div className="w-20 h-4 skeleton-block rounded"></div>
                   </div>
-                  <div className="w-14 h-3 bg-zinc-100 rounded"></div>
+                  <div className="w-14 h-3 skeleton-block-light rounded"></div>
                 </div>
               </div>
             </div>
@@ -172,11 +173,11 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
         <div className="hidden md:block pb-20 max-w-4xl mx-auto px-4 md:px-8">
           <div className="mb-8">
             <div className="flex items-center gap-4 mb-4">
-              <span className="text-sm font-bold text-zinc-400 uppercase tracking-widest">Produce</span>
-              <div className="h-[1px] flex-1 bg-zinc-100"></div>
+              <span className="label-section">Produce</span>
+              <div className="section-divider"></div>
             </div>
-            <div className="bg-white rounded-2xl shadow-sm border border-zinc-100 overflow-hidden">
-              <div className="divide-y divide-zinc-50">
+            <div className="card rounded-2xl overflow-hidden">
+              <div className="divide-y" style={{ borderColor: 'var(--surface-secondary)' }}>
                 <ItemSkeleton isLoading={true} />
                 <ItemSkeleton isLoading={true} />
               </div>
@@ -184,11 +185,11 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
           </div>
           <div className="mb-8">
             <div className="flex items-center gap-4 mb-4">
-              <span className="text-sm font-bold text-zinc-400 uppercase tracking-widest">Dairy</span>
-              <div className="h-[1px] flex-1 bg-zinc-100"></div>
+              <span className="label-section">Dairy</span>
+              <div className="section-divider"></div>
             </div>
-            <div className="bg-white rounded-2xl shadow-sm border border-zinc-100 overflow-hidden">
-              <div className="divide-y divide-zinc-50">
+            <div className="card rounded-2xl overflow-hidden">
+              <div className="divide-y" style={{ borderColor: 'var(--surface-secondary)' }}>
                 <ItemSkeleton isLoading={true} />
               </div>
             </div>
@@ -196,10 +197,10 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
         </div>
 
         {/* Loading Message */}
-        <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg border border-zinc-200">
-          <div className="flex items-center gap-2">
-            <ShoppingBag size={16} className="text-zinc-400 animate-pulse" />
-            <span className="text-sm text-zinc-600 font-medium">Organizing your list...</span>
+        <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2">
+          <div className="loading-pill">
+            <ShoppingBag size={16} className="text-primary-400 animate-pulse" />
+            <span className="text-sm text-primary-600 font-medium">Organizing your list...</span>
           </div>
         </div>
       </div>
@@ -217,8 +218,8 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
     <div className="animate-fade-in">
 
       {/* Header - Desktop Only */}
-      <div className="hidden md:flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 max-w-4xl mx-auto px-4 md:px-8">
-        <h2 className="text-xl md:text-2xl font-bold text-zinc-900">Shopping List</h2>
+      <div className="hidden md:flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 max-w-4xl mx-auto px-4 md:px-8">
+        <h2 className="text-xl md:text-2xl font-bold text-primary-900">Shopping List</h2>
         {items.length > 0 && !isInvalidated && (
           <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={true} />
         )}
@@ -228,6 +229,16 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
       {items.length > 0 && !isInvalidated && (
         <div className="md:hidden flex justify-end mb-4 px-4">
           <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={false} />
+        </div>
+      )}
+
+      {/* Progress Bar */}
+      {items.length > 0 && (
+        <div className="max-w-4xl mx-auto px-4 md:px-8 mb-6">
+          <ProgressBar
+            completed={items.filter(i => i.checked).length}
+            total={items.length}
+          />
         </div>
       )}
 
@@ -246,18 +257,18 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
       {items.length === 0 && !isLoading ? (
         <div className="h-[50vh] flex flex-col items-center justify-center px-4">
           <div className="empty-state-icon-wrapper">
-            <ShoppingBag size={32} className="text-zinc-400" />
+            <ShoppingBag size={32} className="text-primary-400" />
           </div>
 
           {!hasMealPlan ? (
             <>
-              <h3 className="text-lg font-semibold text-zinc-800 mb-2">Create Your Meal Plan First</h3>
-              <p className="text-zinc-500 text-center mb-6 max-w-sm leading-relaxed">
+              <h3 className="empty-state-heading">Create Your Meal Plan First</h3>
+              <p className="empty-state-text">
                 Your shopping list is generated from your weekly meal plan. Start by creating your meals for the week.
               </p>
               <button
                 onClick={onNavigateToMealPlan}
-                className="flex items-center gap-2 bg-zinc-900 text-white px-6 py-3 rounded-full font-semibold hover:bg-zinc-800 transition-colors"
+                className="btn-empty-state"
               >
                 <ArrowRight size={16} />
                 Go to Meal Planning
@@ -265,14 +276,14 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
             </>
           ) : (
             <>
-              <h3 className="text-lg font-semibold text-zinc-800 mb-2">No Shopping List Yet</h3>
-              <p className="text-zinc-500 text-center mb-6 max-w-sm leading-relaxed">
+              <h3 className="empty-state-heading">No Shopping List Yet</h3>
+              <p className="empty-state-text">
                 Generate a personalized shopping list based on your meal plan to make grocery shopping effortless.
               </p>
               <button
                 onClick={onGenerate}
                 disabled={isLoading}
-                className="flex items-center gap-2 bg-zinc-900 text-white px-6 py-3 rounded-full font-semibold hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                className="btn-empty-state"
               >
                 <ShoppingBag size={16} />
                 Generate Shopping List
@@ -290,7 +301,7 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
                 {/* Category Header - Apple-style section header */}
                 <div className="sticky-header-mobile">
                   <div className="flex items-center gap-3">
-                    <h3 className="text-xl font-bold text-zinc-900 tracking-tight">
+                    <h3 className="text-xl font-bold text-primary-900 tracking-tight">
                       {category}
                     </h3>
                   </div>
@@ -298,7 +309,7 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
 
                 {/* Items for that category */}
                 <div className="space-y-3">
-                  {catItems.map((item) => {
+                  {catItems.map((item, itemIdx) => {
                     const itemKey = `${item.category}-${item.name}-${item.id}`;
                     return (
                     <div
@@ -306,9 +317,10 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
                       ref={(el) => registerItemRef(itemKey, el)}
                       onClick={() => toggleItem(item.id)}
                       className={`
-                        relative bg-white rounded-2xl p-5 shadow-sm border transition-all active:scale-[0.98] cursor-pointer
-                        ${item.checked ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-100'}
+                        stagger-item relative rounded-2xl p-5 shadow-sm border transition-all active:scale-[0.98] cursor-pointer
+                        ${item.checked ? 'border-emerald-200/50' : 'border-primary-100'}
                       `}
+                      style={{ animationDelay: `${itemIdx * 40}ms`, backgroundColor: 'var(--surface-primary)' }}
                     >
                       <div className="flex gap-4">
                         <div className="mt-1">
@@ -321,11 +333,11 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-1">
-                            <span className={`text-lg font-semibold leading-snug transition-colors ${item.checked ? 'text-zinc-400 line-through' : 'text-zinc-800'}`}>
+                            <span className={`text-lg font-semibold leading-snug transition-all duration-300 ${item.checked ? 'text-primary-400 line-through decoration-emerald-400' : 'text-primary-900'}`}>
                               {item.name}
                             </span>
                             {item.quantity && (
-                              <span className={`text-sm font-medium ml-3 ${item.checked ? 'text-zinc-300' : 'text-zinc-500'}`}>
+                              <span className={`text-sm font-medium ml-3 ${item.checked ? 'text-primary-300' : 'text-primary-500'}`}>
                                 {item.quantity}
                               </span>
                             )}
@@ -336,9 +348,9 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
                               {item.relatedMeals.map((meal, idx) => {
                                 const resolvedMealName = resolveMealName(meal, mealPlan);
                                 return (
-                                  <span key={idx} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${item.checked ? 'bg-zinc-50 border-zinc-100 text-zinc-400' : 'bg-zinc-50 border-zinc-100'}`}>
-                                    <ArrowRight size={10} className="text-zinc-400" />
-                                    <span className={`text-[10px] font-medium ${item.checked ? 'text-zinc-400' : 'text-zinc-500'}`}>{resolvedMealName}</span>
+                                  <span key={idx} className={item.checked ? 'related-meal-pill-checked' : 'related-meal-pill'}>
+                                    <ArrowRight size={10} className="text-primary-400" />
+                                    <span className={`text-[10px] font-medium ${item.checked ? 'text-primary-400' : 'text-primary-500'}`}>{resolvedMealName}</span>
                                   </span>
                                 );
                               })}
@@ -362,14 +374,14 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
                 {/* Category Header - Sticky */}
                 <div className="sticky-header-mobile">
                   <div className="flex items-center gap-4">
-                    <span className="text-sm font-bold text-zinc-400 uppercase tracking-widest">{category}</span>
+                    <span className="label-section">{category}</span>
                   </div>
                 </div>
 
                 {/* Grouped items in a clean card */}
-                <div className="bg-white rounded-2xl shadow-sm border border-zinc-100 overflow-hidden">
-                  <div className="divide-y divide-zinc-50">
-                    {catItems.map((item) => {
+                <div className="card rounded-2xl overflow-hidden">
+                  <div className="divide-y" style={{ borderColor: 'var(--surface-secondary)' }}>
+                    {catItems.map((item, itemIdx) => {
                       const itemKey = `${item.category}-${item.name}-${item.id}`;
                       return (
                       <div
@@ -377,9 +389,10 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
                         ref={(el) => registerItemRef(itemKey, el)}
                         onClick={() => toggleItem(item.id)}
                         className={`
-                          group px-6 py-4 cursor-pointer transition-all duration-200
-                          ${item.checked ? 'bg-zinc-50' : 'hover:bg-zinc-50/50'}
+                          stagger-item group px-6 py-4 cursor-pointer transition-all duration-200
+                          ${item.checked ? '' : 'hover:bg-primary-50/50'}
                         `}
+                        style={{ animationDelay: `${itemIdx * 40}ms`, backgroundColor: item.checked ? 'var(--surface-secondary)' : undefined }}
                       >
                         <div className="flex gap-4">
                           <div className="mt-1">
@@ -392,11 +405,11 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-1">
-                              <span className={`text-base font-medium transition-colors ${item.checked ? 'text-zinc-400 line-through' : 'text-zinc-800'}`}>
+                              <span className={`text-base font-medium transition-all duration-300 ${item.checked ? 'text-primary-400 line-through decoration-emerald-400' : 'text-primary-900'}`}>
                                 {item.name}
                               </span>
                               {item.quantity && (
-                                <span className={`text-sm font-medium ml-3 ${item.checked ? 'text-zinc-300' : 'text-zinc-500'}`}>
+                                <span className={`text-sm font-medium ml-3 ${item.checked ? 'text-primary-300' : 'text-primary-500'}`}>
                                   {item.quantity}
                                 </span>
                               )}
@@ -407,9 +420,9 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
                                 {item.relatedMeals.map((meal, idx) => {
                                   const resolvedMealName = resolveMealName(meal, mealPlan);
                                   return (
-                                    <span key={idx} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${item.checked ? 'bg-zinc-50 border-zinc-100 text-zinc-400' : 'bg-zinc-50 border-zinc-100'}`}>
-                                      <ArrowRight size={10} className="text-zinc-400" />
-                                      <span className={`text-[10px] font-medium ${item.checked ? 'text-zinc-400' : 'text-zinc-500'}`}>{resolvedMealName}</span>
+                                    <span key={idx} className={item.checked ? 'related-meal-pill-checked' : 'related-meal-pill'}>
+                                      <ArrowRight size={10} className="text-primary-400" />
+                                      <span className={`text-[10px] font-medium ${item.checked ? 'text-primary-400' : 'text-primary-500'}`}>{resolvedMealName}</span>
                                     </span>
                                   );
                                 })}

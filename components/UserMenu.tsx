@@ -14,23 +14,19 @@ const UserMenu: React.FC<UserMenuProps> = ({ onOpenSettings }) => {
   const [avatarError, setAvatarError] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Reset avatar error when user changes
   useEffect(() => {
     setAvatarError(false);
   }, [user?.id, user?.user_metadata?.avatar_url]);
 
-  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
-
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
-
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
@@ -50,12 +46,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ onOpenSettings }) => {
   };
 
   const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word.charAt(0))
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+    return name.split(' ').map(w => w.charAt(0)).join('').toUpperCase().slice(0, 2);
   };
 
   const displayName = user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
@@ -64,96 +55,82 @@ const UserMenu: React.FC<UserMenuProps> = ({ onOpenSettings }) => {
 
   return (
     <div className="relative" ref={menuRef}>
-      {/* User Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 h-9 md:h-10 px-2 md:px-3 bg-white/70 backdrop-blur-sm shadow-sm border border-white/50 rounded-full hover:bg-white/90 transition-all group"
+        className="user-menu-trigger group"
         title={displayName}
       >
-        {/* Avatar */}
         {avatarUrl && !avatarError ? (
           <img
             src={avatarUrl}
             alt=""
-            className="w-6 h-6 md:w-7 md:h-7 rounded-full object-cover border border-zinc-200 flex-shrink-0"
+            className="w-6 h-6 md:w-7 md:h-7 rounded-full object-cover border border-primary-200 flex-shrink-0"
             crossOrigin="anonymous"
             referrerPolicy="no-referrer"
             onError={() => setAvatarError(true)}
           />
         ) : (
-          <div className="w-6 h-6 md:w-7 md:h-7 bg-zinc-900 rounded-full flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-semibold text-[10px] md:text-xs">{initials}</span>
+          <div className="avatar-fallback w-6 h-6 md:w-7 md:h-7">
+            <span className="text-[10px] md:text-xs">{initials}</span>
           </div>
         )}
-
-        {/* Name (hidden on mobile) */}
-        <span className="hidden md:block text-sm font-medium text-zinc-700 max-w-[120px] truncate">
+        <span className="hidden md:block text-sm font-medium text-primary-700 max-w-[120px] truncate">
           {displayName}
         </span>
-
-        {/* Chevron */}
         <ChevronDown
           size={14}
-          className={`hidden md:block text-zinc-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`hidden md:block text-primary-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
 
-      {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 bg-white/95 backdrop-blur-xl rounded-xl shadow-modal border border-white/50 ring-1 ring-black/5 overflow-hidden animate-fade-in-up z-50">
-          {/* User Info Section */}
-          <div className="p-4 border-b border-white/30 bg-white/40 backdrop-blur-sm">
+        <div className="user-menu-dropdown">
+          <div className="user-menu-info">
             <div className="flex items-center gap-3">
               {avatarUrl && !avatarError ? (
                 <img
                   src={avatarUrl}
                   alt=""
-                  className="w-10 h-10 rounded-full object-cover border-2 border-zinc-100 flex-shrink-0"
+                  className="w-10 h-10 rounded-full object-cover border-2 border-primary-100 flex-shrink-0"
                   crossOrigin="anonymous"
                   referrerPolicy="no-referrer"
                   onError={() => setAvatarError(true)}
                 />
               ) : (
-                <div className="w-10 h-10 bg-zinc-900 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-semibold text-sm">{initials}</span>
+                <div className="avatar-fallback w-10 h-10">
+                  <span className="text-sm">{initials}</span>
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-zinc-900 truncate text-sm">{displayName}</p>
-                <p className="text-xs text-zinc-500 truncate">{user.email}</p>
+                <p className="font-semibold text-primary-900 truncate text-sm">{displayName}</p>
+                <p className="text-xs text-primary-500 truncate">{user.email}</p>
               </div>
             </div>
           </div>
 
-          {/* Menu Items */}
           <div className="py-2">
             {onOpenSettings && (
               <button
-                onClick={() => {
-                  onOpenSettings();
-                  setIsOpen(false);
-                }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
+                onClick={() => { onOpenSettings(); setIsOpen(false); }}
+                className="user-menu-item"
               >
-                <SettingsIcon size={16} className="text-zinc-400" />
+                <SettingsIcon size={16} className="text-primary-400" />
                 <span>Settings</span>
               </button>
             )}
-
             <button
               onClick={handleSignOut}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
             >
               <LogOut size={16} />
               <span>Sign Out</span>
             </button>
           </div>
 
-          {/* Footer Info */}
-          <div className="px-4 py-3 bg-zinc-50 border-t border-zinc-100">
+          <div className="user-menu-footer">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-zinc-500">Provider</span>
-              <span className="text-zinc-700 font-medium capitalize">
+              <span className="text-primary-500">Provider</span>
+              <span className="text-primary-700 font-medium capitalize">
                 {user.app_metadata?.provider || 'email'}
               </span>
             </div>

@@ -54,6 +54,21 @@ const MealGrid: React.FC<MealGridProps> = ({
     }
   };
 
+  const getMealTypePillClass = (time: MealTime): string => {
+    switch (time) {
+      case MealTime.BREAKFAST:
+        return 'meal-type-pill meal-type-pill-breakfast';
+      case MealTime.LUNCH:
+        return 'meal-type-pill meal-type-pill-lunch';
+      case MealTime.SNACK:
+        return 'meal-type-pill meal-type-pill-snack';
+      case MealTime.DINNER:
+        return 'meal-type-pill meal-type-pill-dinner';
+      default:
+        return '';
+    }
+  };
+
   // Use ref to track which cards have already been animated to prevent re-animation
   const animatedCardsRef = useRef<Set<string>>(new Set());
   const cardRefsRef = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -120,13 +135,10 @@ const MealGrid: React.FC<MealGridProps> = ({
 
   // Skeleton component for loading states
   const MealSkeleton: React.FC<{ isLoading?: boolean }> = ({ isLoading = false }) => (
-    <div className={`
-      relative bg-white rounded-2xl p-5 shadow-sm border border-zinc-100
-      min-h-[140px] xl:min-h-[160px] flex flex-col
-    `}>
+    <div className="card relative min-h-[140px] xl:min-h-[160px] flex flex-col">
       <div className="flex justify-between items-start mb-2">
         <div className="w-8 h-2 skeleton-shimmer rounded"></div>
-        {isLoading && <Loader2 size={14} className="text-zinc-300 animate-spin" />}
+        {isLoading && <Loader2 size={14} className="text-primary-300 animate-spin" />}
       </div>
 
       <div className="flex-1 space-y-2">
@@ -146,19 +158,20 @@ const MealGrid: React.FC<MealGridProps> = ({
 
                 {/* Sticky Day Header - Apple-style section header */}
                 <div className="sticky-header-mobile">
-                    <h3 className="text-xl font-bold text-zinc-900 tracking-tight">
+                    <h3 className="text-xl font-bold text-primary-900 tracking-tight">
                         {dayPlan.day}
                     </h3>
                 </div>
 
                 {/* Cards for that day */}
                 <div className="space-y-3">
-                    {mealTimes.map((time) => {
+                    {mealTimes.map((time, timeIdx) => {
                         const cell = dayPlan.meals[time] || { name: '', description: '', notes: '' };
                         const isChanged = hasChanged(dayIdx, time);
                         const isEmpty = !cell.name || cell.name.trim() === '';
                         const isLoadingThisMeal = isStreaming && isEmpty;
                         const cardKey = `${dayPlan.day}-${time}`;
+                        const staggerDelay = (dayIdx * 4 + timeIdx) * 40;
 
                         // Show skeleton for empty meals during streaming
                         if (isLoadingThisMeal) {
@@ -172,17 +185,15 @@ const MealGrid: React.FC<MealGridProps> = ({
                                 key={time}
                                 ref={(el) => registerCardRef(cardKey, el)}
                                 className={`
-                                  relative rounded-2xl p-5 shadow-sm border transition-all duration-500 active:scale-[0.98]
+                                  stagger-item relative rounded-2xl p-5 shadow-sm border transition-all duration-500 active:scale-[0.98]
                                   ${getMealTypeClass(time)}
                                   ${isChanged ? 'ring-2 ring-indigo-200' : ''}
                                   ${replacingMeals.has(cardKey) ? 'opacity-60' : ''}
                                 `}
+                                style={{ animationDelay: `${staggerDelay}ms` }}
                               >
                                 <div className="flex justify-between items-start mb-2">
-                                  <div className="flex items-center gap-2">
-                                    <span className={`meal-type-dot ${getMealTypeDotClass(time)}`}></span>
-                                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{time}</span>
-                                  </div>
+                                  <span className={getMealTypePillClass(time)}>{time}</span>
                                   <div className="flex items-center gap-2">
                                     {isChanged && <Sparkles size={14} className="text-indigo-500 animate-pulse" />}
                                     {!isEmpty && onReplaceMeal && (
@@ -204,20 +215,22 @@ const MealGrid: React.FC<MealGridProps> = ({
                                   </div>
                                 </div>
 
-                                <h4 className={`text-lg font-semibold mb-1 leading-snug ${isEmpty ? 'text-zinc-300 italic' : 'text-zinc-800'}`}>
+                                <h4 className={`text-lg font-semibold mb-1 leading-snug ${isEmpty ? 'text-primary-300 italic' : 'text-primary-900'}`}>
                                   {cell.name || "Nothing planned"}
                                 </h4>
 
                                 {cell.description && (
-                                  <p className="text-sm text-zinc-500 leading-relaxed font-light line-clamp-2">
+                                  <p className="text-sm text-primary-500 leading-relaxed font-light line-clamp-2">
                                     {cell.description}
                                   </p>
                                 )}
 
                                 {cell.notes && (
-                                  <div className="mt-3 inline-flex items-center gap-1.5 bg-zinc-50 border border-zinc-100 px-2.5 py-1 rounded-lg">
-                                    <Users size={12} className="text-zinc-400" />
-                                    <span className="text-[10px] font-medium text-zinc-500">{cell.notes}</span>
+                                  <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
+                                    style={{ backgroundColor: 'var(--surface-secondary)', border: '1px solid var(--border-subtle)' }}
+                                  >
+                                    <Users size={12} className="text-primary-400" />
+                                    <span className="text-[10px] font-medium text-primary-500">{cell.notes}</span>
                                   </div>
                                 )}
                               </div>
@@ -240,19 +253,20 @@ const MealGrid: React.FC<MealGridProps> = ({
             <div key={dayPlan.day} className="w-full">
                 {/* Sticky Row Header */}
                 <div className="sticky-header-mobile flex items-center justify-between">
-                    <span className="text-base font-bold text-zinc-900 uppercase tracking-widest">{dayPlan.day}</span>
+                    <span className="text-base font-bold text-primary-900 uppercase tracking-widest">{dayPlan.day}</span>
                 </div>
 
                 {/* Adaptive Grid - Apple-like responsive behavior */}
                 <div className="grid gap-4
                     grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4
                     2xl:grid-cols-4">
-                    {mealTimes.map((time) => {
+                    {mealTimes.map((time, timeIdx) => {
                         const cell = dayPlan.meals[time] || { name: '', description: '', notes: '' };
                         const isChanged = hasChanged(dayIdx, time);
                         const isEmpty = !cell.name || cell.name.trim() === '';
                         const isLoadingThisMeal = isStreaming && isEmpty;
                         const cardKey = `${dayPlan.day}-${time}`;
+                        const staggerDelay = (dayIdx * 4 + timeIdx) * 40;
 
                         // Show skeleton for empty meals during streaming
                         if (isLoadingThisMeal) {
@@ -266,22 +280,18 @@ const MealGrid: React.FC<MealGridProps> = ({
                                 key={`${dayPlan.day}-${time}`}
                                 ref={(el) => registerCardRef(cardKey, el)}
                                 className={`
-                                    relative p-4 xl:p-5 rounded-2xl border transition-all duration-500 group
+                                    stagger-item relative p-4 xl:p-5 rounded-2xl border transition-all duration-500 group
                                     flex flex-col h-full min-h-[140px] xl:min-h-[160px]
                                     hover:-translate-y-1
                                     ${getMealTypeClass(time)}
                                     ${isChanged ? 'ring-2 ring-indigo-200' : ''}
                                     ${replacingMeals.has(cardKey) ? 'opacity-60' : ''}
                                 `}
+                                style={{ animationDelay: `${staggerDelay}ms` }}
                             >
                                 {/* Meal Time Label inside card for context */}
                                 <div className="flex justify-between items-start mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className={`meal-type-dot ${getMealTypeDotClass(time)}`}></span>
-                                        <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-wider">
-                                            {time}
-                                        </span>
-                                    </div>
+                                    <span className={getMealTypePillClass(time)}>{time}</span>
                                     <div className="flex items-center gap-2">
                                         {isChanged && <Sparkles size={14} className="text-indigo-400 animate-pulse" />}
                                         {!isEmpty && onReplaceMeal && (
@@ -304,21 +314,21 @@ const MealGrid: React.FC<MealGridProps> = ({
                                 </div>
 
                                 <div className="flex-1">
-                                    <h4 className={`font-bold text-base leading-snug mb-2 ${isEmpty ? 'text-zinc-300 italic' : 'text-zinc-800'}`}>
+                                    <h4 className={`font-bold text-base leading-snug mb-2 ${isEmpty ? 'text-primary-300 italic' : 'text-primary-900'}`}>
                                         {cell.name || "—"}
                                     </h4>
                                     {cell.description && (
-                                        <p className="text-sm text-zinc-500 font-light leading-relaxed line-clamp-2 xl:line-clamp-3">
+                                        <p className="text-sm text-primary-500 font-light leading-relaxed line-clamp-2 xl:line-clamp-3">
                                             {cell.description}
                                         </p>
                                     )}
                                 </div>
 
                                 {cell.notes && (
-                                    <div className="mt-3 pt-3 border-t border-zinc-50">
+                                    <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
                                         <div className="flex items-start gap-1.5">
-                                            <Users size={12} className="text-zinc-300 mt-0.5 shrink-0" />
-                                            <span className="text-xs font-semibold text-zinc-400 leading-tight">
+                                            <Users size={12} className="text-primary-300 mt-0.5 shrink-0" />
+                                            <span className="text-xs font-semibold text-primary-400 leading-tight">
                                                 {cell.notes}
                                             </span>
                                         </div>

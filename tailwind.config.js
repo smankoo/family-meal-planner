@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -57,6 +58,13 @@ export default {
           500: 'var(--color-appetite-500)',
           600: 'var(--color-appetite-600)',
         },
+        surface: {
+          bg: 'var(--surface-bg)',
+          primary: 'var(--surface-primary)',
+          secondary: 'var(--surface-secondary)',
+          elevated: 'var(--surface-elevated)',
+          glass: 'var(--surface-glass)',
+        },
       },
       borderRadius: {
         'card': 'var(--radius-card)',
@@ -85,6 +93,8 @@ export default {
         'slide-in-right': 'slideInRight 0.3s ease-out',
         'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
         'spin-slow': 'spin 1s linear infinite',
+        'stage-enter': 'stageEnter 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'check-bounce': 'checkBounce 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
       },
       keyframes: {
         streamIn: {

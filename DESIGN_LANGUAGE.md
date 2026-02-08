@@ -254,19 +254,73 @@ All visual properties are defined in `index.css` as CSS variables and Tailwind t
 **Transitions**: `--transition-fast`, `--transition-base`, `--transition-slow`
 
 **Tailwind Classes**: Use semantic classes defined in the theme system:
-- **Buttons**: `btn-primary`, `btn-secondary`, `btn-glass`, `btn-glass-primary`, `btn-regenerate`
-- **Cards**: `card`, `card-glass`, `card-glass-light`, `card-glass-medium`, `card-glass-subtle`, `card-interactive-glass`
-- **Meal Cards**: `meal-card-breakfast`, `meal-card-lunch`, `meal-card-snack`, `meal-card-dinner` (with built-in glassmorphism)
-- **Modals**: `modal-backdrop`, `modal-container`, `modal-header`
+- **Buttons**: `btn-primary`, `btn-secondary`, `btn-glass`, `btn-glass-primary`, `btn-regenerate`, `btn-empty-state`, `btn-save-floating`, `btn-close-modal`, `btn-retry-modal`, `btn-icon`, `btn-icon-sm`, `btn-delete-hover`
+- **Cards**: `card`, `card-glass`, `card-glass-light`, `card-glass-medium`, `card-glass-subtle`, `card-interactive-glass`, `family-member-card`, `preferences-card`
+- **Meal Cards**: `meal-card-breakfast`, `meal-card-lunch`, `meal-card-snack`, `meal-card-dinner` (with built-in glassmorphism + dark mode)
+- **Meal Type Pills**: `meal-type-pill meal-type-pill-breakfast`, `meal-type-pill-lunch`, `meal-type-pill-snack`, `meal-type-pill-dinner`
+- **Modals**: `modal-backdrop`, `modal-container`, `modal-header`, `error-icon-wrapper`, `error-detail-box`, `error-support-box`
 - **Lists**: `list-item-glass` for list items with frosted glass effect
 - **Headers**: `sticky-header-mobile` for sticky section headers with glassmorphism
-- **Typography**: `heading-hero`, `heading-page`, `heading-section`, `heading-card`
+- **Typography**: `heading-hero`, `heading-page`, `heading-section`, `heading-card`, `label-section`, `label-category`, `text-body`, `text-secondary`
+- **Forms**: `form-field`, `form-field-bold`, `form-textarea`, `form-textarea-wrapper`, `effort-toggle`, `effort-toggle-active`, `effort-toggle-inactive`
+- **Empty States**: `empty-state-icon-wrapper`, `empty-state-heading`, `empty-state-text`
+- **Progress**: `progress-bar-container`, `progress-bar-fill`, `progress-bar-fill-amber`
+- **Checkboxes**: `checkbox-enhanced`, `checkbox-checked`, `checkbox-unchecked`
+- **Related Meals**: `related-meal-pill`, `related-meal-pill-checked`
+- **User Menu**: `user-menu-trigger`, `user-menu-dropdown`, `user-menu-info`, `user-menu-item`, `user-menu-footer`
+- **Avatars**: `avatar-fallback`
+- **Skeletons**: `skeleton-shimmer`, `skeleton-block`, `skeleton-block-light`
+- **Animations**: `stagger-item`, `stage-enter`, `strikethrough-animate`
+- **Navigation**: `stage-stepper`, `stage-stepper-tab`, `stage-stepper-tab-active`, `stage-stepper-tab-idle`, `stage-stepper-tab-disabled`
+- **Utilities**: `loading-pill`, `auth-divider-text`, `theme-toggle`, `section-divider`
 
 **Glassmorphism Utilities**:
 - `backdrop-blur-xs` (4px), `backdrop-blur-sm` (8px), `backdrop-blur-md` (12px), `backdrop-blur-lg` (16px), `backdrop-blur-xl` (20px)
-- Combine with `bg-white/[70-95]` for varying transparency levels
-- Add `border border-white/[30-50]` for subtle definition
+- Use CSS var surfaces: `var(--surface-glass)`, `var(--surface-glass-heavy)`, `var(--surface-elevated)`
+- Add `border: 1px solid var(--border-subtle)` for subtle definition
 - Include `ring-1 ring-black/5` for refined edges
+
+---
+
+## Dark Mode
+
+The app supports light, dark, and system-preference themes via `ThemeContext`. The implementation uses Tailwind's `class` strategy — a `.dark` class on `<html>` flips all CSS custom properties.
+
+### How It Works
+- All colors are defined as CSS custom properties in `:root` (light) and `.dark` (dark)
+- The `.dark` class inverts the primary color scale (50↔900) so `text-primary-900` is always the strongest text
+- Surface tokens (`--surface-bg`, `--surface-primary`, `--surface-secondary`, `--surface-elevated`, `--surface-glass`) adapt automatically
+- Text tokens (`--text-primary`, `--text-secondary`, `--text-tertiary`, `--text-inverted`) flip for readability
+- Shadow tokens increase opacity in dark mode for visibility against dark backgrounds
+- Meal card gradients have explicit `.dark` overrides for warm, rich tones
+
+### Rules for Dark Mode Compatibility
+1. **Never use raw Tailwind colors** like `bg-white`, `bg-zinc-50`, `text-zinc-900` — use semantic tokens (`bg-primary-50`, `text-primary-900`) or CSS vars (`var(--surface-primary)`)
+2. **Use CSS classes from index.css** — all component classes (`card`, `btn-primary`, `modal-container`, etc.) already handle both themes
+3. **For new components**, add styles to `index.css` using CSS vars, then reference the class name
+4. **Avatar borders** should use `var(--surface-bg)` instead of `border-white` for proper contrast in dark mode
+5. **The ThemeToggle component** provides the UI control — it's placed in the app header
+
+### Theme Toggle
+- `ThemeToggle` component renders a sun/moon icon button
+- `ThemeProvider` wraps the app and manages `localStorage` persistence
+- System preference changes are detected via `matchMedia('prefers-color-scheme: dark')`
+
+---
+
+## Motion & Animation Enhancements
+
+### Staggered Entrance Animations
+Cards and list items use the `stagger-item` class with incremental `animationDelay` to create a cascading entrance effect. Each item fades in and slides up with a slight scale.
+
+### Page/Stage Transitions
+Stage changes (Meal Planning → Prep → Grocery) use the `stage-enter` class with a `key` prop to trigger re-animation on stage switch.
+
+### Check-off Micro-interactions
+Checkboxes use `checkbox-enhanced` with `checkbox-checked`/`checkbox-unchecked` states. The checked state triggers a satisfying bounce animation (`checkBounce`). Completed items get a strikethrough with emerald accent.
+
+### Progress Indicators
+The `ProgressBar` component shows completion state on Prep and Grocery views with an animated fill bar and count display.
 
 ---
 

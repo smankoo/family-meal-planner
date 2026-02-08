@@ -95,7 +95,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ className = '', activePlanId 
         <h3 className="heading-card">Account</h3>
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
         >
           <LogOut size={14} />
           Sign Out
@@ -125,21 +125,21 @@ const UserProfile: React.FC<UserProfileProps> = ({ className = '', activePlanId 
                     type="text"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="input flex-1 px-3 py-1.5 text-sm"
+                    className="form-field flex-1 px-3 py-1.5 text-sm"
                     placeholder="Enter your name"
                     autoFocus
                   />
                   <button
                     onClick={handleSaveProfile}
                     disabled={loading}
-                    className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
+                    className="p-1.5 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/30 rounded-lg transition-colors disabled:opacity-50"
                   >
                     {loading ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                   </button>
                   <button
                     onClick={handleCancelEdit}
                     disabled={loading}
-                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                    className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors disabled:opacity-50"
                   >
                     <X size={14} />
                   </button>
@@ -163,12 +163,12 @@ const UserProfile: React.FC<UserProfileProps> = ({ className = '', activePlanId 
         {/* Account Details */}
         <div className="pt-4 border-t border-primary-100 space-y-3">
           <div className="flex justify-between items-center text-sm">
-            <span className="text-primary-600">Provider</span>
+            <span className="text-primary-500">Provider</span>
             <span className="text-primary-900 font-medium capitalize">{provider}</span>
           </div>
 
           <div className="flex justify-between items-center text-sm">
-            <span className="text-primary-600">Member since</span>
+            <span className="text-primary-500">Member since</span>
             <span className="text-primary-900 font-medium">
               {new Date(user.created_at).toLocaleDateString('en-US', {
                 month: 'short',
@@ -178,8 +178,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ className = '', activePlanId 
           </div>
 
           <div className="flex justify-between items-center text-sm">
-            <span className="text-primary-600">Email verified</span>
-            <span className={`font-medium ${user.email_confirmed_at ? 'text-green-600' : 'text-amber-600'}`}>
+            <span className="text-primary-500">Email verified</span>
+            <span className={`font-medium ${user.email_confirmed_at ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
               {user.email_confirmed_at ? 'Verified' : 'Pending'}
             </span>
           </div>
@@ -196,7 +196,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ className = '', activePlanId 
 
       {/* Family Members Section */}
       {activePlanId && (
-        <div className="mt-6 pt-6 border-t border-primary-200">
+        <div className="mt-6 pt-6 border-t border-primary-100">
           <div className="flex items-center justify-between mb-4">
             <h3 className="heading-card flex items-center gap-2">
               <Users size={18} />

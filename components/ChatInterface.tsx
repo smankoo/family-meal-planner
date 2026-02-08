@@ -63,13 +63,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         <div className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-center px-6 opacity-60">
-              <Bot size={40} className="text-zinc-300 mb-4" strokeWidth={1.5} />
-              <p className="text-sm text-zinc-500 font-medium mb-6">How can I help tweak your plan?</p>
+              <Bot size={40} className="text-primary-300 mb-4" strokeWidth={1.5} />
+              <p className="text-sm text-primary-500 font-medium mb-6">How can I help tweak your plan?</p>
               <div className="flex flex-col gap-2 w-full">
-                <button onClick={() => onSendMessage("Make lunches simpler")} className="text-xs bg-white border border-zinc-200 py-3 px-4 rounded-xl text-zinc-600 hover:bg-zinc-50 hover:scale-[1.02] transition-all text-left">
+                <button onClick={() => onSendMessage("Make lunches simpler")} className="text-xs border py-3 px-4 rounded-xl text-primary-600 hover:scale-[1.02] transition-all text-left" style={{ backgroundColor: 'var(--surface-primary)', borderColor: 'var(--border-primary)' }}>
                     "Make lunches simpler"
                 </button>
-                <button onClick={() => onSendMessage("Swap Tue dinner for tacos")} className="text-xs bg-white border border-zinc-200 py-3 px-4 rounded-xl text-zinc-600 hover:bg-zinc-50 hover:scale-[1.02] transition-all text-left">
+                <button onClick={() => onSendMessage("Swap Tue dinner for tacos")} className="text-xs border py-3 px-4 rounded-xl text-primary-600 hover:scale-[1.02] transition-all text-left" style={{ backgroundColor: 'var(--surface-primary)', borderColor: 'var(--border-primary)' }}>
                     "Swap Tue dinner for tacos"
                 </button>
               </div>
@@ -84,9 +84,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <div
                 className={`max-w-[85%] px-5 py-3 text-[14px] leading-relaxed shadow-sm ${
                   msg.role === 'user'
-                    ? 'bg-zinc-900 text-white rounded-2xl rounded-tr-sm'
-                    : 'bg-white border border-zinc-100 text-zinc-800 rounded-2xl rounded-tl-sm'
+                    ? 'rounded-2xl rounded-tr-sm'
+                    : 'border border-primary-100 text-primary-900 rounded-2xl rounded-tl-sm'
                 }`}
+                style={msg.role === 'user'
+                  ? { backgroundColor: 'var(--text-primary)', color: 'var(--text-inverted)' }
+                  : { backgroundColor: 'var(--surface-primary)' }
+                }
               >
                 {msg.content}
               </div>
@@ -95,7 +99,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               {msg.relatedAction && (
                 <div className="mt-1.5 ml-2 flex items-center gap-1.5">
                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                   <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wide">{msg.relatedAction}</span>
+                   <span className="text-[10px] font-semibold text-primary-400 uppercase tracking-wide">{msg.relatedAction}</span>
                 </div>
               )}
             </div>
@@ -104,10 +108,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           {/* Typing Indicator */}
           {isLoading && (
             <div className="flex justify-start w-full">
-              <div className="bg-white border border-zinc-100 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              <div className="border border-primary-100 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm flex items-center gap-1.5" style={{ backgroundColor: 'var(--surface-primary)' }}>
+                <div className="w-1.5 h-1.5 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-1.5 h-1.5 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-1.5 h-1.5 bg-primary-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
           )}
@@ -115,17 +119,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
 
         {/* Input Area */}
-        <div className="p-4 bg-white/80 backdrop-blur-md border-t border-zinc-100">
+        <div className="p-4 backdrop-blur-md border-t" style={{ backgroundColor: 'var(--surface-glass)', borderColor: 'var(--border-subtle)' }}>
           <form
             onSubmit={handleSubmit}
-            className="relative flex items-center bg-zinc-100/70 rounded-[24px] border border-zinc-200/50 focus-within:bg-white focus-within:ring-2 focus-within:ring-zinc-900/5 transition-all"
+            className="relative flex items-center rounded-[24px] border focus-within:ring-2 focus-within:ring-primary-900/5 transition-all"
+            style={{ backgroundColor: 'var(--surface-secondary)', borderColor: 'var(--border-subtle)' }}
           >
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Type a request..."
-              className="w-full bg-transparent border-none py-3.5 pl-5 pr-12 text-sm text-zinc-800 placeholder-zinc-400 focus:ring-0"
+              className="w-full bg-transparent border-none py-3.5 pl-5 pr-12 text-sm text-primary-900 placeholder-primary-400 focus:ring-0"
               disabled={isLoading}
             />
             <button

@@ -3,6 +3,7 @@ import { PrepTask, WeekPlan } from '../types';
 import { Check, Clock, ArrowRight, Loader2 } from 'lucide-react';
 import InvalidationBanner from './InvalidationBanner';
 import RegenerateButton from './RegenerateButton';
+import ProgressBar from './ProgressBar';
 import { resolveMealName } from '../utils/mealResolver';
 
 interface MealPrepViewProps {
@@ -90,10 +91,7 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
 
   // Skeleton component for loading states
   const TaskSkeleton: React.FC<{ isLoading?: boolean }> = ({ isLoading = false }) => (
-    <div className={`
-      relative bg-white rounded-2xl p-5 shadow-sm border border-zinc-100
-      min-h-[100px] flex gap-4
-    `}>
+    <div className="card relative rounded-2xl p-5 min-h-[100px] flex gap-4">
       <div className="mt-1">
         <div className="w-5 h-5 rounded-full skeleton-shimmer"></div>
       </div>
@@ -101,7 +99,7 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
         <div className="w-3/4 h-5 skeleton-shimmer rounded"></div>
         <div className="w-full h-3 skeleton-shimmer rounded"></div>
         <div className="w-2/3 h-3 skeleton-shimmer rounded"></div>
-        {isLoading && <Loader2 size={14} className="text-zinc-300 animate-spin mt-2" />}
+        {isLoading && <Loader2 size={14} className="text-primary-300 animate-spin mt-2" />}
       </div>
     </div>
   );
@@ -110,14 +108,14 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
       <div className="animate-fade-in">
         {/* Header - Desktop Only */}
         <div className="hidden md:flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 max-w-4xl mx-auto px-4 md:px-8">
-          <h2 className="text-xl md:text-2xl font-bold text-zinc-900">Prep Strategy</h2>
+          <h2 className="text-xl md:text-2xl font-bold text-primary-900">Prep Strategy</h2>
         </div>
 
         {/* Skeleton Loading State */}
         <div className="md:hidden flex flex-col pb-20">
           <div className="mb-8">
-            <div className="sticky top-0 z-20 mb-4 px-4 py-3 bg-zinc-50/95 backdrop-blur-sm border-b border-zinc-200/30">
-              <h3 className="text-xl font-bold text-zinc-900 tracking-tight">Weekend</h3>
+            <div className="sticky-header-mobile">
+              <h3 className="text-xl font-bold text-primary-900 tracking-tight">Weekend</h3>
             </div>
             <div className="space-y-3 px-4">
               <TaskSkeleton isLoading={true} />
@@ -125,8 +123,8 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
             </div>
           </div>
           <div className="mb-8">
-            <div className="sticky top-0 z-20 mb-4 px-4 py-3 bg-zinc-50/95 backdrop-blur-sm border-b border-zinc-200/30">
-              <h3 className="text-xl font-bold text-zinc-900 tracking-tight">Sunday Night</h3>
+            <div className="sticky-header-mobile">
+              <h3 className="text-xl font-bold text-primary-900 tracking-tight">Sunday Night</h3>
             </div>
             <div className="space-y-3 px-4">
               <TaskSkeleton isLoading={true} />
@@ -138,8 +136,8 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
         <div className="hidden md:block pb-20 max-w-4xl mx-auto px-4 md:px-8">
           <div className="mb-8">
             <div className="flex items-center gap-4 mb-4">
-              <span className="text-sm font-bold text-zinc-400 uppercase tracking-widest">Weekend</span>
-              <div className="h-[1px] flex-1 bg-zinc-100"></div>
+              <span className="label-section">Weekend</span>
+              <div className="section-divider"></div>
             </div>
             <div className="space-y-3">
               <TaskSkeleton isLoading={true} />
@@ -148,8 +146,8 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
           </div>
           <div className="mb-8">
             <div className="flex items-center gap-4 mb-4">
-              <span className="text-sm font-bold text-zinc-400 uppercase tracking-widest">Sunday Night</span>
-              <div className="h-[1px] flex-1 bg-zinc-100"></div>
+              <span className="label-section">Sunday Night</span>
+              <div className="section-divider"></div>
             </div>
             <div className="space-y-3">
               <TaskSkeleton isLoading={true} />
@@ -158,10 +156,10 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
         </div>
 
         {/* Loading Message */}
-        <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg border border-zinc-200">
-          <div className="flex items-center gap-2">
-            <Clock size={16} className="text-zinc-400 animate-pulse" />
-            <span className="text-sm text-zinc-600 font-medium">Designing your prep schedule...</span>
+        <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2">
+          <div className="loading-pill">
+            <Clock size={16} className="text-primary-400 animate-pulse" />
+            <span className="text-sm text-primary-600 font-medium">Designing your prep schedule...</span>
           </div>
         </div>
       </div>
@@ -179,8 +177,8 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
     <div className="animate-fade-in">
 
       {/* Header - Desktop Only */}
-      <div className="hidden md:flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 max-w-4xl mx-auto px-4 md:px-8">
-        <h2 className="text-xl md:text-2xl font-bold text-zinc-900">Prep Strategy</h2>
+      <div className="hidden md:flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 max-w-4xl mx-auto px-4 md:px-8">
+        <h2 className="text-xl md:text-2xl font-bold text-primary-900">Prep Strategy</h2>
         {tasks.length > 0 && !isInvalidated && (
           <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={true} />
         )}
@@ -190,6 +188,16 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
       {tasks.length > 0 && !isInvalidated && (
         <div className="md:hidden flex justify-end mb-4 px-4">
           <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={false} />
+        </div>
+      )}
+
+      {/* Progress Bar */}
+      {tasks.length > 0 && (
+        <div className="max-w-4xl mx-auto px-4 md:px-8 mb-6">
+          <ProgressBar
+            completed={tasks.filter(t => t.completed).length}
+            total={tasks.length}
+          />
         </div>
       )}
 
@@ -208,18 +216,18 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
       {tasks.length === 0 && !isLoading ? (
         <div className="h-[50vh] flex flex-col items-center justify-center px-4">
           <div className="empty-state-icon-wrapper">
-            <Clock size={32} className="text-zinc-400" />
+            <Clock size={32} className="text-primary-400" />
           </div>
 
           {!hasMealPlan ? (
             <>
-              <h3 className="text-lg font-semibold text-zinc-800 mb-2">Create Your Meal Plan First</h3>
-              <p className="text-zinc-500 text-center mb-6 max-w-sm leading-relaxed">
+              <h3 className="empty-state-heading">Create Your Meal Plan First</h3>
+              <p className="empty-state-text">
                 A prep strategy is based on your weekly meal plan. Start by creating your meals for the week.
               </p>
               <button
                 onClick={onNavigateToMealPlan}
-                className="flex items-center gap-2 bg-zinc-900 text-white px-6 py-3 rounded-full font-semibold hover:bg-zinc-800 transition-colors"
+                className="btn-empty-state"
               >
                 <ArrowRight size={16} />
                 Go to Meal Planning
@@ -227,14 +235,14 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
             </>
           ) : (
             <>
-              <h3 className="text-lg font-semibold text-zinc-800 mb-2">No Prep Strategy Yet</h3>
-              <p className="text-zinc-500 text-center mb-6 max-w-sm leading-relaxed">
+              <h3 className="empty-state-heading">No Prep Strategy Yet</h3>
+              <p className="empty-state-text">
                 Generate a personalized prep strategy to make your week easier and more organized.
               </p>
               <button
                 onClick={onGenerate}
                 disabled={isLoading}
-                className="flex items-center gap-2 bg-zinc-900 text-white px-6 py-3 rounded-full font-semibold hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                className="btn-empty-state"
               >
                 <Clock size={16} />
                 Generate Prep Strategy
@@ -249,14 +257,14 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
 
               {/* Sticky Day Header - Apple-style section header */}
               <div className="sticky-header-mobile">
-                <h3 className="text-xl font-bold text-zinc-900 tracking-tight">
+                <h3 className="text-xl font-bold text-primary-900 tracking-tight">
                   {day}
                 </h3>
               </div>
 
               {/* Tasks for that day */}
               <div className="space-y-3">
-                {dayTasks.map((task) => {
+                {dayTasks.map((task, taskIdx) => {
                   const taskKey = `${task.day}-${task.id}`;
                   return (
                   <div
@@ -264,23 +272,22 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
                     ref={(el) => registerTaskRef(taskKey, el)}
                     onClick={() => toggleTask(task.id)}
                     className={`
-                      relative bg-white rounded-2xl p-5 shadow-sm border transition-all active:scale-[0.98] cursor-pointer
-                      ${task.completed ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-100'}
+                      stagger-item relative rounded-2xl p-5 shadow-sm border transition-all active:scale-[0.98] cursor-pointer
+                      ${task.completed ? 'border-emerald-200/50' : 'border-primary-100'}
                     `}
+                    style={{ animationDelay: `${taskIdx * 50}ms`, backgroundColor: 'var(--surface-primary)' }}
                   >
                     <div className="flex gap-4">
                       <div className="mt-1">
                         <div className={`
-                          w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300
-                          ${task.completed
-                              ? 'bg-zinc-400 border-zinc-400'
-                              : 'bg-transparent border-zinc-300'}
+                          checkbox-enhanced
+                          ${task.completed ? 'checkbox-checked' : 'checkbox-unchecked'}
                         `}>
                           {task.completed && <Check size={12} className="text-white" strokeWidth={3} />}
                         </div>
                       </div>
                       <div className="flex-1">
-                        <p className={`text-lg font-semibold mb-1 leading-snug transition-colors ${task.completed ? 'text-zinc-400 line-through' : 'text-zinc-800'}`}>
+                        <p className={`text-lg font-semibold mb-1 leading-snug transition-all duration-300 ${task.completed ? 'text-primary-400 line-through decoration-emerald-400' : 'text-primary-900'}`}>
                           {task.task}
                         </p>
 
@@ -289,9 +296,9 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
                             {task.relatedMeals.map((meal, idx) => {
                               const resolvedMealName = resolveMealName(meal, mealPlan);
                               return (
-                                <span key={idx} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${task.completed ? 'bg-zinc-50 border-zinc-100 text-zinc-400' : 'bg-zinc-50 border-zinc-100'}`}>
-                                  <ArrowRight size={10} className="text-zinc-400" />
-                                  <span className={`text-[10px] font-medium ${task.completed ? 'text-zinc-400' : 'text-zinc-500'}`}>{resolvedMealName}</span>
+                                <span key={idx} className={task.completed ? 'related-meal-pill-checked' : 'related-meal-pill'}>
+                                  <ArrowRight size={10} className="text-primary-400" />
+                                  <span className={`text-[10px] font-medium ${task.completed ? 'text-primary-400' : 'text-primary-500'}`}>{resolvedMealName}</span>
                                 </span>
                               );
                             })}
@@ -317,13 +324,13 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
               {/* Day Header - Sticky with backdrop blur */}
               <div className="sticky-header-mobile">
                 <div className="flex items-center gap-4">
-                  <span className="text-sm font-bold text-zinc-400 uppercase tracking-widest">{day}</span>
+                  <span className="label-section">{day}</span>
                 </div>
               </div>
 
               {/* Tasks for that day - Same card style as mobile */}
               <div className="space-y-3">
-                {dayTasks.map((task) => {
+                {dayTasks.map((task, taskIdx) => {
                 const taskKey = `${task.day}-${task.id}`;
                 return (
                 <div
@@ -331,23 +338,22 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
                   ref={(el) => registerTaskRef(taskKey, el)}
                   onClick={() => toggleTask(task.id)}
                   className={`
-                    relative bg-white rounded-2xl p-5 shadow-sm border transition-all hover:shadow-md cursor-pointer
-                    ${task.completed ? 'border-zinc-200 bg-zinc-50' : 'border-zinc-100'}
+                    stagger-item relative rounded-2xl p-5 shadow-sm border transition-all hover:shadow-md cursor-pointer
+                    ${task.completed ? 'border-emerald-200/50' : 'border-primary-100'}
                   `}
+                  style={{ animationDelay: `${taskIdx * 50}ms`, backgroundColor: 'var(--surface-primary)' }}
                 >
                   <div className="flex gap-4">
                     <div className="mt-1">
                       <div className={`
-                        w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300
-                        ${task.completed
-                            ? 'bg-zinc-400 border-zinc-400'
-                            : 'bg-transparent border-zinc-300 hover:border-zinc-400'}
+                        checkbox-enhanced
+                        ${task.completed ? 'checkbox-checked' : 'checkbox-unchecked'}
                       `}>
                         {task.completed && <Check size={12} className="text-white" strokeWidth={3} />}
                       </div>
                     </div>
                     <div className="flex-1">
-                      <p className={`text-lg font-semibold mb-1 leading-snug transition-colors ${task.completed ? 'text-zinc-400 line-through' : 'text-zinc-800'}`}>
+                      <p className={`text-lg font-semibold mb-1 leading-snug transition-all duration-300 ${task.completed ? 'text-primary-400 line-through decoration-emerald-400' : 'text-primary-900'}`}>
                         {task.task}
                       </p>
 
@@ -356,9 +362,9 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
                           {task.relatedMeals.map((meal, idx) => {
                             const resolvedMealName = resolveMealName(meal, mealPlan);
                             return (
-                              <span key={idx} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${task.completed ? 'bg-zinc-50 border-zinc-100 text-zinc-400' : 'bg-zinc-50 border-zinc-100'}`}>
-                                <ArrowRight size={10} className="text-zinc-400" />
-                                <span className={`text-[10px] font-medium ${task.completed ? 'text-zinc-400' : 'text-zinc-500'}`}>{resolvedMealName}</span>
+                              <span key={idx} className={task.completed ? 'related-meal-pill-checked' : 'related-meal-pill'}>
+                                <ArrowRight size={10} className="text-primary-400" />
+                                <span className={`text-[10px] font-medium ${task.completed ? 'text-primary-400' : 'text-primary-500'}`}>{resolvedMealName}</span>
                               </span>
                             );
                           })}

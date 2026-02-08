@@ -67,15 +67,16 @@ const FamilyMemberList: React.FC<FamilyMemberListProps> = ({
                   <img
                     src={member.user.avatar_url}
                     alt={displayName}
-                    className="w-8 h-8 rounded-full border-2 border-white object-cover ring-1 ring-primary-200"
+                    className="w-8 h-8 rounded-full border-2 object-cover ring-1 ring-primary-200"
+                    style={{ borderColor: 'var(--surface-bg)' }}
                   />
                 ) : (
-                  <div className="w-8 h-8 bg-primary-900 rounded-full border-2 border-white flex items-center justify-center ring-1 ring-primary-200">
+                  <div className="w-8 h-8 bg-primary-900 rounded-full border-2 flex items-center justify-center ring-1 ring-primary-200" style={{ borderColor: 'var(--surface-bg)' }}>
                     <span className="text-white font-semibold text-xs">{initials}</span>
                   </div>
                 )}
                 {member.role === 'owner' && (
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full flex items-center justify-center border border-white">
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full flex items-center justify-center" style={{ borderColor: 'var(--surface-bg)', borderWidth: '1px' }}>
                     <Crown size={8} className="text-amber-900" />
                   </div>
                 )}
@@ -83,7 +84,7 @@ const FamilyMemberList: React.FC<FamilyMemberListProps> = ({
             );
           })}
           {remainingCount > 0 && (
-            <div className="w-8 h-8 bg-primary-200 rounded-full border-2 border-white flex items-center justify-center ring-1 ring-primary-200">
+            <div className="w-8 h-8 bg-primary-200 rounded-full border-2 flex items-center justify-center ring-1 ring-primary-200" style={{ borderColor: 'var(--surface-bg)' }}>
               <span className="text-primary-700 font-semibold text-xs">+{remainingCount}</span>
             </div>
           )}
@@ -110,7 +111,8 @@ const FamilyMemberList: React.FC<FamilyMemberListProps> = ({
                 <img
                   src={member.user.avatar_url}
                   alt={displayName}
-                  className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
+                  className="w-10 h-10 rounded-full object-cover border-2 shadow-sm"
+                  style={{ borderColor: 'var(--surface-bg)' }}
                 />
               ) : (
                 <div className="w-10 h-10 bg-primary-900 rounded-full flex items-center justify-center shadow-sm">
@@ -118,7 +120,7 @@ const FamilyMemberList: React.FC<FamilyMemberListProps> = ({
                 </div>
               )}
               {member.role === 'owner' && (
-                <div className="absolute -top-1 -right-1 w-5 h-5 bg-amber-400 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-amber-400 rounded-full flex items-center justify-center border-2 shadow-sm" style={{ borderColor: 'var(--surface-bg)' }}>
                   <Crown size={10} className="text-amber-900" />
                 </div>
               )}
