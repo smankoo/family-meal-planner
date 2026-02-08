@@ -10,6 +10,7 @@ import ErrorModal from './components/ErrorModal';
 import ConfirmationModal from './components/ConfirmationModal';
 import FamilyInviteModal from './components/FamilyInviteModal';
 import FamilyMemberList from './components/FamilyMemberList';
+import RegenerateButton from './components/RegenerateButton';
 import Footer from './components/Footer';
 import LoadingScreen from './components/LoadingScreen';
 import { ToastProvider, useToast } from './contexts/ToastContext';
@@ -1726,27 +1727,41 @@ const App: React.FC = () => {
              {currentStage === Stage.MEAL_PLANNING && (
                 <div className="h-full overflow-y-auto no-scrollbar">
                   <div className="max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pb-40 pt-6 md:pt-8">
-                    {/* Mobile Stepper with Regenerate Button (visible only on small screens) */}
-                    <div className="md:hidden mb-6 relative flex justify-center">
-                      <StageStepper
-                         currentStage={currentStage}
-                         setStage={handleStageChange}
-                         hasMealPlan={hasPlanGenerated}
-                      />
-                      <button
-                         onClick={handleRegeneratePlan}
-                         className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-zinc-50 border border-zinc-100 rounded-full flex items-center justify-center text-zinc-400 hover:bg-zinc-100 hover:text-zinc-500 transition-colors"
-                         title="Regenerate Plan"
-                      >
-                         <RotateCcw size={14} strokeWidth={1.5} />
-                      </button>
+                    {/* Mobile Stepper with Action Buttons (visible only on small screens) */}
+                    <div className="md:hidden mb-6 px-4">
+                      <div className="flex justify-center mb-4">
+                        <StageStepper
+                           currentStage={currentStage}
+                           setStage={handleStageChange}
+                           hasMealPlan={hasPlanGenerated}
+                        />
+                      </div>
+                      {hasPlanGenerated && (
+                        <div className="flex justify-end items-center gap-2">
+                          <button
+                            onClick={handleInviteToFamily}
+                            disabled={isCreatingInvite}
+                            className="btn-icon-sm"
+                            title="Invite to Family"
+                          >
+                            {isCreatingInvite ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : familyMembers.length > 0 ? (
+                              <FamilyMemberList members={familyMembers} compact maxDisplay={1} />
+                            ) : (
+                              <UserPlus size={16} />
+                            )}
+                          </button>
+                          <RegenerateButton onRegenerate={handleRegeneratePlan} isLoading={isLoading} showText={false} />
+                        </div>
+                      )}
                     </div>
 
                     <div className="animate-fade-in">
                       {/* Context Header - Desktop Only */}
                       <div className="hidden md:flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
                          <h2 className="text-xl md:text-2xl font-bold text-zinc-900">Meal Plan</h2>
-                         <div className="flex gap-3">
+                         <div className="flex items-center gap-3">
                             {planHistory.past.length > 0 && (
                                <button onClick={handleUndo} className="flex items-center gap-2 px-3 md:px-4 py-2 bg-white border border-zinc-200 text-zinc-600 rounded-full text-xs md:text-sm font-semibold hover:bg-zinc-50 transition-colors">
                                    <Undo2 size={12} className="md:w-[14px] md:h-[14px]" /> Undo
@@ -1769,38 +1784,19 @@ const App: React.FC = () => {
                                  </>
                                )}
                             </button>
-                            <button onClick={handleRegeneratePlan} className="flex items-center gap-2 px-3 md:px-4 py-2 bg-zinc-100 text-zinc-600 rounded-full text-xs md:text-sm font-semibold hover:bg-zinc-200 transition-colors">
-                               <RotateCcw size={12} className="md:w-[14px] md:h-[14px]" /> Regenerate
-                            </button>
+                            {hasPlanGenerated && (
+                              <RegenerateButton onRegenerate={handleRegeneratePlan} isLoading={isLoading} showText={true} />
+                            )}
                          </div>
                       </div>
 
-                      {/* Mobile Header - Apple-style balanced layout */}
-                      <div className="md:hidden flex justify-between items-center mb-6 px-4">
-                         <div className="flex gap-2">
-                            {planHistory.past.length > 0 && (
-                               <button onClick={handleUndo} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-zinc-200 text-zinc-600 rounded-full text-xs font-semibold hover:bg-zinc-50 transition-colors">
-                                   <Undo2 size={12} /> Undo
-                               </button>
-                            )}
-                         </div>
-                         <button
-                            onClick={handleInviteToFamily}
-                            disabled={isCreatingInvite}
-                            className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white border border-zinc-200 text-zinc-600 rounded-full hover:bg-zinc-50 transition-colors disabled:opacity-50"
-                            title="Invite to Family"
-                         >
-                            {isCreatingInvite ? (
-                               <Loader2 size={14} className="animate-spin" />
-                            ) : familyMembers.length > 0 ? (
-                               <>
-                                 <FamilyMemberList members={familyMembers} compact maxDisplay={2} />
-                                 <span className="text-xs font-semibold">{familyMembers.length}</span>
-                               </>
-                            ) : (
-                               <UserPlus size={14} />
-                            )}
-                         </button>
+                      {/* Mobile Header - Undo button */}
+                      <div className="md:hidden flex justify-start mb-6 px-4">
+                         {planHistory.past.length > 0 && (
+                            <button onClick={handleUndo} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-zinc-200 text-zinc-600 rounded-full text-xs font-semibold hover:bg-zinc-50 transition-colors">
+                                <Undo2 size={12} /> Undo
+                            </button>
+                         )}
                       </div>
 
                       {isLoading && planHistory.present === EMPTY_PLAN ? (

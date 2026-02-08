@@ -1,7 +1,8 @@
 import React, { useState, useRef, useLayoutEffect } from 'react';
 import { PrepTask, WeekPlan } from '../types';
-import { Check, Clock, ArrowRight, RotateCcw, Loader2 } from 'lucide-react';
+import { Check, Clock, ArrowRight, Loader2 } from 'lucide-react';
 import InvalidationBanner from './InvalidationBanner';
+import RegenerateButton from './RegenerateButton';
 import { resolveMealName } from '../utils/mealResolver';
 
 interface MealPrepViewProps {
@@ -180,31 +181,15 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
       {/* Header - Desktop Only */}
       <div className="hidden md:flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 max-w-4xl mx-auto px-4 md:px-8">
         <h2 className="text-xl md:text-2xl font-bold text-zinc-900">Prep Strategy</h2>
-        {tasks.length > 0 && (
-          <div className="flex gap-3">
-            <button
-              onClick={onRegenerate}
-              disabled={isLoading}
-              className="btn-regenerate flex items-center gap-2"
-            >
-              <RotateCcw size={14} /> Regenerate
-            </button>
-          </div>
+        {tasks.length > 0 && !isInvalidated && (
+          <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={true} />
         )}
       </div>
 
-      {/* Mobile Header - Include regenerate button for mobile users only when tasks exist */}
-      {tasks.length > 0 && (
-        <div className="md:hidden mb-6 px-4">
-          <div className="flex justify-end">
-            <button
-              onClick={onRegenerate}
-              disabled={isLoading}
-              className="btn-regenerate flex items-center gap-2"
-            >
-              <RotateCcw size={14} /> Regenerate
-            </button>
-          </div>
+      {/* Mobile: Regenerate Button - Subtle, top-right corner */}
+      {tasks.length > 0 && !isInvalidated && (
+        <div className="md:hidden flex justify-end mb-4 px-4">
+          <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={false} />
         </div>
       )}
 

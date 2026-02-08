@@ -1,7 +1,8 @@
 import React, { useState, useRef, useLayoutEffect } from 'react';
 import { GroceryItem, WeekPlan } from '../types';
-import { Check, ShoppingBag, RotateCcw, Loader2, ArrowRight, Apple, Milk, Beef, Wheat, Package } from 'lucide-react';
+import { Check, ShoppingBag, Loader2, ArrowRight, Apple, Milk, Beef, Wheat, Package } from 'lucide-react';
 import InvalidationBanner from './InvalidationBanner';
+import RegenerateButton from './RegenerateButton';
 import { resolveMealName } from '../utils/mealResolver';
 
 // Category icon mapping - using filled Lucide icons with subtle color tints for distinction
@@ -218,37 +219,21 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
       {/* Header - Desktop Only */}
       <div className="hidden md:flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8 max-w-4xl mx-auto px-4 md:px-8">
         <h2 className="text-xl md:text-2xl font-bold text-zinc-900">Shopping List</h2>
-        {items.length > 0 && (
-          <div className="flex gap-3">
-            <button
-              onClick={onRegenerate}
-              disabled={isLoading}
-              className="btn-regenerate flex items-center gap-2"
-            >
-              <RotateCcw size={14} /> Regenerate
-            </button>
-          </div>
+        {items.length > 0 && !isInvalidated && (
+          <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={true} />
         )}
       </div>
 
-      {/* Mobile Header - Include regenerate button for mobile users only when items exist */}
-      {items.length > 0 && (
-        <div className="md:hidden mb-6 px-4">
-          <div className="flex justify-end">
-            <button
-              onClick={onRegenerate}
-              disabled={isLoading}
-              className="btn-regenerate flex items-center gap-2"
-            >
-              <RotateCcw size={14} /> Regenerate
-            </button>
-          </div>
+      {/* Mobile: Regenerate Button - Subtle, top-right corner */}
+      {items.length > 0 && !isInvalidated && (
+        <div className="md:hidden flex justify-end mb-4 px-4">
+          <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={false} />
         </div>
       )}
 
       {/* Invalidation Banner */}
       {isInvalidated && items.length > 0 && (
-        <div className="px-4 md:px-8 max-w-4xl mx-auto">
+        <div className="px-4 md:px-8 max-w-4xl mx-auto mb-6">
           <InvalidationBanner
             type="grocery"
             onRegenerate={onRegenerate}
