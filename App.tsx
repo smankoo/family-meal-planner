@@ -897,6 +897,42 @@ const App: React.FC = () => {
       setIsCreatingInvite(false);
     }
   };
+  const handleRemoveFamilyMember = async (memberUserId: string) => {
+    if (!activePlanId) return;
+
+    const memberToRemove = familyMembers.find(m => m.user_id === memberUserId);
+    const memberName = memberToRemove?.user?.name || memberToRemove?.user?.email || 'this member';
+
+    // Show confirmation modal
+    setConfirmationModal({
+      isOpen: true,
+      title: 'Remove Family Member',
+      message: `Are you sure you want to remove ${memberName} from your family? They will lose access to the shared meal plan.`,
+      confirmLabel: 'Remove',
+      onConfirm: async () => {
+        setConfirmationModal({ ...confirmationModal, isOpen: false });
+
+        try {
+          await apiService.removeFamilyMember(activePlanId, memberUserId);
+
+          // Update local state
+          setFamilyMembers(prev => prev.filter(m => m.user_id !== memberUserId));
+
+          showToast('Member removed from family', 'success');
+
+          await analyticsService.trackEngagement('family_member_removed', {
+            plan_id: activePlanId,
+            removed_user_id: memberUserId
+          });
+        } catch (error) {
+          console.error('Failed to remove family member:', error);
+          handleApiError(error, showToast, setErrorModal, () => handleRemoveFamilyMember(memberUserId));
+        }
+      }
+    });
+  };
+
+
 
   // --- URL Parameter Handling for Family Invites ---
   useEffect(() => {
@@ -1724,6 +1760,8 @@ const App: React.FC = () => {
         isCreatingInvite={isCreatingInvite}
         members={familyMembers}
         currentUserId={user?.id}
+        onRemoveMember={handleRemoveFamilyMember}
+        canRemoveMembers={familyMembers.some(m => m.user_id === user?.id && m.role === 'owner')}
       />
 
       {/* Header - Apple-like frosted glass effect */}

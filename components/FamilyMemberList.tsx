@@ -1,5 +1,5 @@
-import React from 'react';
-import { Crown, User as UserIcon } from 'lucide-react';
+import React, { useState } from 'react';
+import { Crown, User as UserIcon, UserMinus } from 'lucide-react';
 
 export interface FamilyMemberData {
   id: string;
@@ -20,6 +20,8 @@ interface FamilyMemberListProps {
   compact?: boolean;
   showRole?: boolean;
   maxDisplay?: number;
+  onRemoveMember?: (userId: string) => Promise<void>;
+  canRemoveMembers?: boolean;
 }
 
 const FamilyMemberList: React.FC<FamilyMemberListProps> = ({
@@ -27,8 +29,11 @@ const FamilyMemberList: React.FC<FamilyMemberListProps> = ({
   currentUserId,
   compact = false,
   showRole = true,
-  maxDisplay
+  maxDisplay,
+  onRemoveMember,
+  canRemoveMembers = false
 }) => {
+  const [removingUserId, setRemovingUserId] = useState<string | null>(null);
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -46,6 +51,26 @@ const FamilyMemberList: React.FC<FamilyMemberListProps> = ({
 
   const displayMembers = maxDisplay ? members.slice(0, maxDisplay) : members;
   const remainingCount = maxDisplay && members.length > maxDisplay ? members.length - maxDisplay : 0;
+
+  const handleRemoveMember = async (userId: string) => {
+    if (!onRemoveMember) return;
+
+    setRemovingUserId(userId);
+    try {
+      await onRemoveMember(userId);
+    } catch (error) {
+      console.error('Failed to remove member:', error);
+    } finally {
+      setRemovingUserId(null);
+    }
+  };
+
+  const canRemove = (member: FamilyMemberData) => {
+    if (!canRemoveMembers || !onRemoveMember) return false;
+    if (member.user_id === currentUserId) return false; // Can't remove yourself
+    if (member.role === 'owner') return false; // Can't remove owners
+    return true;
+  };
 
   if (compact) {
     // Compact mode: Overlapping avatars
@@ -100,11 +125,13 @@ const FamilyMemberList: React.FC<FamilyMemberListProps> = ({
         const displayName = getDisplayName(member);
         const initials = getInitials(displayName);
         const isCurrentUser = currentUserId === member.user_id;
+        const showRemoveButton = canRemove(member);
+        const isRemoving = removingUserId === member.user_id;
 
         return (
           <div
             key={member.id}
-            className="flex items-center gap-3 p-3 bg-primary-50 rounded-xl hover:bg-primary-100 transition-colors"
+            className="flex items-center gap-3 p-3 bg-primary-50 rounded-xl hover:bg-primary-100 transition-colors group"
           >
             <div className="relative flex-shrink-0">
               {member.user?.avatar_url ? (
@@ -150,6 +177,22 @@ const FamilyMemberList: React.FC<FamilyMemberListProps> = ({
                   </span>
                 )}
               </div>
+            )}
+
+            {showRemoveButton && (
+              <button
+                onClick={() => handleRemoveMember(member.user_id)}
+                disabled={isRemoving}
+                className="flex-shrink-0 btn-icon text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+                title="Remove member"
+                aria-label={`Remove ${displayName}`}
+              >
+                {isRemoving ? (
+                  <div className="animate-spin">⏳</div>
+                ) : (
+                  <UserMinus size={16} />
+                )}
+              </button>
             )}
           </div>
         );

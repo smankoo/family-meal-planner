@@ -279,6 +279,16 @@ class ApiService {
 
     return this.handleResponse(response);
   }
+  async removeFamilyMember(planId: string, memberUserId: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/family-plans/${planId}/members/${memberUserId}`, {
+      method: 'DELETE',
+      headers: await this.getHeaders(),
+    });
+
+    return this.handleResponse(response);
+  }
+
+
 
   async deleteFamilyPlan(planId: string): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/family-plans/${planId}`, {

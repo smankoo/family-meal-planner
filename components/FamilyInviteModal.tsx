@@ -10,6 +10,8 @@ interface FamilyInviteModalProps {
   isCreatingInvite: boolean;
   members?: FamilyMemberData[];
   currentUserId?: string;
+  onRemoveMember?: (userId: string) => Promise<void>;
+  canRemoveMembers?: boolean;
 }
 
 const FamilyInviteModal: React.FC<FamilyInviteModalProps> = ({
@@ -19,7 +21,9 @@ const FamilyInviteModal: React.FC<FamilyInviteModalProps> = ({
   onCreateInvite,
   isCreatingInvite,
   members = [],
-  currentUserId
+  currentUserId,
+  onRemoveMember,
+  canRemoveMembers = false
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -139,6 +143,8 @@ const FamilyInviteModal: React.FC<FamilyInviteModalProps> = ({
                         members={members}
                         currentUserId={currentUserId}
                         showRole={true}
+                        onRemoveMember={onRemoveMember}
+                        canRemoveMembers={canRemoveMembers}
                       />
                     </div>
                   )}

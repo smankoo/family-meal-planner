@@ -58,8 +58,17 @@ User B sees updated meal + toast "Plan updated by family member"
 1. **FamilyInviteModal** (`components/FamilyInviteModal.tsx`)
    - Modal for creating and sharing family invite links
    - Shows invite URL with copy functionality
+   - Displays current family members with roles
+   - Allows owners to remove non-owner members
 
-2. **useFamilyPlan Hook** (`hooks/useFamilyPlan.ts`)
+2. **FamilyMemberList** (`components/FamilyMemberList.tsx`)
+   - Reusable component for displaying family members
+   - Supports compact (avatars) and full (detailed) modes
+   - Shows owner crown badge and role indicators
+   - Remove button appears on hover for removable members (owner-only feature)
+   - Handles loading states during member removal
+
+3. **useFamilyPlan Hook** (`hooks/useFamilyPlan.ts`)
    - Subscribes to Supabase Broadcast channel with `ack: true` for reliability
    - Runs 10s poll as safety net (faster recovery than 30s)
    - Immediate saves (no debouncing) for instant sync
@@ -89,6 +98,7 @@ All endpoints are under `/family-plans/`:
 | `PUT` | `/{plan_id}` | Update family plan + broadcast (any member) |
 | `DELETE` | `/{plan_id}` | Delete family plan (owner only) |
 | `POST` | `/{plan_id}/leave` | Leave a family |
+| `DELETE` | `/{plan_id}/members/{member_user_id}` | Remove a member from family (owner only) |
 
 The `PUT /{plan_id}` endpoint awaits broadcast completion before returning response, ensuring reliable delivery.
 
@@ -126,6 +136,23 @@ Uses the `collaborative_plans` table in Supabase:
 4. Plan data is loaded and persisted to user's data
 5. `activePlanId` is set — broadcast subscription starts
 6. 30s poll begins as safety net
+
+### Removing Family Members
+
+1. Owner opens "Invite to Family" modal to view members
+2. Hover over non-owner member reveals remove button (red trash icon)
+3. Click remove button triggers confirmation modal
+4. On confirmation, frontend calls `DELETE /family-plans/{plan_id}/members/{user_id}`
+5. Backend validates requester is owner and target is not an owner
+6. Member is removed from `plan_members` table
+7. Broadcast sent to notify all family members of removal
+8. Removed member loses access to the family plan
+
+**Authorization Rules**:
+- Only owners can remove members
+- Cannot remove other owners
+- Cannot remove yourself (use leave endpoint instead)
+- Confirmation modal prevents accidental removals
 
 ### Real-Time Sync
 

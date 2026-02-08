@@ -489,3 +489,78 @@ async def leave_family(
     db.commit()
 
     return {"message": "Successfully left the family"}
+
+
+@router.delete("/{plan_id}/members/{member_user_id}")
+async def remove_family_member(
+    plan_id: str,
+    member_user_id: str,
+    background_tasks: BackgroundTasks,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    """
+    Remove a member from a family plan.
+    Only owners can remove members. Owners cannot remove other owners.
+    """
+    # Check if requester is an owner
+    requester = db.query(PlanMember).filter(
+        PlanMember.plan_id == plan_id,
+        PlanMember.user_id == user_id
+    ).first()
+
+    if not requester:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="You are not a member of this family"
+        )
+
+    if requester.role != "owner":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only family owners can remove members"
+        )
+
+    # Find the member to remove
+    member_to_remove = db.query(PlanMember).filter(
+        PlanMember.plan_id == plan_id,
+        PlanMember.user_id == member_user_id
+    ).first()
+
+    if not member_to_remove:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found in this family"
+        )
+
+    # Cannot remove yourself (use leave endpoint instead)
+    if member_user_id == user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot remove yourself. Use the leave endpoint instead."
+        )
+
+    # Cannot remove other owners
+    if member_to_remove.role == "owner":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot remove other owners from the family"
+        )
+
+    # Remove the member
+    db.delete(member_to_remove)
+    db.commit()
+
+    # Get updated plan and members for broadcast
+    plan = db.query(CollaborativePlan).filter(CollaborativePlan.id == plan_id).first()
+    if plan:
+        broadcast_payload = _plan_broadcast_payload(plan)
+        background_tasks.add_task(
+            broadcast_service.broadcast_plan_update,
+            plan_id=str(plan.id),
+            event="member_removed",
+            payload=broadcast_payload,
+            modified_by=user_id,
+        )
+
+    return {"message": "Member removed successfully"}
