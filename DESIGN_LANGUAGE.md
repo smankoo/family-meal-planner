@@ -26,11 +26,16 @@ Whether on a phone or desktop, the experience feels unified:
 - Same visual language everywhere
 
 ### 4. Depth Through Layers
-We create visual hierarchy through subtle layering:
-- Glassmorphism (frosted glass effects) for floating elements
-- Soft shadows that suggest elevation without harshness
-- Backdrop blur for modern, sophisticated overlays
-- Subtle gradients add warmth without distraction
+We create visual hierarchy through sophisticated glassmorphism:
+- **Frosted glass effects** for all floating elements (modals, dropdowns, sticky headers)
+- **Multiple opacity levels**: 70% for subtle backgrounds, 85-90% for primary surfaces, 95% for modals
+- **Backdrop blur variations**: xs (4px), sm (8px), md (12px), lg (16px), xl (20px)
+- **Layered borders**: White borders with 30-50% opacity create depth without harsh lines
+- **Soft shadows** that suggest elevation without harshness
+- **Subtle ring effects** (ring-1 ring-black/5) add definition to glass surfaces
+- **Gradient overlays** on meal cards combine with glass for warmth
+
+**Glass Effect Formula**: `bg-white/[opacity] backdrop-blur-[size] border border-white/[opacity] shadow-[type]`
 
 ### 5. Resilient & Forgiving
 The app gracefully handles the unexpected:
@@ -248,7 +253,20 @@ All visual properties are defined in `index.css` as CSS variables and Tailwind t
 **Typography**: `--font-weight-*`
 **Transitions**: `--transition-fast`, `--transition-base`, `--transition-slow`
 
-**Tailwind Classes**: Use semantic classes like `btn-primary`, `card`, `input`, `heading-hero` defined in the theme system.
+**Tailwind Classes**: Use semantic classes defined in the theme system:
+- **Buttons**: `btn-primary`, `btn-secondary`, `btn-glass`, `btn-glass-primary`, `btn-regenerate`
+- **Cards**: `card`, `card-glass`, `card-glass-light`, `card-glass-medium`, `card-glass-subtle`, `card-interactive-glass`
+- **Meal Cards**: `meal-card-breakfast`, `meal-card-lunch`, `meal-card-snack`, `meal-card-dinner` (with built-in glassmorphism)
+- **Modals**: `modal-backdrop`, `modal-container`, `modal-header`
+- **Lists**: `list-item-glass` for list items with frosted glass effect
+- **Headers**: `sticky-header-mobile` for sticky section headers with glassmorphism
+- **Typography**: `heading-hero`, `heading-page`, `heading-section`, `heading-card`
+
+**Glassmorphism Utilities**:
+- `backdrop-blur-xs` (4px), `backdrop-blur-sm` (8px), `backdrop-blur-md` (12px), `backdrop-blur-lg` (16px), `backdrop-blur-xl` (20px)
+- Combine with `bg-white/[70-95]` for varying transparency levels
+- Add `border border-white/[30-50]` for subtle definition
+- Include `ring-1 ring-black/5` for refined edges
 
 ---
 

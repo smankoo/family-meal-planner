@@ -141,48 +141,75 @@
   }
 
   .btn-regenerate {
-    @apply bg-white border-2 border-primary-200;
+    @apply bg-white/80 backdrop-blur-sm border-2 border-white/60;
     @apply text-primary-700 rounded-full px-4 py-2.5 font-semibold text-sm;
-    @apply hover:border-accent-500 hover:text-accent-600 hover:bg-accent-50;
+    @apply hover:border-accent-500 hover:text-accent-600 hover:bg-white/95;
     @apply hover:shadow-md hover:-translate-y-0.5;
     @apply active:translate-y-0;
     @apply transition-all duration-200;
   }
 
-  /* Meal Type Specific Cards */
+  .btn-glass {
+    @apply bg-white/70 backdrop-blur-sm rounded-button;
+    @apply border border-white/40 shadow-sm;
+    @apply hover:bg-white/85 hover:shadow-md;
+    @apply active:scale-95;
+    @apply transition-all duration-200;
+  }
+
+  .btn-glass-primary {
+    @apply bg-primary-900 text-white rounded-button px-6 py-3 font-semibold;
+    @apply backdrop-blur-sm;
+    @apply hover:shadow-lg hover:-translate-y-0.5;
+    @apply active:translate-y-0;
+    @apply transition-all duration-200;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none;
+    background-color: rgba(24, 24, 27, 0.9);
+    border: 1px solid rgba(63, 63, 70, 0.4);
+  }
+
+  .btn-glass-primary:hover {
+    background-color: rgba(24, 24, 27, 0.95);
+  }
+
+  /* Meal Type Specific Cards - Enhanced with Glassmorphism */
   .meal-card-breakfast {
-    @apply bg-gradient-to-br from-[#fef3c7]/30 via-white to-white;
-    @apply border-[#fcd34d]/50;
+    @apply bg-gradient-to-br from-[#fef3c7]/40 via-white/85 to-white/85;
+    @apply backdrop-blur-sm border-[#fcd34d]/50;
   }
 
   .meal-card-breakfast:hover {
+    @apply bg-gradient-to-br from-[#fef3c7]/50 via-white/90 to-white/90;
     box-shadow: var(--shadow-warm);
   }
 
   .meal-card-lunch {
-    @apply bg-gradient-to-br from-[#ecfdf5]/30 via-white to-white;
-    @apply border-[#a7f3d0]/50;
+    @apply bg-gradient-to-br from-[#ecfdf5]/40 via-white/85 to-white/85;
+    @apply backdrop-blur-sm border-[#a7f3d0]/50;
   }
 
   .meal-card-lunch:hover {
+    @apply bg-gradient-to-br from-[#ecfdf5]/50 via-white/90 to-white/90;
     box-shadow: var(--shadow-fresh);
   }
 
   .meal-card-snack {
-    @apply bg-gradient-to-br from-[#fff7ed]/30 via-white to-white;
-    @apply border-[#fed7aa]/50;
+    @apply bg-gradient-to-br from-[#fff7ed]/40 via-white/85 to-white/85;
+    @apply backdrop-blur-sm border-[#fed7aa]/50;
   }
 
   .meal-card-snack:hover {
+    @apply bg-gradient-to-br from-[#fff7ed]/50 via-white/90 to-white/90;
     box-shadow: var(--shadow-appetite);
   }
 
   .meal-card-dinner {
-    @apply bg-gradient-to-br from-[#eef2ff]/30 via-white to-white;
-    @apply border-[#c7d2fe]/50;
+    @apply bg-gradient-to-br from-[#eef2ff]/40 via-white/85 to-white/85;
+    @apply backdrop-blur-sm border-[#c7d2fe]/50;
   }
 
   .meal-card-dinner:hover {
+    @apply bg-gradient-to-br from-[#eef2ff]/50 via-white/90 to-white/90;
     box-shadow: var(--shadow-accent);
   }
 
@@ -218,9 +245,33 @@
     @apply shadow-modal border border-white/40 ring-1 ring-black/5;
   }
 
+  .card-glass-light {
+    @apply bg-white/85 backdrop-blur-sm rounded-card;
+    @apply shadow-card border border-white/40;
+    @apply transition-all duration-200;
+  }
+
+  .card-glass-medium {
+    @apply bg-white/80 backdrop-blur-md rounded-card;
+    @apply shadow-card-hover border border-white/40;
+    @apply transition-all duration-200;
+  }
+
+  .card-glass-subtle {
+    @apply bg-white/70 backdrop-blur-lg rounded-card;
+    @apply shadow-card border border-white/30;
+    @apply transition-all duration-200;
+  }
+
   .card-interactive {
     @apply bg-white rounded-card border-2 border-primary-100 p-4;
     @apply hover:-translate-y-1 hover:shadow-card-hover hover:border-primary-200;
+    @apply transition-all duration-200 cursor-pointer;
+  }
+
+  .card-interactive-glass {
+    @apply bg-white/85 backdrop-blur-sm rounded-card border border-white/40 p-4;
+    @apply hover:-translate-y-1 hover:shadow-card-hover hover:bg-white/90;
     @apply transition-all duration-200 cursor-pointer;
   }
 
@@ -240,24 +291,27 @@
   /* Modal */
   .modal-backdrop {
     @apply fixed inset-0 z-50 flex items-center justify-center p-4;
-    @apply bg-black/20 backdrop-blur-sm;
+    @apply bg-black/30 backdrop-blur-md;
     @apply transition-all duration-300 ease-out;
   }
 
   .modal-backdrop-light {
     @apply fixed inset-0 z-50 flex items-center justify-center p-4;
+    @apply bg-white/10 backdrop-blur-lg;
     @apply transition-all duration-300 ease-out;
   }
 
   .modal-container {
     @apply bg-white/95 backdrop-blur-xl rounded-modal shadow-modal;
-    @apply border border-white/40 ring-1 ring-black/5;
+    @apply border border-white/50 ring-1 ring-black/5;
     @apply max-w-md w-full max-h-[80vh] overflow-hidden;
     @apply transform transition-all duration-300 ease-out;
   }
 
   .modal-header {
-    @apply flex items-center justify-between p-6 border-b border-primary-100;
+    @apply flex items-center justify-between p-6;
+    @apply bg-white/50 backdrop-blur-sm;
+    border-bottom: 1px solid rgba(244, 244, 245, 0.5);
   }
 
   .modal-content {
@@ -362,9 +416,21 @@
 
   /* Mobile Optimizations */
   .sticky-header-mobile {
-    @apply sticky top-0 z-20 mb-4 px-4 py-3;
-    @apply bg-zinc-50/95 backdrop-blur-md;
-    @apply border-b border-zinc-200/30 shadow-sm;
+    @apply sticky top-0 z-20 mb-4;
+    @apply bg-white/80 backdrop-blur-xl;
+    @apply border border-white/60 shadow-md;
+    @apply rounded-2xl;
+    @apply px-5 py-3;
+  }
+
+  .list-item-glass {
+    @apply bg-white/85 backdrop-blur-sm rounded-lg;
+    @apply border border-white/30 shadow-sm;
+    @apply transition-all duration-200;
+  }
+
+  .list-item-glass:hover {
+    @apply bg-white/90 shadow-md;
   }
 
   .touch-feedback {
@@ -409,7 +475,22 @@
     backdrop-filter: blur(20px);
   }
 
+  .backdrop-blur-lg {
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+  }
+
+  .backdrop-blur-md {
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+
   .backdrop-blur-sm {
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+
+  .backdrop-blur-xs {
     -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
   }

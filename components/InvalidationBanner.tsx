@@ -21,17 +21,17 @@ const InvalidationBanner: React.FC<InvalidationBannerProps> = ({
   return (
     <div className={`
       relative overflow-hidden
-      bg-white/80 backdrop-blur-sm
-      border border-zinc-200
+      bg-white/85 backdrop-blur-md
+      border border-white/40
       rounded-2xl p-5 mb-6
-      shadow-sm
+      shadow-card
       transition-all duration-300
       ${className}
     `}>
       <div className="flex items-start gap-4">
         {/* Icon */}
         <div className="flex-shrink-0">
-          <div className="w-9 h-9 rounded-full bg-zinc-100 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-full bg-white/60 backdrop-blur-sm flex items-center justify-center border border-white/40">
             <RefreshCw size={16} className="text-zinc-500" strokeWidth={2.5} />
           </div>
         </div>
@@ -49,17 +49,7 @@ const InvalidationBanner: React.FC<InvalidationBannerProps> = ({
           <button
             onClick={onRegenerate}
             disabled={isLoading}
-            className="
-              inline-flex items-center justify-center gap-2
-              px-4 py-2.5
-              bg-zinc-900 hover:bg-zinc-800
-              text-white text-sm font-medium
-              rounded-full
-              transition-all duration-200
-              shadow-sm hover:shadow-md
-              disabled:opacity-50 disabled:cursor-not-allowed
-              active:scale-[0.98]
-            "
+            className="btn-glass-primary"
           >
             {isLoading ? (
               <>

@@ -283,12 +283,12 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
       ) : (
         <>
           {/* Mobile View */}
-          <div className="md:hidden flex flex-col pb-20">
+          <div className="md:hidden flex flex-col pb-20 px-4">
             {Object.entries(groupedItems).sort().map(([category, catItems]) => (
               <div key={category} className="mb-8">
 
                 {/* Category Header - Apple-style section header */}
-                <div className="sticky top-0 z-20 mb-4 px-4 py-3 bg-zinc-50/95 backdrop-blur-md border-b border-zinc-200/30 shadow-sm">
+                <div className="sticky-header-mobile">
                   <div className="flex items-center gap-3">
                     <h3 className="text-xl font-bold text-zinc-900 tracking-tight">
                       {category}
@@ -297,7 +297,7 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
                 </div>
 
                 {/* Items for that category */}
-                <div className="space-y-3 px-4">
+                <div className="space-y-3">
                   {catItems.map((item) => {
                     const itemKey = `${item.category}-${item.name}-${item.id}`;
                     return (
@@ -360,10 +360,9 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
               <div key={category} className="mb-8">
 
                 {/* Category Header - Sticky */}
-                <div className="sticky top-0 z-20 mb-4 px-4 py-3 bg-zinc-50/95 backdrop-blur-md border-b border-zinc-200/30 shadow-sm">
+                <div className="sticky-header-mobile">
                   <div className="flex items-center gap-4">
                     <span className="text-sm font-bold text-zinc-400 uppercase tracking-widest">{category}</span>
-                    <div className="h-[1px] flex-1 bg-zinc-100"></div>
                   </div>
                 </div>
 

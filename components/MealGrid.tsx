@@ -19,7 +19,7 @@ const MealGrid: React.FC<MealGridProps> = ({
   onReplaceMeal,
   isStreaming = false,
   newlyReceivedCards = new Set(),
-  replacingMeals = new Set()
+  replacingMeals = new Set(),
 }) => {
   const mealTimes = [MealTime.BREAKFAST, MealTime.LUNCH, MealTime.SNACK, MealTime.DINNER];
 
@@ -140,7 +140,7 @@ const MealGrid: React.FC<MealGridProps> = ({
   // --- Mobile View (Apple-style sticky section headers) ---
   const MobileView = () => {
     return (
-      <div className="md:hidden flex flex-col pb-20">
+      <div className="md:hidden flex flex-col pb-20 px-4">
         {plan.map((dayPlan, dayIdx) => (
             <div key={dayPlan.day} className="mb-8">
 
@@ -152,7 +152,7 @@ const MealGrid: React.FC<MealGridProps> = ({
                 </div>
 
                 {/* Cards for that day */}
-                <div className="space-y-3 px-4">
+                <div className="space-y-3">
                     {mealTimes.map((time) => {
                         const cell = dayPlan.meals[time] || { name: '', description: '', notes: '' };
                         const isChanged = hasChanged(dayIdx, time);
@@ -239,9 +239,8 @@ const MealGrid: React.FC<MealGridProps> = ({
         {plan.map((dayPlan, dayIdx) => (
             <div key={dayPlan.day} className="w-full">
                 {/* Sticky Row Header */}
-                <div className="sticky-header-mobile flex items-center gap-4 -mx-4">
-                    <span className="text-sm font-bold text-zinc-900 uppercase tracking-widest">{dayPlan.day}</span>
-                    <div className="h-[1px] flex-1 bg-zinc-200/50"></div>
+                <div className="sticky-header-mobile flex items-center justify-between">
+                    <span className="text-base font-bold text-zinc-900 uppercase tracking-widest">{dayPlan.day}</span>
                 </div>
 
                 {/* Adaptive Grid - Apple-like responsive behavior */}
@@ -305,11 +304,11 @@ const MealGrid: React.FC<MealGridProps> = ({
                                 </div>
 
                                 <div className="flex-1">
-                                    <h4 className={`font-bold text-sm xl:text-sm leading-snug mb-2 ${isEmpty ? 'text-zinc-300 italic' : 'text-zinc-800'}`}>
+                                    <h4 className={`font-bold text-base leading-snug mb-2 ${isEmpty ? 'text-zinc-300 italic' : 'text-zinc-800'}`}>
                                         {cell.name || "—"}
                                     </h4>
                                     {cell.description && (
-                                        <p className="text-xs text-zinc-500 font-light leading-relaxed line-clamp-2 xl:line-clamp-3">
+                                        <p className="text-sm text-zinc-500 font-light leading-relaxed line-clamp-2 xl:line-clamp-3">
                                             {cell.description}
                                         </p>
                                     )}
@@ -319,7 +318,7 @@ const MealGrid: React.FC<MealGridProps> = ({
                                     <div className="mt-3 pt-3 border-t border-zinc-50">
                                         <div className="flex items-start gap-1.5">
                                             <Users size={12} className="text-zinc-300 mt-0.5 shrink-0" />
-                                            <span className="text-[10px] font-semibold text-zinc-400 leading-tight">
+                                            <span className="text-xs font-semibold text-zinc-400 leading-tight">
                                                 {cell.notes}
                                             </span>
                                         </div>

@@ -133,20 +133,20 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="modal-backdrop-light">
-      {/* Lighter backdrop */}
+    <div className="modal-backdrop">
+      {/* Glassmorphic backdrop */}
       <div
-        className="absolute inset-0 bg-black/30 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-black/30 backdrop-blur-md"
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md bg-white rounded-modal shadow-modal overflow-hidden animate-modal-in">
+      <div className="relative w-full max-w-md bg-white/95 backdrop-blur-xl rounded-modal shadow-modal border border-white/50 ring-1 ring-black/5 overflow-hidden animate-modal-in">
         {/* Header */}
-        <div className="relative px-8 pt-8 pb-6">
+        <div className="relative px-8 pt-8 pb-6 bg-white/50 backdrop-blur-sm">
           <button
             onClick={onClose}
-            className="absolute top-6 right-6 w-10 h-10 rounded-full hover:bg-primary-100 text-primary-400 hover:text-primary-600 flex items-center justify-center transition-all"
+            className="absolute top-6 right-6 w-10 h-10 rounded-full hover:bg-white/80 text-primary-400 hover:text-primary-600 flex items-center justify-center transition-all"
             aria-label="Close"
           >
             <X size={20} />

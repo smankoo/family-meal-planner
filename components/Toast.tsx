@@ -48,8 +48,8 @@ const Toast: React.FC<ToastProps> = ({ toast }) => {
     >
       <div
         className="
-          bg-white/90 backdrop-blur-xl rounded-card shadow-card-hover
-          border border-primary-200/50
+          bg-white/95 backdrop-blur-xl rounded-card shadow-card-hover
+          border border-white/50 ring-1 ring-black/5
           px-4 py-3 flex items-center gap-3
           min-w-[320px] max-w-md
         "

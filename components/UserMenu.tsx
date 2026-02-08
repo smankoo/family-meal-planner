@@ -67,7 +67,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ onOpenSettings }) => {
       {/* User Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 h-9 md:h-10 px-2 md:px-3 bg-white/60 backdrop-blur-sm shadow-sm border border-white/40 rounded-full hover:bg-white/80 transition-all group"
+        className="flex items-center gap-2 h-9 md:h-10 px-2 md:px-3 bg-white/70 backdrop-blur-sm shadow-sm border border-white/50 rounded-full hover:bg-white/90 transition-all group"
         title={displayName}
       >
         {/* Avatar */}
@@ -100,9 +100,9 @@ const UserMenu: React.FC<UserMenuProps> = ({ onOpenSettings }) => {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 bg-white/95 backdrop-blur-xl rounded-xl shadow-modal border border-white/40 ring-1 ring-black/5 overflow-hidden animate-fade-in-up z-50">
+        <div className="absolute right-0 mt-2 w-64 bg-white/95 backdrop-blur-xl rounded-xl shadow-modal border border-white/50 ring-1 ring-black/5 overflow-hidden animate-fade-in-up z-50">
           {/* User Info Section */}
-          <div className="p-4 border-b border-zinc-100">
+          <div className="p-4 border-b border-white/30 bg-white/40 backdrop-blur-sm">
             <div className="flex items-center gap-3">
               {avatarUrl && !avatarError ? (
                 <img

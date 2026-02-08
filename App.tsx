@@ -1658,15 +1658,15 @@ const App: React.FC = () => {
       />
 
       {/* Header - Apple-like frosted glass effect */}
-      <header className="frosted-header fixed top-0 left-0 right-0 z-50 h-16 md:h-20 flex items-center justify-between px-4 md:px-6 lg:px-10 pointer-events-none">
+      <header className="frosted-header fixed top-0 left-0 right-0 z-50 h-16 md:h-20 pointer-events-none">
         {/* Backdrop blur background */}
-        <div className="absolute inset-0 bg-zinc-50/80 backdrop-blur-xl border-b border-zinc-200/50"></div>
+        <div className="absolute inset-0 bg-white/70 backdrop-blur-xl border-b border-white/40 shadow-sm"></div>
 
-        {/* Content layer */}
-        <div className="relative w-full flex items-center justify-between">
+        {/* Content layer - same max-width as main content */}
+        <div className="relative h-full max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 flex items-center justify-between">
           {/* Left: Brand - Cleaner, Apple-like */}
           <div className="pointer-events-auto flex items-center gap-2 md:gap-2.5">
-              <div className="w-7 h-7 md:w-8 md:h-8 bg-zinc-900 rounded-xl flex items-center justify-center shadow-md shadow-zinc-900/10">
+              <div className="w-7 h-7 md:w-8 md:h-8 bg-zinc-900/90 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-md shadow-zinc-900/10">
                   <ChefHat size={16} className="md:w-[18px] md:h-[18px] text-white" strokeWidth={2.5} />
               </div>
               <h1 className="text-base md:text-lg font-semibold text-zinc-900 tracking-tight">Meal Planner</h1>
@@ -1681,14 +1681,37 @@ const App: React.FC = () => {
                />
           </div>
 
-          {/* Right: User Actions */}
+          {/* Right: App Actions + User Menu */}
           <div className="pointer-events-auto flex items-center gap-2">
-              {/* User Menu or Close Button - Transform in place */}
+              {/* Invite (app-level action) */}
+              {viewMode === 'planning' && hasPlanGenerated && (
+                <div className="hidden md:flex items-center gap-2">
+                    <button
+                       onClick={handleInviteToFamily}
+                       disabled={isCreatingInvite}
+                       className="btn-glass flex items-center gap-2 px-3 py-1.5 text-zinc-600 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                       {familyMembers.length > 0 ? (
+                         <>
+                           <FamilyMemberList members={familyMembers} compact maxDisplay={3} />
+                           <span className="ml-1">{familyMembers.length}</span>
+                         </>
+                       ) : (
+                         <>
+                           <UserPlus size={14} />
+                           {isCreatingInvite ? 'Creating...' : 'Invite'}
+                         </>
+                       )}
+                    </button>
+                </div>
+              )}
+
+              {/* User Menu or Close Button */}
               {user && (
                   viewMode === 'household' && hasPlanGenerated ? (
                       <button
                           onClick={handleCloseSetup}
-                          className="w-9 h-9 md:w-10 md:h-10 bg-white/60 backdrop-blur-sm shadow-sm border border-white/40 rounded-full flex items-center justify-center text-zinc-500 hover:text-red-600 hover:bg-white/80 transition-all"
+                          className="w-9 h-9 md:w-10 md:h-10 bg-white/70 backdrop-blur-sm shadow-sm border border-white/50 rounded-full flex items-center justify-center text-zinc-500 hover:text-red-600 hover:bg-white/90 transition-all"
                           title="Close Settings"
                       >
                           <X size={18} className="md:w-5 md:h-5" />
@@ -1758,42 +1781,22 @@ const App: React.FC = () => {
                     </div>
 
                     <div className="animate-fade-in">
-                      {/* Context Header - Desktop Only */}
-                      <div className="hidden md:flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
-                         <h2 className="text-xl md:text-2xl font-bold text-zinc-900">Meal Plan</h2>
-                         <div className="flex items-center gap-3">
+
+                      {/* Page-level actions - Desktop */}
+                      <div className="hidden md:flex justify-end items-center gap-3 mb-4">
                             {planHistory.past.length > 0 && (
-                               <button onClick={handleUndo} className="flex items-center gap-2 px-3 md:px-4 py-2 bg-white border border-zinc-200 text-zinc-600 rounded-full text-xs md:text-sm font-semibold hover:bg-zinc-50 transition-colors">
-                                   <Undo2 size={12} className="md:w-[14px] md:h-[14px]" /> Undo
+                               <button onClick={handleUndo} className="btn-glass flex items-center gap-2 px-3 py-1.5 text-zinc-600 text-sm font-semibold">
+                                   <Undo2 size={14} /> Undo
                                </button>
                             )}
-                            <button
-                               onClick={handleInviteToFamily}
-                               disabled={isCreatingInvite}
-                               className="flex items-center gap-2 px-3 md:px-4 py-2 bg-white border border-zinc-200 text-zinc-600 rounded-full text-xs md:text-sm font-semibold hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                               {familyMembers.length > 0 ? (
-                                 <>
-                                   <FamilyMemberList members={familyMembers} compact maxDisplay={3} />
-                                   <span className="ml-1">{familyMembers.length}</span>
-                                 </>
-                               ) : (
-                                 <>
-                                   <UserPlus size={12} className="md:w-[14px] md:h-[14px]" />
-                                   {isCreatingInvite ? 'Creating...' : 'Invite'}
-                                 </>
-                               )}
-                            </button>
                             {hasPlanGenerated && (
                               <RegenerateButton onRegenerate={handleRegeneratePlan} isLoading={isLoading} showText={true} />
                             )}
-                         </div>
                       </div>
-
                       {/* Mobile Header - Undo button */}
                       <div className="md:hidden flex justify-start mb-6 px-4">
                          {planHistory.past.length > 0 && (
-                            <button onClick={handleUndo} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-zinc-200 text-zinc-600 rounded-full text-xs font-semibold hover:bg-zinc-50 transition-colors">
+                            <button onClick={handleUndo} className="btn-glass flex items-center gap-1.5 px-3 py-1.5 text-zinc-600 text-xs font-semibold">
                                 <Undo2 size={12} /> Undo
                             </button>
                          )}

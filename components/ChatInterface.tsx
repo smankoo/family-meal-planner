@@ -41,9 +41,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       <div className="flex-1 flex flex-col card-glass rounded-modal shadow-modal overflow-hidden">
 
         {/* Header */}
-        <div className="modal-header bg-white/50 backdrop-blur-md sticky top-0 z-10">
+        <div className="modal-header">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-accent-50 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-accent-50/80 backdrop-blur-sm flex items-center justify-center border border-accent-100/50">
                 <Sparkles size={16} className="text-accent-600" />
             </div>
             <div>
