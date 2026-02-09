@@ -330,6 +330,10 @@ const App: React.FC = () => {
   const [newlyReceivedTasks, setNewlyReceivedTasks] = useState<Set<string>>(new Set());
   const [newlyReceivedItems, setNewlyReceivedItems] = useState<Set<string>>(new Set());
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  // Background processing states - for transparent data generation
+  const [isPrepGenerating, setIsPrepGenerating] = useState(false);
+  const [isGroceryGenerating, setIsGroceryGenerating] = useState(false);
   const [errorModal, setErrorModal] = useState<{
     isOpen: boolean;
     title?: string;
@@ -591,6 +595,170 @@ const App: React.FC = () => {
     return Date.now().toString();
   };
 
+  // Background generation functions - non-blocking, transparent to user
+  const generatePrepPlanInBackground = async (mealPlan: WeekPlan) => {
+    // Don't generate if already generating or if prep plan is current
+    if (isPrepGenerating || (prepTasks.length > 0 && !isPrepPlanInvalidated())) {
+      return;
+    }
+
+    console.log('[Background] Starting prep plan generation...');
+    setIsPrepGenerating(true);
+
+    // Clear previously received tasks and set initial empty state
+    setNewlyReceivedTasks(new Set());
+    setPrepTasks([], true); // skipSave - don't persist empty array during init
+
+    // Use a ref to track tasks as they're being built during streaming
+    const streamingTasksRef = { current: [] as PrepTask[] };
+
+    try {
+      await generateMealPrepPlanStream(
+        mealPlan,
+        // onTaskReceived callback
+        (taskData: any) => {
+          const newTask: PrepTask = {
+            id: `prep-${Date.now()}-${Math.random()}`,
+            day: taskData.day,
+            task: taskData.task,
+            relatedMeals: Array.isArray(taskData.relatedMeals) ? taskData.relatedMeals :
+                         typeof taskData.relatedMeals === 'string' ? [taskData.relatedMeals] : [],
+            completed: false
+          };
+
+          const taskKey = `${taskData.day}-${newTask.id}`;
+          setNewlyReceivedTasks(prev => new Set([...prev, taskKey]));
+
+          streamingTasksRef.current.push(newTask);
+          setPrepTasks([...streamingTasksRef.current], true);
+
+          setTimeout(() => {
+            setNewlyReceivedTasks(prev => {
+              const updated = new Set(prev);
+              updated.delete(taskKey);
+              return updated;
+            });
+          }, 600);
+        },
+        // onComplete callback
+        async () => {
+          setIsPrepGenerating(false);
+          await dataService.saveData('prep_tasks', streamingTasksRef.current);
+          console.log('[Background] ✓ Prep plan generation completed');
+
+          setInvalidationState(prev => ({
+            ...prev,
+            prepPlanVersion: prev.currentPlanVersion
+          }));
+
+          await analyticsService.trackMealPlanningEvent('prep_generation_completed', {
+            streaming: true,
+            background: true
+          });
+
+          // Automatically start generating grocery list in background
+          generateGroceryListInBackground(mealPlan, streamingTasksRef.current);
+        },
+        // onError callback
+        async (error: Error) => {
+          setIsPrepGenerating(false);
+          console.warn('[Background] Prep plan generation failed:', error.message);
+
+          await analyticsService.trackMealPlanningEvent('prep_generation_failed', {
+            error_message: error.message,
+            streaming: true,
+            background: true
+          });
+
+          // Silently fail - user can manually regenerate if needed
+        }
+      );
+    } catch (error) {
+      setIsPrepGenerating(false);
+      console.warn('[Background] Prep plan generation error:', error);
+    }
+  };
+
+  const generateGroceryListInBackground = async (mealPlan: WeekPlan, tasks: PrepTask[]) => {
+    // Don't generate if already generating or if grocery list is current
+    if (isGroceryGenerating || (groceryItems.length > 0 && !isGroceryListInvalidated())) {
+      return;
+    }
+
+    console.log('[Background] Starting grocery list generation...');
+    setIsGroceryGenerating(true);
+
+    // Clear previously received items and set initial empty state
+    setNewlyReceivedItems(new Set());
+    setGroceryItems([], true);
+
+    const streamingItemsRef = { current: [] as GroceryItem[] };
+
+    try {
+      await generateGroceryListStream(
+        mealPlan,
+        tasks,
+        // onItemReceived callback
+        (itemData: any) => {
+          const newItem: GroceryItem = {
+            id: `groc-${Date.now()}-${Math.random()}`,
+            name: itemData.name,
+            category: itemData.category,
+            quantity: itemData.quantity,
+            checked: false,
+            relatedMeals: itemData.relatedMeals
+          };
+
+          const itemKey = `${itemData.category}-${itemData.name}-${newItem.id}`;
+          setNewlyReceivedItems(prev => new Set([...prev, itemKey]));
+
+          streamingItemsRef.current.push(newItem);
+          setGroceryItems([...streamingItemsRef.current], true);
+
+          setTimeout(() => {
+            setNewlyReceivedItems(prev => {
+              const updated = new Set(prev);
+              updated.delete(itemKey);
+              return updated;
+            });
+          }, 600);
+        },
+        // onComplete callback
+        async () => {
+          setIsGroceryGenerating(false);
+          await dataService.saveData('grocery_items', streamingItemsRef.current);
+          console.log('[Background] ✓ Grocery list generation completed');
+
+          setInvalidationState(prev => ({
+            ...prev,
+            groceryListVersion: prev.currentPlanVersion
+          }));
+
+          await analyticsService.trackMealPlanningEvent('grocery_generation_completed', {
+            streaming: true,
+            background: true
+          });
+        },
+        // onError callback
+        async (error: Error) => {
+          setIsGroceryGenerating(false);
+          console.warn('[Background] Grocery list generation failed:', error.message);
+
+          await analyticsService.trackMealPlanningEvent('grocery_generation_failed', {
+            error_message: error.message,
+            streaming: true,
+            background: true
+          });
+
+          // Silently fail - user can manually regenerate if needed
+        }
+      );
+    } catch (error) {
+      setIsGroceryGenerating(false);
+      console.warn('[Background] Grocery list generation error:', error);
+    }
+  };
+
   const handleGenerateInitialPlan = async (members: FamilyMember[], prefs: FamilyPreferences) => {
     setIsLoading(true);
 
@@ -715,6 +883,9 @@ const App: React.FC = () => {
             family_size: members.length,
             streaming: true
           });
+
+          // Automatically start generating prep plan in background
+          generatePrepPlanInBackground(streamingPlanRef.current);
         },
         // onError callback
         async (error: Error) => {
@@ -1180,6 +1351,9 @@ const App: React.FC = () => {
 
       showToast(`Replaced ${mealType} with ${newMeal.name}`, 'success');
 
+      // Automatically regenerate prep and grocery in background since meal plan changed
+      generatePrepPlanInBackground(updatedPlan);
+
     } catch (error) {
       console.error('Error replacing meal:', error);
 
@@ -1242,255 +1416,6 @@ const App: React.FC = () => {
         behavior: 'smooth'
       });
     }, 100);
-
-    // If switching to prep and we don't have prep tasks, generate them
-    if (newStage === Stage.MEAL_PREP && prepTasks.length === 0) {
-      setIsLoading(true);
-
-      await analyticsService.trackMealPlanningEvent('prep_generation_started');
-
-      // Clear previously received tasks and set initial empty state
-      setNewlyReceivedTasks(new Set());
-      setPrepTasks([], true); // skipSave - don't persist empty array during init
-
-      // Use a ref to track tasks as they're being built during streaming
-      const streamingTasksRef = { current: [] as PrepTask[] };
-
-      try {
-        // Use task-by-task streaming generation
-        await generateMealPrepPlanStream(
-          planHistory.present,
-          // onTaskReceived callback
-          (taskData: any) => {
-            // Create task with proper ID and structure
-            const newTask: PrepTask = {
-              id: `prep-${Date.now()}-${Math.random()}`,
-              day: taskData.day,
-              task: taskData.task,
-              relatedMeals: Array.isArray(taskData.relatedMeals) ? taskData.relatedMeals :
-                           typeof taskData.relatedMeals === 'string' ? [taskData.relatedMeals] : [],
-              completed: false
-            };
-
-            // Track newly received task for animation using the same key format as component
-            const taskKey = `${taskData.day}-${newTask.id}`;
-            setNewlyReceivedTasks(prev => new Set([...prev, taskKey]));
-
-            // Add task to the ref
-            streamingTasksRef.current.push(newTask);
-
-            // Update UI state with the ref's current tasks
-            setPrepTasks([...streamingTasksRef.current], true); // skipSave during streaming
-
-            // Clear the animation state after animation completes
-            setTimeout(() => {
-              setNewlyReceivedTasks(prev => {
-                const updated = new Set(prev);
-                updated.delete(taskKey);
-                return updated;
-              });
-            }, 600); // Match animation duration
-          },
-          // onComplete callback
-          async () => {
-            setIsLoading(false);
-
-            // Save the completed prep tasks from the ref
-            await dataService.saveData('prep_tasks', streamingTasksRef.current);
-            console.log('✓ Saved completed prep tasks after streaming');
-
-            // Mark prep plan as current with the meal plan version
-            setInvalidationState(prev => ({
-              ...prev,
-              prepPlanVersion: prev.currentPlanVersion
-            }));
-
-            await analyticsService.trackMealPlanningEvent('prep_generation_completed', {
-              streaming: true
-            });
-          },
-          // onError callback
-          async (error: Error) => {
-            setIsLoading(false);
-
-            await analyticsService.trackMealPlanningEvent('prep_generation_failed', {
-              error_message: error.message,
-              streaming: true
-            });
-
-            const errorMessage = error.message;
-            if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
-              showToast('Rate limit reached. Prep tasks will be generated later.', 'warning', 6000);
-            } else {
-              showToast('Failed to generate prep tasks. You can try again later.', 'error', 6000);
-            }
-          }
-        );
-
-      } catch (error) {
-        setIsLoading(false);
-
-        // Fallback to batch generation if streaming fails
-        try {
-          const tasks = await generateMealPrepPlan(planHistory.present);
-          setPrepTasks(tasks);
-
-          // Mark prep plan as current with the meal plan version
-          setInvalidationState(prev => ({
-            ...prev,
-            prepPlanVersion: prev.currentPlanVersion
-          }));
-
-          await analyticsService.trackMealPlanningEvent('prep_generation_completed', {
-            fallback: true
-          });
-
-        } catch (fallbackError) {
-          const errorMessage = fallbackError instanceof Error ? fallbackError.message : 'Unknown error';
-
-          await analyticsService.trackMealPlanningEvent('prep_generation_failed', {
-            error_message: errorMessage,
-            fallback: true
-          });
-
-          const errorCode = (fallbackError as any)?.code;
-          if (errorCode === 'RATE_LIMIT_EXCEEDED') {
-            const retryAfter = (fallbackError as any)?.retryAfter;
-            const retryMessage = retryAfter
-              ? `Rate limit reached. Prep tasks will be generated in ${Math.ceil(retryAfter / 60)} minutes.`
-              : 'Rate limit reached. Prep tasks will be generated later.';
-            showToast(retryMessage, 'warning', 6000);
-          } else {
-            showToast('Failed to generate prep tasks. You can try again later.', 'error', 6000);
-          }
-        }
-      }
-    }
-
-    // If switching to grocery list and we don't have grocery items, generate them
-    if (newStage === Stage.GROCERY_LIST && groceryItems.length === 0) {
-      setIsLoading(true);
-
-      await analyticsService.trackMealPlanningEvent('grocery_generation_started');
-
-      // Clear previously received items and set initial empty state
-      setNewlyReceivedItems(new Set());
-      setGroceryItems([], true); // skipSave - don't persist empty array during init
-
-      // Use a ref to track items as they're being built during streaming
-      const streamingItemsRef = { current: [] as GroceryItem[] };
-
-      try {
-        // Use item-by-item streaming generation
-        await generateGroceryListStream(
-          planHistory.present,
-          prepTasks,
-          // onItemReceived callback
-          (itemData: any) => {
-            // Create item with proper ID and structure
-            const newItem: GroceryItem = {
-              id: `groc-${Date.now()}-${Math.random()}`,
-              name: itemData.name,
-              category: itemData.category,
-              quantity: itemData.quantity,
-              checked: false,
-              relatedMeals: itemData.relatedMeals // Include related meals from backend
-            };
-
-            // Track newly received item for animation using the same key format as component
-            const itemKey = `${itemData.category}-${itemData.name}-${newItem.id}`;
-            setNewlyReceivedItems(prev => new Set([...prev, itemKey]));
-
-            // Add item to the ref
-            streamingItemsRef.current.push(newItem);
-
-            // Update UI state with the ref's current items
-            setGroceryItems([...streamingItemsRef.current], true); // skipSave during streaming
-
-            // Clear the animation state after animation completes
-            setTimeout(() => {
-              setNewlyReceivedItems(prev => {
-                const updated = new Set(prev);
-                updated.delete(itemKey);
-                return updated;
-              });
-            }, 600); // Match animation duration
-          },
-          // onComplete callback
-          async () => {
-            setIsLoading(false);
-
-            // Save the completed grocery items from the ref
-            await dataService.saveData('grocery_items', streamingItemsRef.current);
-            console.log('✓ Saved completed grocery items after streaming');
-
-            // Mark grocery list as current with the meal plan version
-            setInvalidationState(prev => ({
-              ...prev,
-              groceryListVersion: prev.currentPlanVersion
-            }));
-
-            await analyticsService.trackMealPlanningEvent('grocery_generation_completed', {
-              streaming: true
-            });
-          },
-          // onError callback
-          async (error: Error) => {
-            setIsLoading(false);
-
-            await analyticsService.trackMealPlanningEvent('grocery_generation_failed', {
-              error_message: error.message,
-              streaming: true
-            });
-
-            const errorMessage = error.message;
-            if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
-              showToast('Rate limit reached. Grocery list will be generated later.', 'warning', 6000);
-            } else {
-              showToast('Failed to generate grocery list. You can try again later.', 'error', 6000);
-            }
-          }
-        );
-
-      } catch (error) {
-        setIsLoading(false);
-
-        // Fallback to batch generation if streaming fails
-        try {
-          const items = await generateGroceryList(planHistory.present, prepTasks);
-          setGroceryItems(items);
-
-          // Mark grocery list as current with the meal plan version
-          setInvalidationState(prev => ({
-            ...prev,
-            groceryListVersion: prev.currentPlanVersion
-          }));
-
-          await analyticsService.trackMealPlanningEvent('grocery_generation_completed', {
-            fallback: true
-          });
-
-        } catch (fallbackError) {
-          const errorMessage = fallbackError instanceof Error ? fallbackError.message : 'Unknown error';
-
-          await analyticsService.trackMealPlanningEvent('grocery_generation_failed', {
-            error_message: errorMessage,
-            fallback: true
-          });
-
-          const errorCode = (fallbackError as any)?.code;
-          if (errorCode === 'RATE_LIMIT_EXCEEDED') {
-            const retryAfter = (fallbackError as any)?.retryAfter;
-            const retryMessage = retryAfter
-              ? `Rate limit reached. Grocery list will be generated in ${Math.ceil(retryAfter / 60)} minutes.`
-              : 'Rate limit reached. Grocery list will be generated later.';
-            showToast(retryMessage, 'warning', 6000);
-          } else {
-            showToast('Failed to generate grocery list. You can try again later.', 'error', 6000);
-          }
-        }
-      }
-    }
   };
 
   // Helper functions for regenerating prep and grocery lists
@@ -1973,7 +1898,7 @@ const App: React.FC = () => {
                          onRegenerate={handleRegeneratePrep}
                          onGenerate={handleRegeneratePrep}
                          onNavigateToMealPlan={() => setCurrentStage(Stage.MEAL_PLANNING)}
-                         isLoading={isLoading}
+                         isLoading={isLoading || isPrepGenerating}
                          hasMealPlan={hasPlanGenerated && planHistory.present.some(day =>
                            Object.values(day.meals).some(meal => meal.name && meal.name.trim() !== '')
                          )}
@@ -2005,7 +1930,7 @@ const App: React.FC = () => {
                          onRegenerate={handleRegenerateGrocery}
                          onGenerate={handleRegenerateGrocery}
                          onNavigateToMealPlan={() => setCurrentStage(Stage.MEAL_PLANNING)}
-                         isLoading={isLoading}
+                         isLoading={isLoading || isGroceryGenerating}
                          hasMealPlan={hasPlanGenerated && planHistory.present.some(day =>
                            Object.values(day.meals).some(meal => meal.name && meal.name.trim() !== '')
                          )}
@@ -2027,66 +1952,9 @@ const App: React.FC = () => {
         Bottom Floating Controls
       */}
       {viewMode === 'planning' && (
-          <div className="fixed bottom-8 w-full px-6 flex items-center justify-between pointer-events-none z-50 max-w-[1600px] mx-auto left-0 right-0">
+          <div className="fixed bottom-8 w-full px-6 flex items-center justify-end pointer-events-none z-50 max-w-[1600px] mx-auto left-0 right-0">
 
-             {/* Left: Back / Spacer */}
-             <div className="pointer-events-auto">
-                {currentStage !== Stage.MEAL_PLANNING ? (
-                     <button
-                        onClick={() => handleStageChange(currentStage - 1)}
-                        className="w-12 h-12 flex items-center justify-center rounded-full shadow-lg transition-all active:scale-95"
-                        style={{ backgroundColor: 'var(--surface-glass)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}
-                        title="Back"
-                    >
-                        <ArrowLeft size={20} />
-                    </button>
-                ) : <div className="w-12" />}
-             </div>
-
-             {/* Center: Primary Stage Action */}
-             <div className="pointer-events-auto">
-                {currentStage === Stage.MEAL_PLANNING && (
-                    <button
-                        onClick={() => handleStageChange(Stage.MEAL_PREP)}
-                        disabled={isLoading}
-                        className="group flex items-center gap-3 px-8 py-4 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-80 disabled:hover:scale-100 disabled:cursor-wait"
-                        style={{ backgroundColor: 'var(--text-primary)', color: 'var(--text-inverted)' }}
-                    >
-                        {isLoading ? (
-                            <Loader2 size={18} className="animate-spin text-primary-400" />
-                        ) : (
-                            <>
-                                <span className="font-bold text-sm tracking-wide">Prep Strategy</span>
-                                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                            </>
-                        )}
-                    </button>
-                )}
-                {currentStage === Stage.MEAL_PREP && (
-                    <button
-                        onClick={() => handleStageChange(Stage.GROCERY_LIST)}
-                        disabled={isLoading}
-                        className="group flex items-center gap-3 px-8 py-4 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-80 disabled:hover:scale-100 disabled:cursor-wait"
-                        style={{ backgroundColor: 'var(--text-primary)', color: 'var(--text-inverted)' }}
-                    >
-                         {isLoading ? (
-                            <Loader2 size={18} className="animate-spin text-primary-400" />
-                        ) : (
-                            <>
-                                <span className="font-bold text-sm tracking-wide">Shopping List</span>
-                                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                            </>
-                        )}
-                    </button>
-                )}
-                {currentStage === Stage.GROCERY_LIST && (
-                    <div className="backdrop-blur-md text-primary-400 px-6 py-3 rounded-full font-bold text-xs tracking-widest cursor-default" style={{ backgroundColor: 'var(--surface-glass)', border: '1px solid var(--border-subtle)' }}>
-                        ALL DONE
-                    </div>
-                )}
-             </div>
-
-             {/* Right: Assistant Toggle (Black Circle) */}
+             {/* Assistant Toggle (Black Circle) */}
              <div className="pointer-events-auto">
                 <button
                     onClick={() => {

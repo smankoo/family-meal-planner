@@ -70,6 +70,20 @@
    │                         │                         │                         │
    │ 20. Show complete plan  │                         │                         │
    │<────────────────────────┤                         │                         │
+   │                         │                         │                         │
+   │                         │ 21. Auto-start prep     │                         │
+   │                         │     generation (bg)     │                         │
+   │                         ├────────────────────────>│                         │
+   │                         │                         │                         │
+   │                         │ 22. SSE: Prep tasks     │                         │
+   │                         │<────────────────────────┤                         │
+   │                         │                         │                         │
+   │                         │ 23. Auto-start grocery  │                         │
+   │                         │     generation (bg)     │                         │
+   │                         ├────────────────────────>│                         │
+   │                         │                         │                         │
+   │                         │ 24. SSE: Grocery items  │                         │
+   │                         │<────────────────────────┤                         │
 ```
 
 **Key Points**:
@@ -77,6 +91,9 @@
 - Each meal animates in smoothly (no stuttering)
 - User sees first meal within 2-3 seconds
 - Total time: ~15-20 seconds, but perceived as much faster
+- **Prep and grocery generation happen automatically in background**
+- **User can navigate to any tab immediately - no forced progression**
+- **Background generation is transparent and non-blocking**
 
 ### Scenario 2: Modifying Plan via Chat
 
@@ -115,15 +132,21 @@
    │                         │    as invalidated       │                         │
    │                         ├────────────────────────>│                         │
    │                         │                         │                         │
-   │ 10. Show invalidation   │                         │                         │
-   │     banner              │                         │                         │
+   │                         │ 10. Auto-regenerate     │                         │
+   │                         │     prep/grocery (bg)   │                         │
+   │                         ├────────────────────────>│                         │
+   │                         │                         │                         │
+   │ 11. Show updated meals  │                         │                         │
+   │ (prep/grocery updating  │                         │                         │
+   │  transparently in bg)   │                         │                         │
    │<────────────────────────┤                         │                         │
 ```
 
 **Key Points**:
 - Natural language modification
 - Invalidation tracking ensures downstream data stays consistent
-- User prompted to regenerate prep tasks and grocery list
+- **Prep and grocery automatically regenerate in background**
+- **No user action required - seamless experience**
 
 ### Scenario 3: Family Plan Sharing with Real-Time Sync
 
@@ -376,34 +399,49 @@ Animate: Smooth fade-in
 - Multiple fallback strategies
 - Smooth animations
 
-### Invalidation Cascade
+### Background Generation & Auto-Invalidation
 
 ```
-User modifies meal plan
+User generates/modifies meal plan
   ↓
 planVersion++
   ↓
-Check: prepVersion === planVersion?
-  ↓ (no)
-Mark: prepInvalidated = true
+Trigger: generatePrepPlanInBackground()
   ↓
-Check: groceryVersion === planVersion?
-  ↓ (no)
-Mark: groceryInvalidated = true
+  ├─> Check: Already generating? → Skip
+  ├─> Check: Prep current? → Skip
+  └─> Start: Background prep generation
+        ↓
+        Stream prep tasks (non-blocking)
+        ↓
+        On complete: prepVersion = planVersion
+        ↓
+        Trigger: generateGroceryListInBackground()
+          ↓
+          Stream grocery items (non-blocking)
+          ↓
+          On complete: groceryVersion = planVersion
+```
+
+**User Experience**:
+```
+User on Meal Plan tab
   ↓
-Show: Invalidation banner
+Meal plan completes
   ↓
-User clicks "Regenerate Prep"
+User switches to Prep tab
   ↓
-Generate new prep tasks
-  ↓
-prepVersion = planVersion
-prepInvalidated = false
-  ↓
-Update: Invalidation banner
+  ├─> If prep ready: Show data immediately
+  └─> If prep generating: Show elegant loading state
+        ↓
+        Tasks stream in progressively
+        ↓
+        Smooth animations
 ```
 
 **Benefits**:
-- Ensures data consistency
-- Clear user feedback
-- Prevents stale data
+- **Zero waiting** - user never blocked
+- **Transparent processing** - happens in background
+- **Graceful degradation** - errors are silent
+- **Free navigation** - all tabs accessible anytime
+- **Apple-like UX** - everything just works

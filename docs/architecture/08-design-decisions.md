@@ -338,6 +338,84 @@ Other meals this week (avoid duplicates):
 
 ---
 
+## ADR-014: Automatic Background Data Generation
+
+**Status**: Accepted
+**Date**: 2026-02-09
+**Context**: Users had to manually progress through tabs (Meals → Prep → Grocery) by clicking large pill buttons at the bottom of each screen. This created an artificial, video-game-like progression that didn't match user expectations. Users often wanted to jump directly to a specific tab or spend time in just one view without being prompted to move forward.
+
+**Decision**: Remove manual progression buttons and implement automatic background generation of prep plans and grocery lists. All tabs become freely accessible once a meal plan exists, with data generating transparently in the background.
+
+**Consequences**:
+- ✅ **Apple-like UX**: Everything "just works" without user intervention
+- ✅ **Zero waiting**: Users never blocked by data generation
+- ✅ **Free navigation**: All tabs accessible anytime, no forced progression
+- ✅ **Transparent processing**: Background generation is silent and non-blocking
+- ✅ **Graceful degradation**: Errors fail silently without disrupting user flow
+- ✅ **Progressive enhancement**: Data streams in as it becomes available
+- ✅ **Automatic invalidation**: Changes to meal plan trigger background regeneration
+- ❌ **Increased complexity**: More state management for background processes
+- ❌ **Hidden processing**: Users may not realize data is being generated
+- ❌ **Resource usage**: Background generation consumes API quota even if user doesn't view tabs
+
+**Implementation Details**:
+```typescript
+// Background generation functions
+const generatePrepPlanInBackground = async (mealPlan: WeekPlan) => {
+  if (isPrepGenerating || !isPrepPlanInvalidated()) return;
+
+  setIsPrepGenerating(true);
+  await generateMealPrepPlanStream(
+    mealPlan,
+    onTaskReceived,
+    () => {
+      setIsPrepGenerating(false);
+      // Chain to grocery generation
+      generateGroceryListInBackground(mealPlan, tasks);
+    },
+    onError // Silent failure
+  );
+};
+
+// Triggered automatically on meal plan completion
+onMealPlanComplete: () => {
+  generatePrepPlanInBackground(completedPlan);
+}
+
+// Triggered automatically on meal replacement
+onMealReplaced: () => {
+  generatePrepPlanInBackground(updatedPlan);
+}
+```
+
+**User Experience Flow**:
+1. User generates meal plan → Prep generation starts in background
+2. Prep completes → Grocery generation starts in background
+3. User can switch to any tab anytime:
+   - If data ready: Shows immediately
+   - If generating: Shows elegant loading state with streaming updates
+4. User replaces a meal → Prep and grocery regenerate automatically in background
+
+**Alternatives Considered**:
+- **Manual progression with buttons**: Original implementation, felt forced and game-like
+- **Generate on tab switch**: Would cause waiting when switching tabs
+- **Pre-generate everything**: Would waste API quota if user doesn't view all tabs
+- **Notification-based**: Would interrupt user flow with notifications
+
+**Performance Impact**:
+- Prep generation: ~8-12 seconds (background, non-blocking)
+- Grocery generation: ~6-10 seconds (background, non-blocking)
+- Total: ~14-22 seconds, but user never waits
+- API cost: Same as before, just automatic instead of manual
+
+**Related Changes**:
+- Removed bottom pill buttons ("Prep Strategy", "Shopping List", "ALL DONE")
+- Updated `StageStepper` to make all tabs clickable once meal plan exists
+- Added `isPrepGenerating` and `isGroceryGenerating` state flags
+- Updated loading states in `MealPrepView` and `GroceryListView` to handle background generation
+
+---
+
 ## Technical Debt Register
 
 ### High Priority

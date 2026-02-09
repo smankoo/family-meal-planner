@@ -20,7 +20,8 @@ const StageStepper: React.FC<StageStepperProps> = ({ currentStage, setStage, has
       <div className="stage-stepper">
         {steps.map((step) => {
           const isActive = currentStage === step.id;
-          const isClickable = step.id === Stage.MEAL_PLANNING || hasMealPlan;
+          // All tabs are clickable once a meal plan exists
+          const isClickable = hasMealPlan;
 
           return (
             <button
