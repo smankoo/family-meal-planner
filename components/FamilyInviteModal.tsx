@@ -47,12 +47,12 @@ const FamilyInviteModal: React.FC<FamilyInviteModalProps> = ({
     <>
       {/* Backdrop */}
       <div
-        className="modal-backdrop animate-fade-in"
+        className="modal-backdrop animate-fade-in z-[100]"
         onClick={onClose}
       >
         {/* Modal */}
         <div
-          className="modal-container animate-modal-in"
+          className="modal-container animate-modal-in z-[101]"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}

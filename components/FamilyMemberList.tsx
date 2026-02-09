@@ -76,7 +76,7 @@ const FamilyMemberList: React.FC<FamilyMemberListProps> = ({
     // Compact mode: Overlapping avatars
     return (
       <div className="flex items-center">
-        <div className="flex -space-x-2">
+        <div className="flex -space-x-1.5">
           {displayMembers.map((member) => {
             const displayName = getDisplayName(member);
             const initials = getInitials(displayName);
@@ -92,25 +92,25 @@ const FamilyMemberList: React.FC<FamilyMemberListProps> = ({
                   <img
                     src={member.user.avatar_url}
                     alt={displayName}
-                    className="w-8 h-8 rounded-full border-2 object-cover ring-1 ring-primary-200"
+                    className="w-7 h-7 rounded-full border-2 object-cover ring-1 ring-primary-200"
                     style={{ borderColor: 'var(--surface-bg)' }}
                   />
                 ) : (
-                  <div className="w-8 h-8 bg-primary-900 rounded-full border-2 flex items-center justify-center ring-1 ring-primary-200" style={{ borderColor: 'var(--surface-bg)' }}>
-                    <span className="text-white font-semibold text-xs">{initials}</span>
+                  <div className="w-7 h-7 bg-primary-900 rounded-full border-2 flex items-center justify-center ring-1 ring-primary-200" style={{ borderColor: 'var(--surface-bg)' }}>
+                    <span className="text-white font-semibold text-[10px]">{initials}</span>
                   </div>
                 )}
                 {member.role === 'owner' && (
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full flex items-center justify-center" style={{ borderColor: 'var(--surface-bg)', borderWidth: '1px' }}>
-                    <Crown size={8} className="text-amber-900" />
+                  <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-amber-400 rounded-full flex items-center justify-center" style={{ borderColor: 'var(--surface-bg)', borderWidth: '1px' }}>
+                    <Crown size={7} className="text-amber-900" />
                   </div>
                 )}
               </div>
             );
           })}
           {remainingCount > 0 && (
-            <div className="w-8 h-8 bg-primary-200 rounded-full border-2 flex items-center justify-center ring-1 ring-primary-200" style={{ borderColor: 'var(--surface-bg)' }}>
-              <span className="text-primary-700 font-semibold text-xs">+{remainingCount}</span>
+            <div className="w-7 h-7 bg-primary-200 rounded-full border-2 flex items-center justify-center ring-1 ring-primary-200" style={{ borderColor: 'var(--surface-bg)' }}>
+              <span className="text-primary-700 font-semibold text-[10px]">+{remainingCount}</span>
             </div>
           )}
         </div>

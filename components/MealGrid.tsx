@@ -183,9 +183,9 @@ const MealGrid: React.FC<MealGridProps> = ({
   // --- Mobile View (Apple-style sticky section headers) ---
   const MobileView = () => {
     return (
-      <div className="md:hidden flex flex-col pb-20 px-4">
+      <div className="md:hidden flex flex-col pb-20">
         {plan.map((dayPlan, dayIdx) => (
-            <div key={dayPlan.day} className="mb-8">
+            <div key={dayPlan.day} className="mb-6">
 
                 {/* Subtle Day Header */}
                 <div className="sticky-header-mobile">

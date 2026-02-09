@@ -159,14 +159,48 @@ def handle_gemini_exception(exc: Exception) -> tuple[int, ErrorResponse]:
         )
 
 # Custom exception handler
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request, exc: HTTPException):
+    """Handle HTTPException with CORS headers"""
+    origin = request.headers.get("origin", "*")
+
+    cors_headers = {
+        "Access-Control-Allow-Origin": origin,
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Headers": "*",
+    }
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=cors_headers
+    )
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
 
+    # Determine the origin for CORS
+    origin = request.headers.get("origin", "*")
+
+    # CORS headers to add to error responses
+    cors_headers = {
+        "Access-Control-Allow-Origin": origin,
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Headers": "*",
+    }
+
     # Handle Google API exceptions specifically
     if isinstance(exc, google_exceptions.GoogleAPICallError):
         status_code, error_response = handle_gemini_exception(exc)
-        return JSONResponse(status_code=status_code, content=error_response.model_dump())
+        return JSONResponse(
+            status_code=status_code,
+            content=error_response.model_dump(),
+            headers=cors_headers
+        )
 
     # Fallback to string matching for other exceptions that might contain API errors
     exc_str = str(exc).lower()
@@ -179,7 +213,8 @@ async def global_exception_handler(request, exc):
                 code="RATE_LIMIT_EXCEEDED",
                 retry_after=300,
                 details=str(exc) if os.getenv("DEBUG") == "true" else None
-            ).model_dump()
+            ).model_dump(),
+            headers=cors_headers
         )
     elif "api key" in exc_str or "authentication" in exc_str or "unauthenticated" in exc_str:
         return JSONResponse(
@@ -189,7 +224,8 @@ async def global_exception_handler(request, exc):
                 message="API key is missing or invalid. Please check your configuration.",
                 code="AUTH_ERROR",
                 details=str(exc) if os.getenv("DEBUG") == "true" else None
-            ).model_dump()
+            ).model_dump(),
+            headers=cors_headers
         )
     else:
         return JSONResponse(
@@ -199,7 +235,8 @@ async def global_exception_handler(request, exc):
                 message="An unexpected error occurred. Please try again later.",
                 code="INTERNAL_ERROR",
                 details=str(exc) if os.getenv("DEBUG") == "true" else None
-            ).model_dump()
+            ).model_dump(),
+            headers=cors_headers
         )
 
 # Configure Gemini with new SDK

@@ -1876,8 +1876,8 @@ const App: React.FC = () => {
                 <div className="h-full overflow-y-auto no-scrollbar">
                   <div key={`stage-${Stage.MEAL_PLANNING}`} className="stage-enter max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pb-40 pt-6 md:pt-8">
                     {/* Mobile Stepper with Action Buttons (visible only on small screens) */}
-                    <div className="md:hidden mb-6 px-4">
-                      <div className="flex justify-center mb-4">
+                    <div className="md:hidden mb-3">
+                      <div className="flex justify-center mb-2">
                         <StageStepper
                            currentStage={currentStage}
                            setStage={handleStageChange}
@@ -1885,24 +1885,36 @@ const App: React.FC = () => {
                         />
                       </div>
                       {hasPlanGenerated && (
-                        <div className="flex justify-end items-center gap-2">
-                          <button
-                            onClick={handleInviteToFamily}
-                            disabled={isCreatingInvite}
-                            className="btn-icon-sm"
-                            title="Invite to Family"
-                          >
-                            {isCreatingInvite ? (
-                              <Loader2 size={16} className="animate-spin" />
-                            ) : familyMembers.length > 0 ? (
-                              <FamilyMemberList members={familyMembers} compact maxDisplay={1} />
-                            ) : (
-                              <UserPlus size={16} />
-                            )}
-                          </button>
-                          {!isPlanLocked && (
-                            <RegenerateButton onRegenerate={handleRegeneratePlan} isLoading={isLoading} showText={false} />
+                        <div className="flex justify-between items-center gap-2">
+                          {/* Left: Undo button */}
+                          {planHistory.past.length > 0 && !isPlanLocked ? (
+                            <button onClick={handleUndo} className="btn-glass flex items-center gap-1.5 px-3 py-1.5 text-primary-600 text-xs font-semibold">
+                                <Undo2 size={12} /> Undo
+                            </button>
+                          ) : (
+                            <div />
                           )}
+
+                          {/* Right: Invite and Regenerate buttons */}
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={handleInviteToFamily}
+                              disabled={isCreatingInvite}
+                              className="btn-icon-sm"
+                              title="Invite to Family"
+                            >
+                              {isCreatingInvite ? (
+                                <Loader2 size={16} className="animate-spin" />
+                              ) : familyMembers.length > 0 ? (
+                                <FamilyMemberList members={familyMembers} compact maxDisplay={1} />
+                              ) : (
+                                <UserPlus size={16} />
+                              )}
+                            </button>
+                            {!isPlanLocked && (
+                              <RegenerateButton onRegenerate={handleRegeneratePlan} isLoading={isLoading} showText={false} />
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1919,14 +1931,6 @@ const App: React.FC = () => {
                             {hasPlanGenerated && !isPlanLocked && (
                               <RegenerateButton onRegenerate={handleRegeneratePlan} isLoading={isLoading} showText={true} />
                             )}
-                      </div>
-                      {/* Mobile Header - Undo button */}
-                      <div className="md:hidden flex justify-start mb-6 px-4">
-                         {planHistory.past.length > 0 && !isPlanLocked && (
-                            <button onClick={handleUndo} className="btn-glass flex items-center gap-1.5 px-3 py-1.5 text-primary-600 text-xs font-semibold">
-                                <Undo2 size={12} /> Undo
-                            </button>
-                         )}
                       </div>
 
                       {isLoading && planHistory.present === EMPTY_PLAN ? (
@@ -1955,7 +1959,7 @@ const App: React.FC = () => {
                 <div className="h-full overflow-y-auto no-scrollbar">
                   <div key={`stage-${Stage.MEAL_PREP}`} className="stage-enter max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pb-40 pt-6 md:pt-8">
                     {/* Mobile Stepper (visible only on small screens) */}
-                    <div className="md:hidden mb-6 relative flex justify-center">
+                    <div className="md:hidden mb-3 relative flex justify-center">
                       <StageStepper
                          currentStage={currentStage}
                          setStage={handleStageChange}
@@ -1987,7 +1991,7 @@ const App: React.FC = () => {
                 <div className="h-full overflow-y-auto no-scrollbar">
                   <div key={`stage-${Stage.GROCERY_LIST}`} className="stage-enter max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pb-40 pt-6 md:pt-8">
                     {/* Mobile Stepper (visible only on small screens) */}
-                    <div className="md:hidden mb-6 relative flex justify-center">
+                    <div className="md:hidden mb-3 relative flex justify-center">
                       <StageStepper
                          currentStage={currentStage}
                          setStage={handleStageChange}
