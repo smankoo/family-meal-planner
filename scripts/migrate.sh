@@ -43,8 +43,17 @@ if [ "$MIGRATION_COUNT" -eq 0 ]; then
     exit 0
 fi
 
+# Supabase CLI uses prepared statements which are incompatible with
+# PgBouncer/Supavisor connection poolers (port 6543). Convert to
+# direct connection (port 5432) if a pooler URL is detected.
+MIGRATION_DB_URL="$DATABASE_URL"
+if echo "$MIGRATION_DB_URL" | grep -q ":6543"; then
+    echo "Detected pooler URL (port 6543), converting to direct connection (port 5432)..."
+    MIGRATION_DB_URL=$(echo "$MIGRATION_DB_URL" | sed 's/:6543/:5432/')
+fi
+
 # Apply migrations
 echo "Applying migrations to database..."
-$SUPABASE_BIN db push --db-url "$DATABASE_URL" --include-all
+$SUPABASE_BIN db push --db-url "$MIGRATION_DB_URL" --include-all
 
 echo "✓ Migrations applied successfully!"
