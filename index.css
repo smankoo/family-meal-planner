@@ -631,11 +631,18 @@
   .sticky-header-mobile {
     @apply sticky -mx-4 px-4 py-3;
     @apply backdrop-blur-xl;
-    top: 62px; /* Default: below tab menu only (for meal grid) */
+    top: 62px; /* Default: below tab menu only (for meal grid on mobile) */
     z-index: 5; /* Lower than progress bar (z-15) and tab menu (z-20) */
-    background: linear-gradient(to bottom, var(--surface-bg) 0%, var(--surface-bg) 80%, transparent 100%);
+    background-color: var(--surface-bg);
     border-bottom: 1px solid var(--border-primary);
     margin-bottom: 1.5rem; /* 24px */
+  }
+
+  /* Desktop: no sticky tab menu in scroll container, so stick at top */
+  @media (min-width: 768px) {
+    .sticky-header-mobile {
+      top: 0;
+    }
   }
 
   /* For meals view where tab menu includes action buttons (Undo, Invite, Regenerate) */
