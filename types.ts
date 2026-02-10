@@ -78,3 +78,10 @@ export interface InvalidationState {
   groceryListVersion?: string; // Version when grocery list was generated
   currentPlanVersion: string; // Current meal plan version
 }
+
+export interface MealChange {
+  day: string;
+  mealType: string;
+  oldMeal?: MealCell;
+  newMeal: MealCell;
+}

@@ -128,24 +128,43 @@
    │                         │ 8. Save updated plan    │                         │
    │                         ├────────────────────────>│                         │
    │                         │                         │                         │
-   │                         │ 9. Mark prep/grocery    │                         │
-   │                         │    as invalidated       │                         │
+   │                         │ 9. Diff old vs new plan │                         │
+   │                         │    to find changedMeals │                         │
+   │                         ├──────────────────┐      │                         │
+   │                         │<─────────────────┘      │                         │
+   │                         │                         │                         │
+   │                         │ 10. Mark prep/grocery   │                         │
+   │                         │     as invalidated      │                         │
+   │                         ├──────────────────┐      │                         │
+   │                         │<─────────────────┘      │                         │
+   │                         │                         │                         │
+   │                         │ 11. PATCH /update-prep-stream                     │
+   │                         │     (incremental, only  │                         │
+   │                         │      changed meals)     │                         │
    │                         ├────────────────────────>│                         │
    │                         │                         │                         │
-   │                         │ 10. Auto-regenerate     │                         │
-   │                         │     prep/grocery (bg)   │                         │
+   │                         │ 12. SSE: Patched tasks  │                         │
+   │                         │<────────────────────────┤                         │
+   │                         │                         │                         │
+   │                         │ 13. PATCH /update-grocery-stream                  │
+   │                         │     (incremental)       │                         │
    │                         ├────────────────────────>│                         │
    │                         │                         │                         │
-   │ 11. Show updated meals  │                         │                         │
-   │ (prep/grocery updating  │                         │                         │
-   │  transparently in bg)   │                         │                         │
+   │                         │ 14. SSE: Patched items  │                         │
+   │                         │<────────────────────────┤                         │
+   │                         │                         │                         │
+   │ 15. Show updated meals  │                         │                         │
+   │ (prep/grocery updated   │                         │                         │
+   │  incrementally in bg)   │                         │                         │
    │<────────────────────────┤                         │                         │
 ```
 
 **Key Points**:
 - Natural language modification
 - Invalidation tracking ensures downstream data stays consistent
-- **Prep and grocery automatically regenerate in background**
+- **Frontend diffs old vs new plan to identify changed meals**
+- **Prep and grocery update incrementally via PATCH endpoints (only affected tasks/items)**
+- **Falls back to full regeneration if incremental update fails**
 - **No user action required - seamless experience**
 
 ### Scenario 3: Family Plan Sharing with Real-Time Sync
@@ -406,22 +425,45 @@ User generates/modifies meal plan
   ↓
 planVersion++
   ↓
-Trigger: generatePrepPlanInBackground()
+Determine change type:
+  ├─> Full plan regeneration (no changedMeals)
+  │     → Full prep regen → Full grocery regen
+  │
+  └─> Partial change (changedMeals available)
+        → Incremental prep update (PATCH /api/update-prep-stream)
+        → Incremental grocery update (PATCH /api/update-grocery-stream)
+        → Falls back to full regen if incremental fails
+```
+
+**Detailed flow:**
+```
+generatePrepPlanInBackground(mealPlan, { changedMeals?, forceRun? })
   ↓
   ├─> Check: Already generating? → Skip
+  ├─> Check: forceRun? → Bypass "is current" check
   ├─> Check: Prep current? → Skip
-  └─> Start: Background prep generation
-        ↓
-        Stream prep tasks (non-blocking)
+  └─> Route:
+        ├─> changedMeals + existing tasks → PATCH /api/update-prep-stream
+        │     ↓
+        │     LLM patches only affected tasks
+        │     ↓
+        │     On fallback_to_full → retry with full regen
+        │
+        └─> No changedMeals or no existing tasks → POST /api/generate-prep-stream
+              ↓
+              Full regeneration from scratch
         ↓
         On complete: prepVersion = planVersion
         ↓
-        Trigger: generateGroceryListInBackground()
-          ↓
-          Stream grocery items (non-blocking)
-          ↓
-          On complete: groceryVersion = planVersion
+        Trigger: generateGroceryListInBackground() (same routing logic)
 ```
+
+**Trigger points:**
+- `handleGenerateInitialPlan` → full regen (no existing data)
+- `handleReplaceMeal` → incremental (1 meal changed, `forceRun: true`)
+- `handlePlanUpdate` (chat) → incremental (diffs old vs new plan, `forceRun: true`)
+- `handleRegeneratePlan` → full regen (resets all data first)
+- Manual regenerate buttons → full regen (user explicitly wants fresh data)
 
 **User Experience**:
 ```

@@ -1,4 +1,4 @@
-import { FamilyMember, FamilyPreferences, WeekPlan, PrepTask, GroceryItem } from "../types";
+import { FamilyMember, FamilyPreferences, WeekPlan, PrepTask, GroceryItem, MealChange } from "../types";
 
 // FastAPI backend base URL - use environment variable in production
 // Empty string from build means env var wasn't set, so fall back to localhost
@@ -454,4 +454,139 @@ export const generateGroceryListStream = async (
   } catch (error) {
     onError(error as Error);
   }
+};
+
+// --- Incremental Update Functions ---
+// Used for partial meal changes (single meal replace, chat updates) instead of full regeneration
+
+// Helper: generic SSE stream reader for incremental updates
+const streamIncrementalUpdate = async (
+  url: string,
+  body: any,
+  onItemReceived: (data: any) => void,
+  onComplete: () => void,
+  onError: (error: Error) => void,
+  onFallbackToFull: () => void,
+  itemValidator: (data: any) => boolean
+): Promise<void> => {
+  try {
+    const response = await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = {
+          error: 'Network Error',
+          message: `HTTP ${response.status}: ${response.statusText}`,
+          code: 'NETWORK_ERROR'
+        };
+      }
+      const error = new Error(errorData.message || errorData.detail || 'Unknown error');
+      (error as any).code = errorData.code;
+      throw error;
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('No response body reader available');
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+
+              if (data.type === 'complete') {
+                onComplete();
+                return;
+              } else if (data.type === 'error') {
+                const error = new Error(data.message || 'Streaming error');
+                (error as any).code = data.code;
+                (error as any).retryAfter = data.retry_after;
+                onError(error);
+                return;
+              } else if (data.type === 'fallback_to_full') {
+                onFallbackToFull();
+                return;
+              } else if (itemValidator(data)) {
+                onItemReceived(data);
+              }
+            } catch (parseError) {
+              console.warn("Failed to parse SSE data:", line, parseError);
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  } catch (error) {
+    onError(error as Error);
+  }
+};
+
+export const updatePrepPlanIncrementalStream = async (
+  mealPlan: WeekPlan,
+  changedMeals: MealChange[],
+  existingTasks: PrepTask[],
+  onTaskReceived: (taskData: any) => void,
+  onComplete: () => void,
+  onError: (error: Error) => void,
+  onFallbackToFull: () => void
+): Promise<void> => {
+  // Strip client-only fields (id, completed) from existing tasks for the API
+  const tasksForApi = existingTasks.map(({ day, task, relatedMeals }) => ({ day, task, relatedMeals }));
+
+  return streamIncrementalUpdate(
+    `${API_BASE_URL}/api/update-prep-stream`,
+    { mealPlan, changedMeals, existingTasks: tasksForApi },
+    onTaskReceived,
+    onComplete,
+    onError,
+    onFallbackToFull,
+    (data) => !!(data.day && data.task)
+  );
+};
+
+export const updateGroceryListIncrementalStream = async (
+  mealPlan: WeekPlan,
+  changedMeals: MealChange[],
+  existingItems: GroceryItem[],
+  prepTasks: PrepTask[],
+  onItemReceived: (itemData: any) => void,
+  onComplete: () => void,
+  onError: (error: Error) => void,
+  onFallbackToFull: () => void
+): Promise<void> => {
+  // Strip client-only fields (id, checked) from existing items for the API
+  const itemsForApi = existingItems.map(({ name, category, quantity, relatedMeals }) => ({ name, category, quantity, relatedMeals }));
+  const tasksForApi = prepTasks.map(({ day, task, relatedMeals }) => ({ day, task, relatedMeals }));
+
+  return streamIncrementalUpdate(
+    `${API_BASE_URL}/api/update-grocery-stream`,
+    { mealPlan, changedMeals, existingItems: itemsForApi, prepTasks: tasksForApi },
+    onItemReceived,
+    onComplete,
+    onError,
+    onFallbackToFull,
+    (data) => !!(data.name && data.category)
+  );
 };

@@ -117,8 +117,9 @@ services/
 │   ├── Meal plan generation (streaming + batch)
 │   ├── Plan updates via chat
 │   ├── Meal replacement
-│   ├── Prep task generation
-│   └── Grocery list generation
+│   ├── Prep task generation (full + incremental)
+│   ├── Grocery list generation (full + incremental)
+│   └── Shared SSE stream reader for incremental updates
 │
 └── analyticsService.ts        # Event tracking
     ├── Page view tracking
@@ -239,6 +240,13 @@ interface InvalidationState {
   prepInvalidated: boolean;
   groceryInvalidated: boolean;
 }
+
+interface MealChange {
+  day: string;
+  mealType: string;
+  oldMeal?: MealCell;
+  newMeal: MealCell;
+}
 ```
 
 ## Backend Container
@@ -315,6 +323,10 @@ POST /api/generate-grocery-stream
 # Plan modifications
 POST /api/update-plan          # Chat-based updates
 POST /api/replace-meal         # Single meal replacement
+
+# Incremental updates (SSE) — patches only affected tasks/items
+PATCH /api/update-prep-stream     # Partial prep update after meal changes
+PATCH /api/update-grocery-stream  # Partial grocery update after meal changes
 ```
 
 #### User Data Endpoints

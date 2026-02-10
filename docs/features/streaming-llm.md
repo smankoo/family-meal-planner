@@ -507,6 +507,59 @@ data: {"id": "2", "name": "Bread", "category": "Bakery", "quantity": "1 loaf", "
 data: {"status": "complete"}
 ```
 
+### Incremental Prep Update
+
+Used when only a few meals change (single meal replace, chat updates). Patches only affected tasks instead of regenerating everything.
+
+```python
+PATCH /api/update-prep-stream
+```
+
+**Request**:
+```json
+{
+  "mealPlan": [...],
+  "changedMeals": [
+    { "day": "Monday", "mealType": "Dinner", "newMeal": {...} }
+  ],
+  "existingTasks": [...]
+}
+```
+
+**Response** (SSE):
+```
+data: {"day": "Weekend", "task": "Chop vegetables...", "relatedMeals": ["Monday Dinner"]}
+
+data: {"type": "complete"}
+```
+
+If the LLM returns no tasks, a `fallback_to_full` signal is sent and the frontend retries with full regeneration.
+
+### Incremental Grocery Update
+
+Same pattern as incremental prep — patches only items affected by changed meals.
+
+```python
+PATCH /api/update-grocery-stream
+```
+
+**Request**:
+```json
+{
+  "mealPlan": [...],
+  "changedMeals": [...],
+  "existingItems": [...],
+  "prepTasks": [...]
+}
+```
+
+**Response** (SSE):
+```
+data: {"name": "Chicken Breast", "category": "Meat", "quantity": "2 lbs", "relatedMeals": ["Monday Dinner"]}
+
+data: {"type": "complete"}
+```
+
 ## Testing
 
 ### Manual Testing

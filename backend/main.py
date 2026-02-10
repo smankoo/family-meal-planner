@@ -275,6 +275,23 @@ class GroceryListRequest(BaseModel):
     mealPlan: List[Dict[str, Any]]
     prepTasks: List[Dict[str, Any]]
 
+class MealChange(BaseModel):
+    day: str
+    mealType: str
+    oldMeal: Optional[Dict[str, Any]] = None
+    newMeal: Dict[str, Any]
+
+class IncrementalPrepRequest(BaseModel):
+    mealPlan: List[Dict[str, Any]]
+    changedMeals: List[MealChange]
+    existingTasks: List[Dict[str, Any]]
+
+class IncrementalGroceryRequest(BaseModel):
+    mealPlan: List[Dict[str, Any]]
+    changedMeals: List[MealChange]
+    existingItems: List[Dict[str, Any]]
+    prepTasks: List[Dict[str, Any]]
+
 @app.get("/")
 async def root():
     return {"message": "Family Meal Planner API"}
@@ -1106,6 +1123,257 @@ async def generate_prep_stream(request: PrepPlanRequest):
             "Content-Type": "text/event-stream",
         }
     )
+
+@app.patch("/api/update-prep-stream")
+async def update_prep_stream(request: IncrementalPrepRequest):
+    """Incremental prep plan update - patches only tasks affected by changed meals"""
+
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key or api_key == "PLACEHOLDER_API_KEY":
+        raise HTTPException(
+            status_code=400,
+            detail=ErrorResponse(
+                error="Configuration Error",
+                message="GEMINI_API_KEY not configured. Please set a valid API key.",
+                code="MISSING_API_KEY"
+            ).model_dump()
+        )
+
+    async def generate_stream():
+        try:
+            changed_meals_desc = json.dumps([
+                {"day": c.day, "mealType": c.mealType, "newMeal": c.newMeal}
+                for c in request.changedMeals
+            ])
+
+            # Build list of affected meal references (e.g., "Monday Dinner")
+            affected_refs = [f"{c.day} {c.mealType}" for c in request.changedMeals]
+
+            logger.info(f"Incremental prep update for changed meals: {affected_refs}")
+
+            prompt = f"""
+            A meal plan has been partially updated. Some meals changed and the prep plan needs a targeted update.
+
+            FULL UPDATED MEAL PLAN (for context):
+            {json.dumps(request.mealPlan)}
+
+            MEALS THAT CHANGED:
+            {changed_meals_desc}
+
+            CURRENT PREP TASKS:
+            {json.dumps(request.existingTasks)}
+
+            Your job:
+            1. Identify which existing prep tasks are affected by the changed meals (tasks whose relatedMeals reference any of: {json.dumps(affected_refs)}).
+            2. Remove or update those affected tasks based on the new meals.
+            3. Add any new prep tasks needed for the changed meals.
+            4. Keep ALL unaffected tasks exactly as they are.
+            5. Return the COMPLETE updated list of prep tasks (both unchanged and updated/new).
+
+            IMPORTANT: Return EXACTLY this JSON structure:
+            [
+              {{
+                "day": "Weekend",
+                "task": "Chop vegetables for Monday and Tuesday dinners",
+                "relatedMeals": ["Monday Dinner", "Tuesday Dinner"]
+              }}
+            ]
+
+            Each task MUST have:
+            - "day": When to do the task (e.g., "Weekend", "Sunday Night", "Monday Morning")
+            - "task": Description of what to do
+            - "relatedMeals": Array of strings indicating which meals this helps with
+
+            The relatedMeals field MUST be an array of strings, never a single string.
+            Return ALL tasks (unchanged + updated + new). Do NOT omit unaffected tasks.
+            """
+
+            response = client.models.generate_content(
+                model="gemini-3-flash-preview",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json"
+                )
+            )
+
+            tasks = json.loads(response.text)
+            tasks_sent = 0
+
+            if isinstance(tasks, list) and len(tasks) > 0:
+                logger.info(f"Incremental prep update: streaming {len(tasks)} tasks")
+                for task_data in tasks:
+                    if isinstance(task_data, dict) and 'day' in task_data and 'task' in task_data:
+                        yield f"data: {json.dumps(task_data)}\n\n"
+                        tasks_sent += 1
+                        await asyncio.sleep(0.3)
+
+            if tasks_sent == 0:
+                logger.warning("Incremental prep update returned no tasks, falling back to full regen signal")
+                yield f"data: {json.dumps({'type': 'fallback_to_full'})}\n\n"
+            else:
+                logger.info(f"Successfully streamed {tasks_sent} incremental prep tasks")
+
+            yield f"data: {json.dumps({'type': 'complete'})}\n\n"
+
+        except google_exceptions.GoogleAPICallError as e:
+            logger.error(f"Gemini API error in incremental prep update: {str(e)}")
+            status_code, error_response_obj = handle_gemini_exception(e)
+            error_response = {
+                "type": "error",
+                "error": error_response_obj.error,
+                "message": error_response_obj.message,
+                "code": error_response_obj.code,
+                "retry_after": error_response_obj.retry_after
+            }
+            yield f"data: {json.dumps(error_response)}\n\n"
+        except Exception as e:
+            logger.error(f"Error in incremental prep update: {str(e)}")
+            error_response = {
+                "type": "error",
+                "error": "Generation Error",
+                "message": str(e),
+                "code": "STREAMING_ERROR"
+            }
+            yield f"data: {json.dumps(error_response)}\n\n"
+
+    return StreamingResponse(
+        generate_stream(),
+        media_type="text/plain",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Content-Type": "text/event-stream",
+        }
+    )
+
+
+@app.patch("/api/update-grocery-stream")
+async def update_grocery_stream(request: IncrementalGroceryRequest):
+    """Incremental grocery list update - patches only items affected by changed meals"""
+
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key or api_key == "PLACEHOLDER_API_KEY":
+        raise HTTPException(
+            status_code=400,
+            detail=ErrorResponse(
+                error="Configuration Error",
+                message="GEMINI_API_KEY not configured. Please set a valid API key.",
+                code="MISSING_API_KEY"
+            ).model_dump()
+        )
+
+    async def generate_stream():
+        try:
+            changed_meals_desc = json.dumps([
+                {"day": c.day, "mealType": c.mealType, "newMeal": c.newMeal}
+                for c in request.changedMeals
+            ])
+
+            affected_refs = [f"{c.day} {c.mealType}" for c in request.changedMeals]
+
+            logger.info(f"Incremental grocery update for changed meals: {affected_refs}")
+
+            prompt = f"""
+            A meal plan has been partially updated. Some meals changed and the grocery list needs a targeted update.
+
+            FULL UPDATED MEAL PLAN (for context):
+            {json.dumps(request.mealPlan)}
+
+            MEALS THAT CHANGED:
+            {changed_meals_desc}
+
+            CURRENT PREP TASKS:
+            {json.dumps(request.prepTasks)}
+
+            CURRENT GROCERY LIST:
+            {json.dumps(request.existingItems)}
+
+            Your job:
+            1. Identify which existing grocery items are affected by the changed meals (items whose relatedMeals reference any of: {json.dumps(affected_refs)}).
+            2. For affected items:
+               - If the item is still needed by other unchanged meals, keep it but update the quantity and relatedMeals.
+               - If the item is no longer needed at all, remove it.
+               - If the changed meals need new ingredients, add them.
+            3. Keep ALL unaffected items exactly as they are.
+            4. Return the COMPLETE updated grocery list (both unchanged and updated/new).
+
+            IMPORTANT: Return EXACTLY this JSON structure:
+            [
+              {{
+                "name": "Tomatoes",
+                "category": "Produce",
+                "quantity": "2 lbs",
+                "relatedMeals": ["Monday Dinner", "Wednesday Lunch"]
+              }}
+            ]
+
+            Each item MUST have:
+            - "name": The grocery item name
+            - "category": The grocery category (Produce, Meat, Dairy, Pantry, etc.)
+            - "quantity": Estimated quantity needed
+            - "relatedMeals": Array of meal references
+
+            Return ALL items (unchanged + updated + new). Do NOT omit unaffected items.
+            """
+
+            response = client.models.generate_content(
+                model="gemini-3-flash-preview",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json"
+                )
+            )
+
+            items = json.loads(response.text)
+            items_sent = 0
+
+            if isinstance(items, list) and len(items) > 0:
+                logger.info(f"Incremental grocery update: streaming {len(items)} items")
+                for item_data in items:
+                    if isinstance(item_data, dict) and 'name' in item_data and 'category' in item_data:
+                        yield f"data: {json.dumps(item_data)}\n\n"
+                        items_sent += 1
+                        await asyncio.sleep(0.15)
+
+            if items_sent == 0:
+                logger.warning("Incremental grocery update returned no items, falling back to full regen signal")
+                yield f"data: {json.dumps({'type': 'fallback_to_full'})}\n\n"
+            else:
+                logger.info(f"Successfully streamed {items_sent} incremental grocery items")
+
+            yield f"data: {json.dumps({'type': 'complete'})}\n\n"
+
+        except google_exceptions.GoogleAPICallError as e:
+            logger.error(f"Gemini API error in incremental grocery update: {str(e)}")
+            status_code, error_response_obj = handle_gemini_exception(e)
+            error_response = {
+                "type": "error",
+                "error": error_response_obj.error,
+                "message": error_response_obj.message,
+                "code": error_response_obj.code,
+                "retry_after": error_response_obj.retry_after
+            }
+            yield f"data: {json.dumps(error_response)}\n\n"
+        except Exception as e:
+            logger.error(f"Error in incremental grocery update: {str(e)}")
+            error_response = {
+                "type": "error",
+                "error": "Generation Error",
+                "message": str(e),
+                "code": "STREAMING_ERROR"
+            }
+            yield f"data: {json.dumps(error_response)}\n\n"
+
+    return StreamingResponse(
+        generate_stream(),
+        media_type="text/plain",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Content-Type": "text/event-stream",
+        }
+    )
+
 
 @app.post("/api/generate-grocery")
 async def generate_grocery(request: GroceryListRequest):
