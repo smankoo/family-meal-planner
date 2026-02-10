@@ -631,11 +631,16 @@
   .sticky-header-mobile {
     @apply sticky -mx-4 px-4 py-3;
     @apply backdrop-blur-xl;
-    top: 62px; /* Default: below tab menu only (for meal grid on mobile) */
+    top: var(--tab-header-height, 62px); /* Dynamically measured via ResizeObserver in App.tsx */
     z-index: 5; /* Lower than progress bar (z-15) and tab menu (z-20) */
     background-color: var(--surface-bg);
     border-bottom: 1px solid var(--border-primary);
     margin-bottom: 1.5rem; /* 24px */
+  }
+
+  /* For section headers that stack below a sticky progress bar (prep/shop views) */
+  .sticky-header-below-progress {
+    top: var(--sticky-content-top, 86px);
   }
 
   /* Desktop: no sticky tab menu in scroll container, so stick at top */
@@ -643,16 +648,9 @@
     .sticky-header-mobile {
       top: 0;
     }
-  }
-
-  /* For meals view where tab menu includes action buttons (Undo, Invite, Regenerate) */
-  .sticky-header-with-actions {
-    top: 100px; /* Below tab menu with action buttons row */
-  }
-
-  /* For prep and shop views with progress bar - override top position */
-  .sticky-header-with-progress {
-    top: 86px; /* Below tab menu (62px) + progress bar (24px) */
+    .sticky-header-below-progress {
+      top: 0;
+    }
   }
 
   .list-item-glass {

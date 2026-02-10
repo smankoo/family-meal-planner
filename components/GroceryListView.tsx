@@ -235,9 +235,9 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
         </div>
       )}
 
-      {/* Progress Bar - Sticky below tab menu on mobile */}
+      {/* Progress Bar - Sticky below tab menu on mobile, dynamically positioned */}
       {items.length > 0 && (
-        <div className="md:hidden sticky top-[62px] z-[15] px-4 pb-2 backdrop-blur-xl" style={{ backgroundColor: 'var(--surface-bg)' }}>
+        <div data-sticky-progress="grocery" className="md:hidden sticky z-[15] px-4 pb-2 backdrop-blur-xl" style={{ top: 'var(--tab-header-height, 62px)', backgroundColor: 'var(--surface-bg)' }}>
           <ProgressBar
             completed={items.filter(i => i.checked).length}
             total={items.length}
@@ -312,7 +312,7 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
               <div key={category} className="mb-8">
 
                 {/* Category Header - Apple-style section header */}
-                <div className="sticky-header-mobile sticky-header-with-progress">
+                <div className="sticky-header-mobile sticky-header-below-progress">
                   <div className="flex items-center gap-3">
                     <h3 className="text-xl font-bold text-primary-900 tracking-tight">
                       {category}

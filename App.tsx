@@ -1798,10 +1798,25 @@ const App: React.FC = () => {
           <>
              {/* Planning Stage Content - Each stage gets its own scroll container */}
              {currentStage === Stage.MEAL_PLANNING && (
-                <div className="h-full overflow-y-auto no-scrollbar">
+                <div className="h-full overflow-y-auto no-scrollbar" ref={(el) => {
+                  // Observe the MEALS tab sticky header height and set CSS custom property
+                  if (!el) return;
+                  const stickyHeader = el.querySelector('[data-sticky-header="meals"]') as HTMLElement;
+                  if (!stickyHeader) return;
+                  const updateHeight = () => {
+                    const h = stickyHeader.offsetHeight;
+                    el.style.setProperty('--tab-header-height', `${h}px`);
+                  };
+                  updateHeight();
+                  const ro = new ResizeObserver(updateHeight);
+                  ro.observe(stickyHeader);
+                  // Store cleanup on the element
+                  (el as any).__mealsRO?.disconnect();
+                  (el as any).__mealsRO = ro;
+                }}>
                   <div key={`stage-${Stage.MEAL_PLANNING}`} className="stage-enter max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pb-40 pt-6 md:pt-8">
                     {/* Mobile Stepper with Action Buttons (visible only on small screens) - Sticky */}
-                    <div className="md:hidden mb-3 sticky top-0 z-20 pt-2 pb-3 -mx-4 px-4 backdrop-blur-xl" style={{ backgroundColor: 'var(--surface-bg)' }}>
+                    <div data-sticky-header="meals" className="md:hidden mb-3 sticky top-0 z-20 pt-2 pb-3 -mx-4 px-4 backdrop-blur-xl" style={{ backgroundColor: 'var(--surface-bg)' }}>
                       <div className="flex justify-center mb-2">
                         <StageStepper
                            currentStage={currentStage}
@@ -1881,10 +1896,36 @@ const App: React.FC = () => {
              )}
 
              {currentStage === Stage.MEAL_PREP && (
-                <div className="h-full overflow-y-auto no-scrollbar">
+                <div className="h-full overflow-y-auto no-scrollbar" ref={(el) => {
+                  if (!el) return;
+                  const stickyHeader = el.querySelector('[data-sticky-header="prep"]') as HTMLElement;
+                  if (!stickyHeader) return;
+                  const updateHeights = () => {
+                    const h = stickyHeader.offsetHeight;
+                    el.style.setProperty('--tab-header-height', `${h}px`);
+                    // Also measure progress bar for section headers that stack below it
+                    const progressBar = el.querySelector('[data-sticky-progress="prep"]') as HTMLElement;
+                    if (progressBar) {
+                      const ph = progressBar.offsetHeight;
+                      el.style.setProperty('--sticky-content-top', `${h + ph}px`);
+                    } else {
+                      el.style.setProperty('--sticky-content-top', `${h}px`);
+                    }
+                  };
+                  // Use MutationObserver to detect when progress bar appears/disappears
+                  const mo = new MutationObserver(updateHeights);
+                  mo.observe(el, { childList: true, subtree: true });
+                  updateHeights();
+                  const ro = new ResizeObserver(updateHeights);
+                  ro.observe(stickyHeader);
+                  (el as any).__prepRO?.disconnect();
+                  (el as any).__prepMO?.disconnect();
+                  (el as any).__prepRO = ro;
+                  (el as any).__prepMO = mo;
+                }}>
                   <div key={`stage-${Stage.MEAL_PREP}`} className="stage-enter max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pb-40 pt-6 md:pt-8">
                     {/* Mobile Stepper (visible only on small screens) - Sticky */}
-                    <div className="md:hidden mb-3 sticky top-0 z-20 pt-2 pb-3 -mx-4 px-4 flex justify-center backdrop-blur-xl" style={{ backgroundColor: 'var(--surface-bg)' }}>
+                    <div data-sticky-header="prep" className="md:hidden mb-3 sticky top-0 z-20 pt-2 pb-3 -mx-4 px-4 flex justify-center backdrop-blur-xl" style={{ backgroundColor: 'var(--surface-bg)' }}>
                       <StageStepper
                          currentStage={currentStage}
                          setStage={handleStageChange}
@@ -1913,10 +1954,34 @@ const App: React.FC = () => {
              )}
 
              {currentStage === Stage.GROCERY_LIST && (
-                <div className="h-full overflow-y-auto no-scrollbar">
+                <div className="h-full overflow-y-auto no-scrollbar" ref={(el) => {
+                  if (!el) return;
+                  const stickyHeader = el.querySelector('[data-sticky-header="grocery"]') as HTMLElement;
+                  if (!stickyHeader) return;
+                  const updateHeights = () => {
+                    const h = stickyHeader.offsetHeight;
+                    el.style.setProperty('--tab-header-height', `${h}px`);
+                    const progressBar = el.querySelector('[data-sticky-progress="grocery"]') as HTMLElement;
+                    if (progressBar) {
+                      const ph = progressBar.offsetHeight;
+                      el.style.setProperty('--sticky-content-top', `${h + ph}px`);
+                    } else {
+                      el.style.setProperty('--sticky-content-top', `${h}px`);
+                    }
+                  };
+                  const mo = new MutationObserver(updateHeights);
+                  mo.observe(el, { childList: true, subtree: true });
+                  updateHeights();
+                  const ro = new ResizeObserver(updateHeights);
+                  ro.observe(stickyHeader);
+                  (el as any).__groceryRO?.disconnect();
+                  (el as any).__groceryMO?.disconnect();
+                  (el as any).__groceryRO = ro;
+                  (el as any).__groceryMO = mo;
+                }}>
                   <div key={`stage-${Stage.GROCERY_LIST}`} className="stage-enter max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pb-40 pt-6 md:pt-8">
                     {/* Mobile Stepper (visible only on small screens) - Sticky */}
-                    <div className="md:hidden mb-3 sticky top-0 z-20 pt-2 pb-3 -mx-4 px-4 flex justify-center backdrop-blur-xl" style={{ backgroundColor: 'var(--surface-bg)' }}>
+                    <div data-sticky-header="grocery" className="md:hidden mb-3 sticky top-0 z-20 pt-2 pb-3 -mx-4 px-4 flex justify-center backdrop-blur-xl" style={{ backgroundColor: 'var(--surface-bg)' }}>
                       <StageStepper
                          currentStage={currentStage}
                          setStage={handleStageChange}

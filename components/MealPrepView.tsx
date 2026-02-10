@@ -194,9 +194,9 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
         </div>
       )}
 
-      {/* Progress Bar - Sticky below tab menu on mobile */}
+      {/* Progress Bar - Sticky below tab menu on mobile, dynamically positioned */}
       {tasks.length > 0 && (
-        <div className="md:hidden sticky top-[62px] z-[15] px-4 pb-2 backdrop-blur-xl" style={{ backgroundColor: 'var(--surface-bg)' }}>
+        <div data-sticky-progress="prep" className="md:hidden sticky z-[15] px-4 pb-2 backdrop-blur-xl" style={{ top: 'var(--tab-header-height, 62px)', backgroundColor: 'var(--surface-bg)' }}>
           <ProgressBar
             completed={tasks.filter(t => t.completed).length}
             total={tasks.length}
@@ -269,7 +269,7 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
             <div key={day} className="mb-8">
 
               {/* Sticky Day Header - Apple-style section header */}
-              <div className="sticky-header-mobile sticky-header-with-progress">
+              <div className="sticky-header-mobile sticky-header-below-progress">
                 <h3 className="text-xl font-bold text-primary-900 tracking-tight">
                   {day}
                 </h3>

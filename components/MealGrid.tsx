@@ -306,7 +306,7 @@ const MealGrid: React.FC<MealGridProps> = ({
                 {/* Subtle Day Header */}
                 <div
                   ref={(el) => registerDayHeaderRef(dayPlan.day, el)}
-                  className="sticky-header-mobile sticky-header-with-actions"
+                  className="sticky-header-mobile"
                 >
                     <h3 className="text-xs font-bold text-primary-500 uppercase tracking-[0.2em]">
                         {dayPlan.day}
