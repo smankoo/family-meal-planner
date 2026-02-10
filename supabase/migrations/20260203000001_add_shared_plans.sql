@@ -37,7 +37,8 @@ CREATE INDEX IF NOT EXISTS idx_collaborative_plans_created_by ON public.collabor
 CREATE INDEX IF NOT EXISTS idx_plan_members_plan_id ON public.plan_members(plan_id);
 CREATE INDEX IF NOT EXISTS idx_plan_members_user_id ON public.plan_members(user_id);
 
--- Add triggers for updated_at
+-- Add triggers for updated_at (idempotent)
+DROP TRIGGER IF EXISTS set_collaborative_plans_updated_at ON public.collaborative_plans;
 CREATE TRIGGER set_collaborative_plans_updated_at
     BEFORE UPDATE ON public.collaborative_plans
     FOR EACH ROW
@@ -47,8 +48,8 @@ CREATE TRIGGER set_collaborative_plans_updated_at
 ALTER TABLE public.collaborative_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.plan_members ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies for collaborative_plans
--- Users can view plans they are members of
+-- RLS Policies for collaborative_plans (idempotent - drop before create)
+DROP POLICY IF EXISTS "Members can view their collaborative plans" ON public.collaborative_plans;
 CREATE POLICY "Members can view their collaborative plans"
     ON public.collaborative_plans FOR SELECT
     USING (
@@ -59,12 +60,12 @@ CREATE POLICY "Members can view their collaborative plans"
         )
     );
 
--- Users can create new collaborative plans
+DROP POLICY IF EXISTS "Users can create collaborative plans" ON public.collaborative_plans;
 CREATE POLICY "Users can create collaborative plans"
     ON public.collaborative_plans FOR INSERT
     WITH CHECK (auth.uid() = created_by);
 
--- Members can update plans they belong to
+DROP POLICY IF EXISTS "Members can update their collaborative plans" ON public.collaborative_plans;
 CREATE POLICY "Members can update their collaborative plans"
     ON public.collaborative_plans FOR UPDATE
     USING (
@@ -75,7 +76,7 @@ CREATE POLICY "Members can update their collaborative plans"
         )
     );
 
--- Only owners can delete plans
+DROP POLICY IF EXISTS "Owners can delete their collaborative plans" ON public.collaborative_plans;
 CREATE POLICY "Owners can delete their collaborative plans"
     ON public.collaborative_plans FOR DELETE
     USING (
@@ -87,8 +88,8 @@ CREATE POLICY "Owners can delete their collaborative plans"
         )
     );
 
--- RLS Policies for plan_members
--- Users can view memberships for plans they belong to
+-- RLS Policies for plan_members (idempotent - drop before create)
+DROP POLICY IF EXISTS "Members can view plan memberships" ON public.plan_members;
 CREATE POLICY "Members can view plan memberships"
     ON public.plan_members FOR SELECT
     USING (
@@ -100,17 +101,17 @@ CREATE POLICY "Members can view plan memberships"
         )
     );
 
--- Users can join plans (insert their own membership)
+DROP POLICY IF EXISTS "Users can join plans" ON public.plan_members;
 CREATE POLICY "Users can join plans"
     ON public.plan_members FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
--- Users can update their own membership
+DROP POLICY IF EXISTS "Users can update their membership" ON public.plan_members;
 CREATE POLICY "Users can update their membership"
     ON public.plan_members FOR UPDATE
     USING (auth.uid() = user_id);
 
--- Owners can remove members
+DROP POLICY IF EXISTS "Owners can remove members" ON public.plan_members;
 CREATE POLICY "Owners can remove members"
     ON public.plan_members FOR DELETE
     USING (
