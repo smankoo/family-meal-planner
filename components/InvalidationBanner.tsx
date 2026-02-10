@@ -19,23 +19,11 @@ const InvalidationBanner: React.FC<InvalidationBannerProps> = ({
   const typeTitle = type === 'prep' ? 'Prep Plan' : 'Shopping List';
 
   return (
-    <div className={`
-      relative overflow-hidden
-      backdrop-blur-md
-      rounded-2xl p-4 md:p-5 mb-4 md:mb-6
-      shadow-card
-      transition-all duration-300
-      ${className}
-    `}
-    style={{
-      backgroundColor: 'var(--surface-glass)',
-      border: '1px solid var(--border-subtle)',
-    }}
-    >
+    <div className={`invalidation-banner md:p-5 md:mb-6 ${className}`}>
       <div className="flex flex-col md:flex-row items-start gap-3 md:gap-4">
         {/* Icon */}
         <div className="flex-shrink-0 hidden md:block">
-          <div className="w-9 h-9 rounded-full backdrop-blur-sm flex items-center justify-center" style={{ backgroundColor: 'var(--surface-glass)', border: '1px solid var(--border-subtle)' }}>
+          <div className="invalidation-banner-icon">
             <RefreshCw size={16} className="text-primary-500" strokeWidth={2.5} />
           </div>
         </div>
@@ -53,17 +41,17 @@ const InvalidationBanner: React.FC<InvalidationBannerProps> = ({
           <button
             onClick={onRegenerate}
             disabled={isLoading}
-            className="btn-glass-primary w-full md:w-auto"
+            className="btn-invalidation-update"
           >
             {isLoading ? (
               <>
-                <RefreshCw size={14} className="animate-spin" />
-                <span className="text-xs md:text-sm">Updating...</span>
+                <RefreshCw size={16} className="animate-spin" />
+                <span>Updating...</span>
               </>
             ) : (
               <>
-                <RefreshCw size={14} />
-                <span className="text-xs md:text-sm">Update {typeTitle}</span>
+                <RefreshCw size={16} />
+                <span>Update {typeTitle}</span>
               </>
             )}
           </button>

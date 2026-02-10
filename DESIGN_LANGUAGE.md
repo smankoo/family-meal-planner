@@ -260,7 +260,8 @@ All visual properties are defined in `index.css` as CSS variables and Tailwind t
 - **Meal Type Pills**: `meal-type-pill meal-type-pill-breakfast`, `meal-type-pill-lunch`, `meal-type-pill-snack`, `meal-type-pill-dinner`
 - **Modals**: `modal-backdrop`, `modal-container`, `modal-header`, `error-icon-wrapper`, `error-detail-box`, `error-support-box`
 - **Lists**: `list-item-glass` for list items with frosted glass effect
-- **Headers**: `sticky-header-mobile` for sticky section headers with glassmorphism
+- **Headers**: `sticky-header-mobile` for sticky section headers with glassmorphism, `sticky-header-with-actions` for headers below tab menu with action buttons, `sticky-header-with-progress` for headers below progress bar
+- **Banners**: `invalidation-banner`, `invalidation-banner-icon`, `btn-invalidation-update`
 - **Typography**: `heading-hero`, `heading-page`, `heading-section`, `heading-card`, `label-section`, `label-category`, `text-body`, `text-secondary`
 - **Forms**: `form-field`, `form-field-bold`, `form-textarea`, `form-textarea-wrapper`, `effort-toggle`, `effort-toggle-active`, `effort-toggle-inactive`
 - **Empty States**: `empty-state-icon-wrapper`, `empty-state-heading`, `empty-state-text`

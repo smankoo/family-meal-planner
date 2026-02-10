@@ -235,9 +235,19 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
         </div>
       )}
 
-      {/* Progress Bar */}
+      {/* Progress Bar - Sticky below tab menu on mobile */}
       {items.length > 0 && (
-        <div className="max-w-4xl mx-auto px-4 md:px-8 mb-6">
+        <div className="md:hidden sticky top-[62px] z-[15] px-4 pb-2 backdrop-blur-xl" style={{ backgroundColor: 'var(--surface-bg)' }}>
+          <ProgressBar
+            completed={items.filter(i => i.checked).length}
+            total={items.length}
+          />
+        </div>
+      )}
+
+      {/* Progress Bar - Static on desktop */}
+      {items.length > 0 && (
+        <div className="hidden md:block max-w-4xl mx-auto px-4 md:px-8 mb-6">
           <ProgressBar
             completed={items.filter(i => i.checked).length}
             total={items.length}
@@ -247,7 +257,7 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
 
       {/* Invalidation Banner */}
       {isInvalidated && items.length > 0 && (
-        <div className="px-4 md:px-8 max-w-4xl mx-auto mb-6">
+        <div className="px-4 md:px-8 max-w-4xl mx-auto mb-0 md:mb-6">
           <InvalidationBanner
             type="grocery"
             onRegenerate={onRegenerate}
@@ -302,7 +312,7 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
               <div key={category} className="mb-8">
 
                 {/* Category Header - Apple-style section header */}
-                <div className="sticky-header-mobile">
+                <div className="sticky-header-mobile sticky-header-with-progress">
                   <div className="flex items-center gap-3">
                     <h3 className="text-xl font-bold text-primary-900 tracking-tight">
                       {category}

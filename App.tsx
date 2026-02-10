@@ -1800,8 +1800,8 @@ const App: React.FC = () => {
              {currentStage === Stage.MEAL_PLANNING && (
                 <div className="h-full overflow-y-auto no-scrollbar">
                   <div key={`stage-${Stage.MEAL_PLANNING}`} className="stage-enter max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pb-40 pt-6 md:pt-8">
-                    {/* Mobile Stepper with Action Buttons (visible only on small screens) */}
-                    <div className="md:hidden mb-3">
+                    {/* Mobile Stepper with Action Buttons (visible only on small screens) - Sticky */}
+                    <div className="md:hidden mb-3 sticky top-0 z-20 pt-2 pb-3 -mx-4 px-4 backdrop-blur-xl" style={{ backgroundColor: 'var(--surface-bg)' }}>
                       <div className="flex justify-center mb-2">
                         <StageStepper
                            currentStage={currentStage}
@@ -1883,8 +1883,8 @@ const App: React.FC = () => {
              {currentStage === Stage.MEAL_PREP && (
                 <div className="h-full overflow-y-auto no-scrollbar">
                   <div key={`stage-${Stage.MEAL_PREP}`} className="stage-enter max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pb-40 pt-6 md:pt-8">
-                    {/* Mobile Stepper (visible only on small screens) */}
-                    <div className="md:hidden mb-3 relative flex justify-center">
+                    {/* Mobile Stepper (visible only on small screens) - Sticky */}
+                    <div className="md:hidden mb-3 sticky top-0 z-20 pt-2 pb-3 -mx-4 px-4 flex justify-center backdrop-blur-xl" style={{ backgroundColor: 'var(--surface-bg)' }}>
                       <StageStepper
                          currentStage={currentStage}
                          setStage={handleStageChange}
@@ -1915,8 +1915,8 @@ const App: React.FC = () => {
              {currentStage === Stage.GROCERY_LIST && (
                 <div className="h-full overflow-y-auto no-scrollbar">
                   <div key={`stage-${Stage.GROCERY_LIST}`} className="stage-enter max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pb-40 pt-6 md:pt-8">
-                    {/* Mobile Stepper (visible only on small screens) */}
-                    <div className="md:hidden mb-3 relative flex justify-center">
+                    {/* Mobile Stepper (visible only on small screens) - Sticky */}
+                    <div className="md:hidden mb-3 sticky top-0 z-20 pt-2 pb-3 -mx-4 px-4 flex justify-center backdrop-blur-xl" style={{ backgroundColor: 'var(--surface-bg)' }}>
                       <StageStepper
                          currentStage={currentStage}
                          setStage={handleStageChange}

@@ -194,9 +194,19 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
         </div>
       )}
 
-      {/* Progress Bar */}
+      {/* Progress Bar - Sticky below tab menu on mobile */}
       {tasks.length > 0 && (
-        <div className="max-w-4xl mx-auto px-4 md:px-8 mb-6">
+        <div className="md:hidden sticky top-[62px] z-[15] px-4 pb-2 backdrop-blur-xl" style={{ backgroundColor: 'var(--surface-bg)' }}>
+          <ProgressBar
+            completed={tasks.filter(t => t.completed).length}
+            total={tasks.length}
+          />
+        </div>
+      )}
+
+      {/* Progress Bar - Static on desktop */}
+      {tasks.length > 0 && (
+        <div className="hidden md:block max-w-4xl mx-auto px-4 md:px-8 mb-6">
           <ProgressBar
             completed={tasks.filter(t => t.completed).length}
             total={tasks.length}
@@ -206,7 +216,7 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
 
       {/* Invalidation Banner */}
       {isInvalidated && tasks.length > 0 && (
-        <div className="px-4 md:px-8 max-w-4xl mx-auto">
+        <div className="px-4 md:px-8 max-w-4xl mx-auto mb-0 md:mb-6">
           <InvalidationBanner
             type="prep"
             onRegenerate={onRegenerate}
@@ -259,7 +269,7 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
             <div key={day} className="mb-8">
 
               {/* Sticky Day Header - Apple-style section header */}
-              <div className="sticky-header-mobile">
+              <div className="sticky-header-mobile sticky-header-with-progress">
                 <h3 className="text-xl font-bold text-primary-900 tracking-tight">
                   {day}
                 </h3>

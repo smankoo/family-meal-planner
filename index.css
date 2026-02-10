@@ -629,10 +629,23 @@
 
   /* Mobile Optimizations */
   .sticky-header-mobile {
-    @apply sticky top-0 z-20 mb-6 -mx-4 px-4 py-4;
+    @apply sticky -mx-4 px-4 py-3;
     @apply backdrop-blur-xl;
+    top: 62px; /* Default: below tab menu only (for meal grid) */
+    z-index: 5; /* Lower than progress bar (z-15) and tab menu (z-20) */
     background: linear-gradient(to bottom, var(--surface-bg) 0%, var(--surface-bg) 80%, transparent 100%);
     border-bottom: 1px solid var(--border-primary);
+    margin-bottom: 1.5rem; /* 24px */
+  }
+
+  /* For meals view where tab menu includes action buttons (Undo, Invite, Regenerate) */
+  .sticky-header-with-actions {
+    top: 100px; /* Below tab menu with action buttons row */
+  }
+
+  /* For prep and shop views with progress bar - override top position */
+  .sticky-header-with-progress {
+    top: 86px; /* Below tab menu (62px) + progress bar (24px) */
   }
 
   .list-item-glass {
@@ -1095,6 +1108,30 @@
     @apply text-sm font-medium text-amber-600;
     background-color: rgba(245, 158, 11, 0.08);
     border: 1px solid rgba(245, 158, 11, 0.2);
+  }
+
+  /* ===== Invalidation Banner ===== */
+  .invalidation-banner {
+    @apply relative overflow-hidden backdrop-blur-md rounded-2xl p-4 shadow-card transition-all duration-300;
+    background-color: var(--surface-glass);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .invalidation-banner-icon {
+    @apply w-9 h-9 rounded-full backdrop-blur-sm flex items-center justify-center;
+    background-color: var(--surface-glass);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .btn-invalidation-update {
+    @apply w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm;
+    @apply transition-all duration-200;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+    background-color: var(--text-primary);
+    color: var(--text-inverted);
+  }
+  .btn-invalidation-update:hover {
+    opacity: 0.9;
   }
 
   /* ===== Toast Notifications ===== */
