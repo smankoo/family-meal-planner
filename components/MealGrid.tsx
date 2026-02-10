@@ -105,110 +105,105 @@ const MealGrid: React.FC<MealGridProps> = ({
     return MealTime.DINNER;
   };
 
-  // Helper function to get current day of week
-  const getCurrentDay = (): string => {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  // Helper function to get current day - matches against plan's day format
+  const getCurrentDayKey = (): string | null => {
     const now = new Date();
-    return days[now.getDay()];
+    const fullDayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][now.getDay()];
+
+    // Match against actual plan data (handles both "Mon" and "Monday" formats)
+    const matchedDay = plan.find(d =>
+      d.day.toLowerCase() === fullDayName.toLowerCase() ||
+      d.day.toLowerCase().startsWith(fullDayName.toLowerCase().slice(0, 3))
+    );
+
+    return matchedDay?.day ?? null;
   };
 
-  // Mark initial load as complete after first render with data
+  // Auto-scroll to current meal on initial load
+  // Combined into a single effect that watches `plan` so it fires as soon as data arrives.
   useEffect(() => {
+    if (hasAutoScrolled.current) return;
+
     const hasData = plan.some(day =>
       Object.values(day.meals).some(meal => meal.name && meal.name.trim() !== '')
     );
+    if (!hasData) return;
 
-    if (hasData && !hasInitialLoadCompleted.current) {
-      hasInitialLoadCompleted.current = true;
-    }
-  }, [plan]);
+    // Data is ready — mark complete and scroll
+    hasInitialLoadCompleted.current = true;
+    hasAutoScrolled.current = true;
 
-  // Auto-scroll to current meal on initial load - Apple-style: simple and direct
-  useEffect(() => {
-    if (!hasAutoScrolled.current && hasInitialLoadCompleted.current) {
-      hasAutoScrolled.current = true;
+    const currentDay = getCurrentDayKey();
+    if (!currentDay) return;
 
-      const currentDay = getCurrentDay();
-      const currentMealTime = getCurrentMealTime();
-      const cardKey = `${currentDay}-${currentMealTime}`;
+    const currentMealTime = getCurrentMealTime();
+    const cardKey = `${currentDay}-${currentMealTime}`;
 
-      console.log('[Auto-scroll] Attempting to scroll to:', cardKey);
+    console.log('[Auto-scroll] Targeting:', cardKey);
 
-      // Calculate position using getBoundingClientRect for reliable positioning
-      const attemptScroll = (retryCount = 0) => {
-        let cardElement = cardRefsRef.current.get(cardKey);
+    const attemptScroll = (retryCount = 0) => {
+      // Query DOM for visible card/header — handles mobile/desktop dual rendering
+      // Both views register the same cardKey to the ref map, but the desktop view
+      // overwrites the mobile ref. Use data attributes + visibility check instead.
+      let cardElement: HTMLElement | null = null;
 
-        if (!cardElement) {
-          console.log('[Auto-scroll] Card not found:', cardKey);
-          if (retryCount < 3) {
-            setTimeout(() => attemptScroll(retryCount + 1), 100);
-          }
-          return;
+      // Try the exact meal card first
+      const candidates = document.querySelectorAll<HTMLElement>(`[data-meal-key="${cardKey}"]`);
+      for (const el of candidates) {
+        if (el.offsetHeight > 0) { cardElement = el; break; }
+      }
+
+      // Fall back to the day header
+      if (!cardElement) {
+        const headerCandidates = document.querySelectorAll<HTMLElement>(`[data-day-header="${currentDay}"]`);
+        for (const el of headerCandidates) {
+          if (el.offsetHeight > 0) { cardElement = el; break; }
         }
+        if (cardElement) console.log('[Auto-scroll] Falling back to day header for', currentDay);
+      }
 
-        // Check if element is actually visible (has height)
-        // If not, it's the hidden view - try to find the visible one
-        if (cardElement.clientHeight === 0) {
-          console.log('[Auto-scroll] Card has no height (hidden view), searching for visible card');
-
-          // Search through all registered cards to find one with the same key that has height
-          // This handles the case where both mobile and desktop views register the same key
-          const allCards = Array.from(document.querySelectorAll('[class*="meal-card-dinner"]'));
-          const visibleCard = allCards.find(el => {
-            const htmlEl = el as HTMLElement;
-            return htmlEl.clientHeight > 0;
-          });
-
-          if (visibleCard) {
-            cardElement = visibleCard as HTMLDivElement;
-            console.log('[Auto-scroll] Found visible card');
-          } else {
-            console.log('[Auto-scroll] No visible card found');
-            return;
-          }
-        }
-
-        // Find the scroll container
-        let scrollContainer: HTMLElement | null = cardElement.parentElement;
-        while (scrollContainer) {
-          if (scrollContainer.classList.contains('overflow-y-auto')) {
-            break;
-          }
-          scrollContainer = scrollContainer.parentElement;
-        }
-
-        if (!scrollContainer) {
-          console.log('[Auto-scroll] No scroll container found');
-          return;
-        }
-
-        console.log('[Auto-scroll] Found visible card and container');
-
-        // Use getBoundingClientRect for reliable positioning
-        const containerRect = scrollContainer.getBoundingClientRect();
-        const cardRect = cardElement.getBoundingClientRect();
-
-        // Calculate position within scroll container
-        // Add extra offset to account for sticky header (approximately 120px on mobile, 80px on desktop)
-        const headerOffset = window.innerWidth < 768 ? 140 : 100;
-        const relativePosition = scrollContainer.scrollTop + (cardRect.top - containerRect.top) - headerOffset;
-
-        console.log('[Auto-scroll] Scrolling to:', relativePosition);
-
-        // Set scroll position
-        if (relativePosition > 0) {
-          scrollContainer.scrollTop = relativePosition;
-          console.log('[Auto-scroll] Scroll complete:', scrollContainer.scrollTop);
+      if (!cardElement) {
+        // Element not rendered yet — retry briefly
+        if (retryCount < 15) {
+          requestAnimationFrame(() => attemptScroll(retryCount + 1));
         } else {
-          console.log('[Auto-scroll] Target at top, no scroll needed');
+          console.log('[Auto-scroll] Gave up after retries');
         }
-      };
+        return;
+      }
 
-      // Wait for all data loading and layout to fully complete
-      // Need a longer delay to ensure elements are in their final positions
-      setTimeout(() => attemptScroll(0), 2000);
-    }
-  }, [hasInitialLoadCompleted]);
+      // Find the scroll container
+      let scrollContainer: HTMLElement | null = cardElement.parentElement;
+      while (scrollContainer) {
+        if (scrollContainer.classList.contains('overflow-y-auto')) break;
+        scrollContainer = scrollContainer.parentElement;
+      }
+
+      if (!scrollContainer) {
+        // No custom scroll container — use window scroll
+        const headerOffset = window.innerWidth < 768 ? 140 : 100;
+        const cardRect = cardElement.getBoundingClientRect();
+        const targetY = window.scrollY + cardRect.top - headerOffset;
+
+        if (targetY > 0) {
+          window.scrollTo({ top: targetY, behavior: 'smooth' });
+        }
+        return;
+      }
+
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const cardRect = cardElement.getBoundingClientRect();
+      const headerOffset = window.innerWidth < 768 ? 140 : 100;
+      const targetScrollTop = scrollContainer.scrollTop + (cardRect.top - containerRect.top) - headerOffset;
+
+      if (targetScrollTop > 0) {
+        scrollContainer.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
+      }
+    };
+
+    // Use rAF to let the render commit, then scroll
+    requestAnimationFrame(() => attemptScroll(0));
+  }, [plan]);
 
   // Reset on new plan generation
   useEffect(() => {
@@ -306,6 +301,7 @@ const MealGrid: React.FC<MealGridProps> = ({
                 {/* Subtle Day Header */}
                 <div
                   ref={(el) => registerDayHeaderRef(dayPlan.day, el)}
+                  data-day-header={dayPlan.day}
                   className="sticky-header-mobile"
                 >
                     <h3 className="text-xs font-bold text-primary-500 uppercase tracking-[0.2em]">
@@ -334,6 +330,7 @@ const MealGrid: React.FC<MealGridProps> = ({
                              <div
                                 key={time}
                                 ref={(el) => registerCardRef(cardKey, el)}
+                                data-meal-key={cardKey}
                                 className={`
                                   ${!hasInitialLoadCompleted.current ? 'stagger-item' : ''} relative rounded-2xl p-5 shadow-sm border transition-all duration-500 active:scale-[0.98]
                                   ${getMealTypeClass(time)}
@@ -407,6 +404,7 @@ const MealGrid: React.FC<MealGridProps> = ({
                 {/* Subtle Row Header */}
                 <div
                   ref={(el) => registerDayHeaderRef(dayPlan.day, el)}
+                  data-day-header={dayPlan.day}
                   className="sticky-header-mobile"
                 >
                     <span className="text-xs font-bold text-primary-500 uppercase tracking-[0.2em]">{dayPlan.day}</span>
@@ -435,6 +433,7 @@ const MealGrid: React.FC<MealGridProps> = ({
                             <div
                                 key={`${dayPlan.day}-${time}`}
                                 ref={(el) => registerCardRef(cardKey, el)}
+                                data-meal-key={cardKey}
                                 className={`
                                     ${!hasInitialLoadCompleted.current ? 'stagger-item' : ''} relative p-4 xl:p-5 rounded-2xl border transition-all duration-500 group
                                     flex flex-col h-full min-h-[140px] xl:min-h-[160px]
