@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import StageStepper from './components/StageStepper';
 import MealGrid from './components/MealGrid';
+import { MealGridHandle } from './components/MealGrid';
 import ChatInterface from './components/ChatInterface';
 import MealPrepView from './components/MealPrepView';
 import GroceryListView from './components/GroceryListView';
@@ -46,7 +47,7 @@ import {
 } from './services/geminiService';
 import { analyticsService } from './services/analyticsService';
 import { getAnalyticsConfig, validateAnalyticsConfig } from './config/analytics';
-import { Undo2, Sparkles, ChefHat, ArrowLeft, ArrowRight, X, RotateCcw, Loader2, UserPlus } from 'lucide-react';
+import { Undo2, Sparkles, ChefHat, ArrowLeft, ArrowRight, X, RotateCcw, Loader2, UserPlus, Clock } from 'lucide-react';
 import UserMenu from './components/UserMenu';
 import UserProfile from './components/UserProfile';
 import PlanLockToggle from './components/PlanLockToggle';
@@ -372,6 +373,9 @@ const App: React.FC = () => {
 
   // Track if we're applying a remote update to prevent feedback loop
   const isApplyingRemoteUpdateRef = useRef(false);
+
+  // Ref for MealGrid to trigger "Now" scroll
+  const mealGridRef = useRef<MealGridHandle>(null);
 
   // Track if we're toggling the lock to prevent sync effect from interfering
   const isTogglingLockRef = useRef(false);
@@ -1919,6 +1923,16 @@ const App: React.FC = () => {
                             <div />
                           )}
 
+                          {/* Center: Now button */}
+                          <button
+                            onClick={() => mealGridRef.current?.scrollToNow()}
+                            className="btn-glass flex items-center gap-1.5 px-3 py-1.5 text-primary-600 text-xs font-semibold"
+                            title="What to eat now?"
+                            aria-label="Scroll to current meal"
+                          >
+                            <Clock size={12} /> Now
+                          </button>
+
                           {/* Right: Invite and Regenerate buttons */}
                           <div className="flex items-center gap-2">
                             <button
@@ -1952,6 +1966,16 @@ const App: React.FC = () => {
                                    <Undo2 size={14} /> Undo
                                </button>
                             )}
+                            {hasPlanGenerated && (
+                              <button
+                                onClick={() => mealGridRef.current?.scrollToNow()}
+                                className="btn-glass flex items-center gap-2 px-3 py-1.5 text-primary-600 text-sm font-semibold"
+                                title="What to eat now?"
+                                aria-label="Scroll to current meal"
+                              >
+                                <Clock size={14} /> Now
+                              </button>
+                            )}
                             {hasPlanGenerated && !isPlanLocked && (
                               <RegenerateButton onRegenerate={handleRegeneratePlan} isLoading={isLoading} showText={true} />
                             )}
@@ -1964,6 +1988,7 @@ const App: React.FC = () => {
                          </div>
                       ) : (
                          <MealGrid
+                           ref={mealGridRef}
                            plan={planHistory.present}
                            previousPlan={lastDiffPlan}
                            isStreaming={isLoading}

@@ -1,6 +1,10 @@
-import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { WeekPlan, MealTime } from '../types';
 import { Users, Sparkles, ChevronRight, ChevronLeft, Loader2, RefreshCw, Sunrise, Sun, Cookie, Moon } from 'lucide-react';
+
+export interface MealGridHandle {
+  scrollToNow: () => void;
+}
 
 interface MealGridProps {
   plan: WeekPlan;
@@ -13,7 +17,7 @@ interface MealGridProps {
   isLocked?: boolean;
 }
 
-const MealGrid: React.FC<MealGridProps> = ({
+const MealGrid = forwardRef<MealGridHandle, MealGridProps>(({
   plan,
   previousPlan,
   onCellClick,
@@ -22,8 +26,10 @@ const MealGrid: React.FC<MealGridProps> = ({
   newlyReceivedCards = new Set(),
   replacingMeals = new Set(),
   isLocked = false,
-}) => {
+}, ref) => {
   const mealTimes = [MealTime.BREAKFAST, MealTime.LUNCH, MealTime.SNACK, MealTime.DINNER];
+  const [highlightedMealKey, setHighlightedMealKey] = useState<string | null>(null);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Helper functions for meal-type styling
   const getMealTypeClass = (time: MealTime): string => {
@@ -106,7 +112,7 @@ const MealGrid: React.FC<MealGridProps> = ({
   };
 
   // Helper function to get current day - matches against plan's day format
-  const getCurrentDayKey = (): string | null => {
+  const getCurrentDayKey = useCallback((): string | null => {
     const now = new Date();
     const fullDayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][now.getDay()];
 
@@ -117,34 +123,11 @@ const MealGrid: React.FC<MealGridProps> = ({
     );
 
     return matchedDay?.day ?? null;
-  };
+  }, [plan]);
 
-  // Auto-scroll to current meal on initial load
-  // Combined into a single effect that watches `plan` so it fires as soon as data arrives.
-  useEffect(() => {
-    if (hasAutoScrolled.current) return;
-
-    const hasData = plan.some(day =>
-      Object.values(day.meals).some(meal => meal.name && meal.name.trim() !== '')
-    );
-    if (!hasData) return;
-
-    // Data is ready — mark complete and scroll
-    hasInitialLoadCompleted.current = true;
-    hasAutoScrolled.current = true;
-
-    const currentDay = getCurrentDayKey();
-    if (!currentDay) return;
-
-    const currentMealTime = getCurrentMealTime();
-    const cardKey = `${currentDay}-${currentMealTime}`;
-
-    console.log('[Auto-scroll] Targeting:', cardKey);
-
+  // Reusable scroll-to-meal function used by both auto-scroll and the "Now" button
+  const scrollToMeal = useCallback((cardKey: string, currentDay: string) => {
     const attemptScroll = (retryCount = 0) => {
-      // Query DOM for visible card/header — handles mobile/desktop dual rendering
-      // Both views register the same cardKey to the ref map, but the desktop view
-      // overwrites the mobile ref. Use data attributes + visibility check instead.
       let cardElement: HTMLElement | null = null;
 
       // Try the exact meal card first
@@ -159,15 +142,14 @@ const MealGrid: React.FC<MealGridProps> = ({
         for (const el of headerCandidates) {
           if (el.offsetHeight > 0) { cardElement = el; break; }
         }
-        if (cardElement) console.log('[Auto-scroll] Falling back to day header for', currentDay);
+        if (cardElement) console.log('[Scroll] Falling back to day header for', currentDay);
       }
 
       if (!cardElement) {
-        // Element not rendered yet — retry briefly
         if (retryCount < 15) {
           requestAnimationFrame(() => attemptScroll(retryCount + 1));
         } else {
-          console.log('[Auto-scroll] Gave up after retries');
+          console.log('[Scroll] Gave up after retries');
         }
         return;
       }
@@ -180,7 +162,6 @@ const MealGrid: React.FC<MealGridProps> = ({
       }
 
       if (!scrollContainer) {
-        // No custom scroll container — use window scroll
         const headerOffset = window.innerWidth < 768 ? 140 : 100;
         const cardRect = cardElement.getBoundingClientRect();
         const targetY = window.scrollY + cardRect.top - headerOffset;
@@ -201,9 +182,67 @@ const MealGrid: React.FC<MealGridProps> = ({
       }
     };
 
-    // Use rAF to let the render commit, then scroll
     requestAnimationFrame(() => attemptScroll(0));
-  }, [plan]);
+  }, []);
+
+  // "Now" action: scroll to current meal and highlight it for 5 seconds
+  const scrollToNow = useCallback(() => {
+    const currentDay = getCurrentDayKey();
+    if (!currentDay) return;
+
+    const currentMealTime = getCurrentMealTime();
+    const cardKey = `${currentDay}-${currentMealTime}`;
+
+    console.log('[Now] Scrolling to:', cardKey);
+    scrollToMeal(cardKey, currentDay);
+
+    // Clear any existing highlight timer
+    if (highlightTimerRef.current) {
+      clearTimeout(highlightTimerRef.current);
+    }
+
+    setHighlightedMealKey(cardKey);
+    highlightTimerRef.current = setTimeout(() => {
+      setHighlightedMealKey(null);
+      highlightTimerRef.current = null;
+    }, 5000);
+  }, [getCurrentDayKey, scrollToMeal]);
+
+  // Expose scrollToNow to parent via ref
+  useImperativeHandle(ref, () => ({
+    scrollToNow,
+  }), [scrollToNow]);
+
+  // Cleanup highlight timer on unmount
+  useEffect(() => {
+    return () => {
+      if (highlightTimerRef.current) {
+        clearTimeout(highlightTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Auto-scroll to current meal on initial load
+  useEffect(() => {
+    if (hasAutoScrolled.current) return;
+
+    const hasData = plan.some(day =>
+      Object.values(day.meals).some(meal => meal.name && meal.name.trim() !== '')
+    );
+    if (!hasData) return;
+
+    hasInitialLoadCompleted.current = true;
+    hasAutoScrolled.current = true;
+
+    const currentDay = getCurrentDayKey();
+    if (!currentDay) return;
+
+    const currentMealTime = getCurrentMealTime();
+    const cardKey = `${currentDay}-${currentMealTime}`;
+
+    console.log('[Auto-scroll] Targeting:', cardKey);
+    scrollToMeal(cardKey, currentDay);
+  }, [plan, getCurrentDayKey, scrollToMeal]);
 
   // Reset on new plan generation
   useEffect(() => {
@@ -335,6 +374,7 @@ const MealGrid: React.FC<MealGridProps> = ({
                                   ${!hasInitialLoadCompleted.current ? 'stagger-item' : ''} relative rounded-2xl p-5 shadow-sm border transition-all duration-500 active:scale-[0.98]
                                   ${getMealTypeClass(time)}
                                   ${isChanged ? 'ring-2 ring-indigo-200' : ''}
+                                  ${highlightedMealKey === cardKey ? 'meal-card-now-highlight' : ''}
                                   ${replacingMeals.has(cardKey) ? 'opacity-60' : ''}
                                 `}
                                 style={{ animationDelay: !hasInitialLoadCompleted.current ? `${staggerDelay}ms` : '0ms' }}
@@ -440,6 +480,7 @@ const MealGrid: React.FC<MealGridProps> = ({
                                     hover:-translate-y-1
                                     ${getMealTypeClass(time)}
                                     ${isChanged ? 'ring-2 ring-indigo-200' : ''}
+                                    ${highlightedMealKey === cardKey ? 'meal-card-now-highlight' : ''}
                                     ${replacingMeals.has(cardKey) ? 'opacity-60' : ''}
                                 `}
                                 style={{ animationDelay: !hasInitialLoadCompleted.current ? `${staggerDelay}ms` : '0ms' }}
@@ -508,6 +549,8 @@ const MealGrid: React.FC<MealGridProps> = ({
       <DesktopView />
     </div>
   );
-};
+});
+
+MealGrid.displayName = 'MealGrid';
 
 export default MealGrid;
