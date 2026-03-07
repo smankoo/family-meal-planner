@@ -517,57 +517,110 @@ const App: React.FC = () => {
   const [familyPlanLoaded, setFamilyPlanLoaded] = useState(false);
 
   useEffect(() => {
-    const loadFamilyPlanData = async () => {
-      // Wait for initial data to load and ensure we have a valid activePlanId
-      if (isDataLoading || !activePlanId || !user || familyPlanLoaded) return;
+    const loadFamilyMembership = async () => {
+      // Wait for initial data to load
+      if (isDataLoading || !user || familyPlanLoaded) return;
+
+      // Skip if there's an invite code in the URL — the invite handler will take care of it
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('invite')) {
+        console.log('[App] Invite code in URL, deferring to invite handler');
+        return;
+      }
 
       try {
-        console.log('[App] Loading family plan data for plan:', activePlanId);
-        const plan = await apiService.getFamilyPlan(activePlanId);
+        // Always check the backend for family membership — this is the source of truth.
+        // This handles cases where activePlanId is stale, cleared, or out of sync.
+        console.log('[App] Checking family membership from backend...');
+        const membership = await apiService.getMyMembership();
 
-        if (plan) {
+        if (membership) {
+          // User IS in a family — use the family plan data
+          console.log('[App] User is in family, loading plan:', membership.id);
+
+          // Update activePlanId if it doesn't match (handles stale/missing activePlanId)
+          if (activePlanId !== membership.id) {
+            setActivePlanId(membership.id);
+          }
+
           // Update state with family plan data, skip save to avoid circular updates
           setPlanHistory({
             past: [],
-            present: plan.plan_data,
+            present: membership.plan_data,
             future: []
-          }, true); // Skip save - data is already in collaborative_plans
+          }, true);
 
-          setFamily(plan.family_data || INITIAL_FAMILY, true);
-          setPreferences(plan.preferences_data || INITIAL_PREFERENCES, true);
-          setPrepTasks(plan.prep_tasks || [], true);
-          setGroceryItems(plan.grocery_items || [], true);
-          setInvalidationState(plan.invalidation_state || DEFAULT_INVALIDATION_STATE, true);
-          setHasPlanGenerated(plan.has_plan === 'true', true);
-          setCurrentStage(parseInt(plan.current_stage) || Stage.MEAL_PLANNING, true);
-          setIsPlanLocked(plan.is_locked ?? false);
+          setFamily(membership.family_data || INITIAL_FAMILY, true);
+          setPreferences(membership.preferences_data || INITIAL_PREFERENCES, true);
+          setPrepTasks(membership.prep_tasks || [], true);
+          setGroceryItems(membership.grocery_items || [], true);
+          setInvalidationState(membership.invalidation_state || DEFAULT_INVALIDATION_STATE, true);
+          setHasPlanGenerated(membership.has_plan === 'true', true);
+          setCurrentStage(parseInt(membership.current_stage) || Stage.MEAL_PLANNING, true);
+          setIsPlanLocked(membership.is_locked ?? false);
 
-          // Load family members to display in header
-          if (plan.members) {
-            setFamilyMembers(plan.members);
+          // Always set family members from the membership response
+          if (membership.members) {
+            setFamilyMembers(membership.members);
           }
 
-          setFamilyPlanLoaded(true);
+          // Set invite URL
+          if (membership.invite_code) {
+            setInviteUrl(`${window.location.origin}/?invite=${membership.invite_code}`);
+          }
+
           console.log('[App] Family plan data loaded successfully');
+        } else {
+          // User is NOT in a family — clear any stale activePlanId
+          if (activePlanId) {
+            console.log('[App] User not in any family, clearing stale activePlanId');
+            setActivePlanId(null);
+            setFamilyMembers([]);
+            setInviteUrl('');
+          }
+          // Individual user data is already loaded by usePersistedState
+          console.log('[App] User in individual mode');
         }
       } catch (error) {
-        console.error('[App] Failed to load family plan:', error);
-        // If plan doesn't exist anymore, clear the activePlanId
-        if ((error as any)?.status === 404) {
-          console.log('[App] Family plan not found, clearing activePlanId');
-          setActivePlanId(null);
+        console.error('[App] Failed to check family membership:', error);
+        // On error, fall back to whatever activePlanId we have
+        // If we have an activePlanId, try loading that plan directly
+        if (activePlanId) {
+          try {
+            const plan = await apiService.getFamilyPlan(activePlanId);
+            if (plan) {
+              setPlanHistory({ past: [], present: plan.plan_data, future: [] }, true);
+              setFamily(plan.family_data || INITIAL_FAMILY, true);
+              setPreferences(plan.preferences_data || INITIAL_PREFERENCES, true);
+              setPrepTasks(plan.prep_tasks || [], true);
+              setGroceryItems(plan.grocery_items || [], true);
+              setInvalidationState(plan.invalidation_state || DEFAULT_INVALIDATION_STATE, true);
+              setHasPlanGenerated(plan.has_plan === 'true', true);
+              setCurrentStage(parseInt(plan.current_stage) || Stage.MEAL_PLANNING, true);
+              setIsPlanLocked(plan.is_locked ?? false);
+              if (plan.members) setFamilyMembers(plan.members);
+            }
+          } catch (fallbackError) {
+            console.error('[App] Fallback plan load also failed:', fallbackError);
+            if ((fallbackError as any)?.status === 404 || (fallbackError as any)?.status === 403) {
+              setActivePlanId(null);
+              setFamilyMembers([]);
+            }
+          }
         }
-        setFamilyPlanLoaded(true); // Mark as loaded even on error to prevent retry loop
+      } finally {
+        setFamilyPlanLoaded(true);
       }
     };
 
-    loadFamilyPlanData();
-  }, [isDataLoading, activePlanId, user, familyPlanLoaded]);
+    loadFamilyMembership();
+  }, [isDataLoading, user, familyPlanLoaded]);
 
-  // Reset familyPlanLoaded when activePlanId changes (e.g., user joins a new family)
-  useEffect(() => {
-    setFamilyPlanLoaded(false);
-  }, [activePlanId]);
+  // Note: No separate activePlanId change effect needed.
+  // The loadFamilyMembership effect handles all cases:
+  // - Startup: checks backend for membership
+  // - After joining: familyPlanLoaded is reset by handleLeaveFamily or invite handler
+  // - After leaving: familyPlanLoaded is reset by handleLeaveFamily
 
   // Set viewMode once when data finishes loading for the first time
   // Subsequent changes to hasPlanGenerated are handled by explicit setViewMode calls
@@ -1077,10 +1130,10 @@ const App: React.FC = () => {
   // --- Family Invite Handlers ---
   const handleInviteToFamily = async () => {
     if (activePlanId) {
-      // Already has a family plan — fetch the invite code and members if we don't have them yet
+      // Already has a family plan — refresh members and open modal
       try {
         const plan = await apiService.getFamilyPlan(activePlanId);
-        if (plan?.invite_code && !inviteUrl) {
+        if (plan?.invite_code) {
           setInviteUrl(`${window.location.origin}/?invite=${plan.invite_code}`);
         }
         if (plan?.members) {
@@ -1088,6 +1141,7 @@ const App: React.FC = () => {
         }
       } catch (error) {
         console.error('Failed to fetch plan details:', error);
+        // Still open the modal with whatever data we have
       }
       setFamilyInviteModalOpen(true);
       return;
@@ -1128,6 +1182,51 @@ const App: React.FC = () => {
       setIsCreatingInvite(false);
     }
   };
+  // --- Leave Family Handler ---
+  const handleLeaveFamily = async () => {
+    if (!activePlanId) return;
+
+    return new Promise<void>((resolve, reject) => {
+      setConfirmationModal({
+        isOpen: true,
+        title: 'Leave Family?',
+        message: 'You will lose access to the shared meal plan. You can create your own individual plan after leaving.',
+        confirmLabel: 'Leave Family',
+        onConfirm: async () => {
+          setConfirmationModal(prev => ({ ...prev, isOpen: false }));
+          try {
+            await apiService.leaveFamily(activePlanId!);
+
+            // Reset all state to individual mode
+            setActivePlanId(null);
+            setFamilyMembers([]);
+            setInviteUrl('');
+            setIsPlanLocked(false);
+            setFamilyPlanLoaded(false);
+
+            // Clear plan data — user starts fresh in individual mode
+            setPlanHistory({ past: [], present: EMPTY_PLAN, future: [] });
+            setFamily(INITIAL_FAMILY);
+            setPreferences(INITIAL_PREFERENCES);
+            setPrepTasks([]);
+            setGroceryItems([]);
+            setInvalidationState(DEFAULT_INVALIDATION_STATE);
+            setHasPlanGenerated(false);
+            setCurrentStage(Stage.MEAL_PLANNING);
+            setViewMode('household');
+
+            showToast('You have left the family. You can create your own plan now.', 'success');
+            resolve();
+          } catch (error) {
+            console.error('Failed to leave family:', error);
+            handleApiError(error, showToast, setErrorModal);
+            reject(error);
+          }
+        }
+      });
+    });
+  };
+
   const handleRemoveFamilyMember = async (memberUserId: string) => {
     if (!activePlanId) return;
 
@@ -1189,22 +1288,21 @@ const App: React.FC = () => {
             showToast('Loaded family plan', 'success');
           }
 
-          // Load the plan data AND persist it to user's data
-          // This makes the family plan "become" the user's plan
-          // Note: We DON'T skip save here - we want to persist the family data
+          // Load the plan data — skip save since this data belongs to the family plan,
+          // not the user's individual data. The collaborative plan is the source of truth.
           setPlanHistory({
             past: [],
             present: plan.plan_data,
             future: []
-          }); // Persist to user's data
+          }, true); // skipSave — data lives in collaborative_plans
 
-          setFamily(plan.family_data || INITIAL_FAMILY); // Persist
-          setPreferences(plan.preferences_data || INITIAL_PREFERENCES); // Persist
-          setPrepTasks(plan.prep_tasks || []); // Persist
-          setGroceryItems(plan.grocery_items || []); // Persist
-          setInvalidationState(plan.invalidation_state || DEFAULT_INVALIDATION_STATE); // Persist
-          setHasPlanGenerated(plan.has_plan === 'true'); // Persist
-          setCurrentStage(parseInt(plan.current_stage) || Stage.MEAL_PLANNING); // Persist
+          setFamily(plan.family_data || INITIAL_FAMILY, true);
+          setPreferences(plan.preferences_data || INITIAL_PREFERENCES, true);
+          setPrepTasks(plan.prep_tasks || [], true);
+          setGroceryItems(plan.grocery_items || [], true);
+          setInvalidationState(plan.invalidation_state || DEFAULT_INVALIDATION_STATE, true);
+          setHasPlanGenerated(plan.has_plan === 'true', true);
+          setCurrentStage(parseInt(plan.current_stage) || Stage.MEAL_PLANNING, true);
           setIsPlanLocked(plan.is_locked ?? false);
           setActivePlanId(plan.id);
           setViewMode('planning');
@@ -1217,6 +1315,9 @@ const App: React.FC = () => {
           // Set invite URL for the modal
           const url = `${window.location.origin}/?invite=${inviteCode}`;
           setInviteUrl(url);
+
+          // Mark family plan as loaded so the membership check doesn't overwrite
+          setFamilyPlanLoaded(true);
 
           // Clear the URL parameter
           window.history.replaceState({}, '', window.location.pathname);
@@ -1876,6 +1977,7 @@ const App: React.FC = () => {
                isFirstRun={!hasPlanGenerated}
                isLoading={isLoading}
                activePlanId={activePlanId}
+               onLeaveFamily={activePlanId ? handleLeaveFamily : undefined}
              />
 
              <Footer className="mt-12" />

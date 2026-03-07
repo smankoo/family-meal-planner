@@ -247,8 +247,9 @@ User A receives the broadcast, `handleRemoteData` filters out self-updates via `
 - Invite code is a full UUID for uniqueness
 - Real-time updates via Supabase Broadcast REST API (not WebSocket from backend)
 - Backend broadcasts as fire-and-forget via `BackgroundTasks`
-- 30s poll as safety net catches any missed broadcasts
-- `activePlanId` persisted so sync survives page refresh
+- 10s poll as safety net catches any missed broadcasts
+- On startup, `GET /family-plans/my-membership` checks backend for family membership (source of truth)
+- `POST /join` persists `active_plan_id` in backend so membership survives page refresh and deployments
 - Self-update filtering prevents echo loops
 
 ### Scenario 4: Cross-Device Synchronization

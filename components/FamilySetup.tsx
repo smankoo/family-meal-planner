@@ -10,6 +10,7 @@ interface FamilySetupProps {
   isFirstRun: boolean;
   isLoading?: boolean;
   activePlanId?: string;
+  onLeaveFamily?: () => Promise<void>;
 }
 
 const FamilySetup: React.FC<FamilySetupProps> = ({
@@ -18,7 +19,8 @@ const FamilySetup: React.FC<FamilySetupProps> = ({
   onSave,
   isFirstRun,
   isLoading = false,
-  activePlanId
+  activePlanId,
+  onLeaveFamily
 }) => {
   const [members, setMembers] = useState<FamilyMember[]>(initialFamily);
   const [prefs, setPrefs] = useState<FamilyPreferences>(initialPreferences);
@@ -79,7 +81,7 @@ const FamilySetup: React.FC<FamilySetupProps> = ({
             <div className="flex justify-between items-center mb-8">
               <h2 className="label-section">Account</h2>
             </div>
-            <UserProfile activePlanId={activePlanId} />
+            <UserProfile activePlanId={activePlanId} onLeaveFamily={onLeaveFamily} />
           </section>
         )}
 

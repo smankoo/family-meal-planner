@@ -222,6 +222,22 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  async getMyMembership(): Promise<any | null> {
+    const response = await fetch(`${API_BASE_URL}/family-plans/my-membership`, {
+      method: 'GET',
+      headers: await this.getHeaders(),
+    });
+
+    // 204 No Content or empty response means no membership
+    if (response.status === 204 || response.headers.get('content-length') === '0') {
+      return null;
+    }
+
+    const data = await this.handleResponse(response);
+    // Backend returns null (JSON) when no membership exists
+    return data || null;
+  }
+
   async getFamilyPlan(planId: string): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/family-plans/${planId}`, {
       method: 'GET',

@@ -92,19 +92,22 @@ All endpoints are under `/family-plans/`:
 |--------|------|-------------|
 | `POST` | `/` | Create a new family plan |
 | `GET` | `/my-plans` | Get all family plans user is a member of |
+| `GET` | `/my-membership` | Get user's current family membership (source of truth for startup) |
 | `GET` | `/by-invite-code/{invite_code}` | Get plan by invite code |
-| `POST` | `/join` | Join a family using invite code |
+| `POST` | `/join` | Join a family (persists `active_plan_id` in user_data) |
 | `GET` | `/{plan_id}` | Get a specific family plan (member only) |
 | `PUT` | `/{plan_id}` | Update family plan + broadcast (any member) |
 | `DELETE` | `/{plan_id}` | Delete family plan (owner only) |
-| `POST` | `/{plan_id}/leave` | Leave a family |
+| `POST` | `/{plan_id}/leave` | Leave a family (clears `active_plan_id` + individual plan data) |
 | `DELETE` | `/{plan_id}/members/{member_user_id}` | Remove a member from family (owner only) |
 
 The `PUT /{plan_id}` endpoint awaits broadcast completion before returning response, ensuring reliable delivery.
 
-### State Persistence
+### State Persistence & Startup
 
-`activePlanId` is persisted via `usePersistedState` (stored as `active_plan_id` data type in Supabase). This ensures family sync survives page refreshes. On startup, if `activePlanId` exists, the app loads the family plan data from the backend.
+On startup, the frontend calls `GET /family-plans/my-membership` to check the backend for family membership — this is the single source of truth. If the user is in a family, the response includes the full plan data and members, which are loaded into state with `skipSave=true` to avoid circular writes. If the user is not in a family, any stale `activePlanId` is cleared.
+
+This replaces the previous approach of relying on a locally-persisted `activePlanId`, which could become stale or out of sync after deployments or edge cases. The backend `join` endpoint also persists `active_plan_id` in `user_data` as a secondary reference.
 
 ### Database
 
@@ -133,9 +136,20 @@ Uses the `collaborative_plans` table in Supabase:
 1. User opens invite URL (`?invite=<code>`)
 2. Frontend detects invite parameter and calls `GET /by-invite-code/{code}`
 3. If not already a member, calls `POST /join`
-4. Plan data is loaded and persisted to user's data
-5. `activePlanId` is set — broadcast subscription starts
-6. 30s poll begins as safety net
+4. Backend adds user as member and persists `active_plan_id` in `user_data`
+5. Plan data is loaded into state with `skipSave=true` (avoids duplicating family data into individual `user_data`)
+6. `activePlanId` is set — broadcast subscription starts
+7. 10s poll begins as safety net
+
+### Leaving a Family
+
+1. User clicks "Leave Family" button in the family members section
+2. Confirmation modal warns about losing access to the shared plan
+3. On confirmation, frontend calls `POST /family-plans/{plan_id}/leave`
+4. Backend removes the membership, clears `active_plan_id`, and deletes individual plan data (`meal_plan`, `prep_tasks`, `grocery_items`, `invalidation_state`, `has_plan`, `current_stage`) so the user starts fresh
+5. If the user was the last owner, ownership transfers to another member (or the plan is deleted if no members remain)
+6. Frontend resets all state to individual mode (empty plan, initial family, etc.)
+7. User is returned to the household setup view to create their own plan
 
 ### Removing Family Members
 

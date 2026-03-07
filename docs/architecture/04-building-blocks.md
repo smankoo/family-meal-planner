@@ -345,11 +345,12 @@ POST   /user-data/import/all   # Import data
 ```python
 POST   /family-plans/                       # Create family plan
 GET    /family-plans/my-plans               # Get user's plans
+GET    /family-plans/my-membership          # Get current family membership (startup source of truth)
 GET    /family-plans/by-invite-code/{code}  # Get plan by invite code (with members)
-POST   /family-plans/join                   # Join family
+POST   /family-plans/join                   # Join family (persists active_plan_id)
 GET    /family-plans/{id}                   # Get plan with member profiles
 PUT    /family-plans/{id}                   # Update plan + broadcast
-POST   /family-plans/{id}/leave             # Leave family
+POST   /family-plans/{id}/leave             # Leave family (clears user data)
 DELETE /family-plans/{id}                   # Delete plan (owner only)
 ```
 

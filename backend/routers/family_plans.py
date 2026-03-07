@@ -7,7 +7,7 @@ after every write operation. This ensures all family members see changes instant
 """
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 
 import uuid
@@ -217,6 +217,42 @@ async def get_my_family_plans(
 
     return result
 
+@router.get("/my-membership", response_model=Optional[FamilyPlanResponse])
+async def get_my_membership(
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    """
+    Get the user's current family membership (if any).
+
+    Returns the FIRST family plan the user belongs to, or null if they
+    are not in any family. This is the single source of truth for
+    determining whether a user is in a family on app startup.
+    """
+    membership = db.query(PlanMember).filter(
+        PlanMember.user_id == user_id
+    ).first()
+
+    if not membership:
+        return None
+
+    plan = db.query(CollaborativePlan).filter(
+        CollaborativePlan.id == membership.plan_id
+    ).first()
+
+    if not plan:
+        # Orphaned membership — clean it up
+        db.delete(membership)
+        db.commit()
+        return None
+
+    members = db.query(PlanMember).options(
+        joinedload(PlanMember.user)
+    ).filter(PlanMember.plan_id == plan.id).all()
+
+    return _plan_response(plan, members)
+
+
 
 @router.get("/by-invite-code/{invite_code}", response_model=FamilyPlanResponse)
 async def get_plan_by_invite_code(
@@ -240,6 +276,7 @@ async def get_plan_by_invite_code(
     return _plan_response(plan, members)
 
 
+
 @router.post("/join", response_model=dict)
 async def join_family(
     request: JoinFamilyRequest,
@@ -248,8 +285,14 @@ async def join_family(
 ):
     """
     Join a family plan by invite code.
-    This makes the plan the user's active plan.
+
+    When a user joins:
+    - They become a member of the plan
+    - Their active_plan_id is set to this plan
+    - Their individual plan data is cleared (they now use the family plan)
     """
+    from models import UserData
+
     # Find the plan
     plan = db.query(CollaborativePlan).filter(CollaborativePlan.share_id == request.invite_code).first()
 
@@ -277,11 +320,27 @@ async def join_family(
         user_id=user_id,
         role="member"
     )
-
     db.add(member)
+
+    # Set active_plan_id in user_data so it persists
+    active_plan_data = db.query(UserData).filter(
+        UserData.user_id == user_id,
+        UserData.data_type == "active_plan_id"
+    ).first()
+    if active_plan_data:
+        active_plan_data.data = str(plan.id)
+    else:
+        active_plan_data = UserData(
+            user_id=user_id,
+            data_type="active_plan_id",
+            data=str(plan.id)
+        )
+        db.add(active_plan_data)
+
     db.commit()
 
     return {"message": "Successfully joined family", "plan_id": str(plan.id)}
+
 
 
 @router.get("/{plan_id}", response_model=FamilyPlanResponse)
@@ -443,13 +502,23 @@ async def delete_family_plan(
     return {"message": "Family plan deleted successfully"}
 
 
+
 @router.post("/{plan_id}/leave")
 async def leave_family(
     plan_id: str,
     user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
-    """Leave a family plan"""
+    """
+    Leave a family plan.
+
+    When a user leaves:
+    - Their membership is removed
+    - Their active_plan_id user_data is cleared so they revert to individual mode
+    - If they were the last owner, ownership transfers or the plan is deleted
+    """
+    from models import UserData
+
     member = db.query(PlanMember).filter(
         PlanMember.plan_id == plan_id,
         PlanMember.user_id == user_id
@@ -482,13 +551,31 @@ async def leave_family(
                 plan = db.query(CollaborativePlan).filter(CollaborativePlan.id == plan_id).first()
                 if plan:
                     db.delete(plan)
-                db.commit()
-                return {"message": "Family plan deleted as you were the last member"}
 
     db.delete(member)
+
+    # Clear the user's active_plan_id so they revert to individual mode
+    active_plan_data = db.query(UserData).filter(
+        UserData.user_id == user_id,
+        UserData.data_type == "active_plan_id"
+    ).first()
+    if active_plan_data:
+        db.delete(active_plan_data)
+
+    # Clear the user's individual plan data so they start fresh
+    # (their data was the family's data while they were a member)
+    for data_type in ["meal_plan", "prep_tasks", "grocery_items", "invalidation_state", "has_plan", "current_stage"]:
+        user_data_row = db.query(UserData).filter(
+            UserData.user_id == user_id,
+            UserData.data_type == data_type
+        ).first()
+        if user_data_row:
+            db.delete(user_data_row)
+
     db.commit()
 
     return {"message": "Successfully left the family"}
+
 
 
 @router.delete("/{plan_id}/members/{member_user_id}")

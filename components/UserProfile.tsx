@@ -8,9 +8,10 @@ import { apiService } from '../services/apiService';
 interface UserProfileProps {
   className?: string;
   activePlanId?: string;
+  onLeaveFamily?: () => Promise<void>;
 }
 
-const UserProfile: React.FC<UserProfileProps> = ({ className = '', activePlanId }) => {
+const UserProfile: React.FC<UserProfileProps> = ({ className = '', activePlanId, onLeaveFamily }) => {
   const { user, signOut, updateProfile } = useAuth();
   const { showToast } = useToast();
 
@@ -19,6 +20,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ className = '', activePlanId 
   const [loading, setLoading] = useState(false);
   const [familyMembers, setFamilyMembers] = useState<FamilyMemberData[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
+  const [isLeavingFamily, setIsLeavingFamily] = useState(false);
 
   useEffect(() => {
     const fetchFamilyMembers = async () => {
@@ -202,6 +204,31 @@ const UserProfile: React.FC<UserProfileProps> = ({ className = '', activePlanId 
               <Users size={18} />
               Family Members
             </h3>
+            {onLeaveFamily && (
+              <button
+                onClick={async () => {
+                  if (isLeavingFamily) return;
+                  setIsLeavingFamily(true);
+                  try {
+                    await onLeaveFamily();
+                  } catch (error: any) {
+                    console.error('Failed to leave family:', error);
+                    showToast(error.message || 'Failed to leave family', 'error');
+                  } finally {
+                    setIsLeavingFamily(false);
+                  }
+                }}
+                disabled={isLeavingFamily}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {isLeavingFamily ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <LogOut size={14} />
+                )}
+                Leave Family
+              </button>
+            )}
           </div>
 
           {loadingMembers ? (
