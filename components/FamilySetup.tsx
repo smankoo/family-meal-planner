@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FamilyMember, FamilyPreferences } from '../types';
 import { Plus, Trash2, ThumbsUp, ThumbsDown, ArrowRight, Sparkles, Loader2 } from 'lucide-react';
 import UserProfile from './UserProfile';
+import CuisineMultiSelect from './CuisineMultiSelect';
 
 interface FamilySetupProps {
   family: FamilyMember[];
@@ -208,12 +209,9 @@ const FamilySetup: React.FC<FamilySetupProps> = ({
              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                 <div>
                    <label className="block text-sm font-bold text-primary-700 mb-4">Cuisines & Styles</label>
-                   <input
-                      type="text"
+                   <CuisineMultiSelect
                       value={prefs.cuisines || ''}
-                      onChange={(e) => setPrefs({ ...prefs, cuisines: e.target.value })}
-                      className="mobile-text-lg form-field"
-                      placeholder="e.g. Italian, Mediterranean, Thai..."
+                      onChange={(val) => setPrefs({ ...prefs, cuisines: val })}
                    />
                 </div>
 

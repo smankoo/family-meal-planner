@@ -96,6 +96,38 @@
     --border-subtle: rgba(255, 255, 255, 0.4);
     --selection-bg: #e0e7ff;
     --selection-text: #312e81;
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: oklch(0.205 0 0);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.58 0.22 27);
+    --border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: oklch(0.708 0 0);
+    --chart-1: oklch(0.809 0.105 251.813);
+    --chart-2: oklch(0.623 0.214 259.815);
+    --chart-3: oklch(0.546 0.245 262.881);
+    --chart-4: oklch(0.488 0.243 264.376);
+    --chart-5: oklch(0.424 0.199 265.638);
+    --radius: 0.625rem;
+    --sidebar: oklch(0.985 0 0);
+    --sidebar-foreground: oklch(0.145 0 0);
+    --sidebar-primary: oklch(0.205 0 0);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.97 0 0);
+    --sidebar-accent-foreground: oklch(0.205 0 0);
+    --sidebar-border: oklch(0.922 0 0);
+    --sidebar-ring: oklch(0.708 0 0);
   }
 
   .dark {
@@ -160,6 +192,37 @@
     --border-subtle: rgba(63, 63, 70, 0.4);
     --selection-bg: #312e81;
     --selection-text: #c7d2fe;
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.87 0.00 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.371 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.556 0 0);
+    --chart-1: oklch(0.809 0.105 251.813);
+    --chart-2: oklch(0.623 0.214 259.815);
+    --chart-3: oklch(0.546 0.245 262.881);
+    --chart-4: oklch(0.488 0.243 264.376);
+    --chart-5: oklch(0.424 0.199 265.638);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.556 0 0);
   }
 
   body {
@@ -862,6 +925,128 @@
     @apply rounded-3xl p-8 shadow-sm space-y-12;
     background-color: var(--surface-primary);
     border: 1px solid var(--border-primary);
+  }
+
+  /* ===== Cuisine Multi-Select ===== */
+  .cuisine-select-trigger {
+    @apply w-full flex items-center justify-between rounded-2xl px-5 py-4 font-medium;
+    @apply transition-all cursor-pointer;
+    background-color: var(--surface-secondary);
+    color: var(--text-primary);
+    border: none;
+  }
+  .cuisine-select-trigger:hover {
+    background-color: var(--color-primary-200);
+  }
+  .cuisine-select-trigger:focus {
+    @apply ring-2 ring-primary-100 outline-none;
+    background-color: var(--surface-primary);
+  }
+
+  .cuisine-select-placeholder {
+    @apply text-left truncate;
+    color: var(--text-tertiary);
+  }
+
+  .cuisine-select-count {
+    @apply text-left truncate font-medium;
+    color: var(--text-secondary);
+  }
+
+  .cuisine-select-caret {
+    @apply flex-shrink-0;
+    color: var(--text-tertiary);
+  }
+
+  .cuisine-select-dropdown {
+    @apply absolute left-0 right-0 z-50 rounded-2xl overflow-hidden;
+    @apply backdrop-blur-xl;
+    @apply animate-fade-in-up;
+    top: calc(100% + 4px);
+    background-color: var(--surface-elevated);
+    border: 1px solid var(--border-primary);
+    box-shadow: var(--shadow-float);
+  }
+
+  .cuisine-select-search {
+    @apply flex items-center gap-2 px-4 py-3;
+    border-bottom: 1px solid var(--border-primary);
+  }
+
+  .cuisine-select-search-icon {
+    @apply flex-shrink-0;
+    color: var(--text-tertiary);
+  }
+
+  .cuisine-select-search-input {
+    @apply w-full bg-transparent border-none outline-none text-sm font-medium;
+    color: var(--text-primary);
+  }
+  .cuisine-select-search-input::placeholder {
+    color: var(--text-tertiary);
+  }
+
+  .cuisine-select-list {
+    @apply overflow-y-auto py-1;
+    max-height: 240px;
+  }
+
+  .cuisine-select-empty {
+    @apply py-6 text-center text-sm;
+    color: var(--text-tertiary);
+  }
+
+  .cuisine-select-item {
+    @apply w-full flex items-center gap-2.5 px-4 py-2.5 text-left;
+    @apply transition-colors text-sm font-medium cursor-pointer;
+    color: var(--text-primary);
+    background: transparent;
+    border: none;
+  }
+  .cuisine-select-item:hover {
+    background-color: var(--surface-secondary);
+  }
+  .cuisine-select-item-active {
+    background-color: color-mix(in srgb, var(--color-accent-50) 50%, transparent);
+  }
+
+  .cuisine-select-check {
+    @apply w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0;
+    @apply transition-all duration-200;
+    border: 1.5px solid var(--color-primary-300);
+    background: transparent;
+  }
+  .cuisine-select-check-active {
+    border-color: var(--color-accent-500);
+    background-color: var(--color-accent-500);
+    color: white;
+  }
+
+  .cuisine-chips-container {
+    @apply flex flex-wrap gap-2;
+  }
+
+  .cuisine-chip {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full;
+    @apply text-xs font-semibold;
+    @apply transition-all duration-200;
+    @apply animate-fade-in-up;
+    background-color: var(--surface-secondary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-primary);
+  }
+
+  .cuisine-chip-remove {
+    @apply w-4 h-4 rounded-full flex items-center justify-center;
+    @apply transition-colors cursor-pointer;
+    color: var(--text-tertiary);
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+  .cuisine-chip-remove:hover {
+    color: var(--text-primary);
+    background-color: var(--color-primary-200);
   }
 
   /* ===== Floating Save Button ===== */
