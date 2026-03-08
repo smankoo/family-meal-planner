@@ -111,6 +111,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ className = '', activePlanId,
             <img
               src={user.user_metadata.avatar_url}
               alt={displayName}
+              referrerPolicy="no-referrer"
               className="w-16 h-16 rounded-full object-cover border-2 border-primary-100"
             />
           ) : (

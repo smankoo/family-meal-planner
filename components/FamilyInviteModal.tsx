@@ -58,8 +58,8 @@ const FamilyInviteModal: React.FC<FamilyInviteModalProps> = ({
           {/* Header */}
           <div className="modal-header">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-primary-900 to-primary-700 rounded-2xl flex items-center justify-center shadow-sm">
-                <Users size={22} className="text-white" />
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm" style={{ backgroundColor: 'var(--text-primary)' }}>
+                <Users size={22} style={{ color: 'var(--text-inverted)' }} />
               </div>
               <div>
                 <h2 className="heading-card">Invite to Family</h2>
@@ -153,25 +153,25 @@ const FamilyInviteModal: React.FC<FamilyInviteModalProps> = ({
                   <div className="space-y-3">
                     <label className="label-section">Invite Link</label>
                     <div className="space-y-2">
-                      <textarea
-                        readOnly
-                        value={inviteUrl}
-                        rows={2}
-                        className="w-full text-sm text-primary-700 font-mono bg-primary-50 border border-primary-200 rounded-lg px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary-900/10 cursor-text select-all resize-none"
-                        onClick={(e) => (e.target as HTMLTextAreaElement).select()}
-                      />
+                      <div
+                        className="invite-link-display"
+                        onClick={handleCopy}
+                        title={inviteUrl}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCopy(); }}
+                        aria-label="Copy invite link"
+                      >
+                        {inviteUrl}
+                      </div>
                       <button
                         onClick={handleCopy}
-                        className={`w-full px-4 py-2.5 rounded-lg font-semibold text-sm transition-all ${
-                          copied
-                            ? 'bg-green-600 text-white shadow-sm'
-                            : 'bg-primary-900 text-white hover:bg-primary-800 shadow-sm hover:shadow-md'
-                        }`}
+                        className={`btn-primary w-full text-sm ${copied ? '!bg-green-600' : ''}`}
                       >
                         {copied ? (
                           <span className="flex items-center justify-center gap-1.5">
                             <Check size={16} />
-                            Copied to Clipboard
+                            Copied
                           </span>
                         ) : (
                           <span className="flex items-center justify-center gap-1.5">

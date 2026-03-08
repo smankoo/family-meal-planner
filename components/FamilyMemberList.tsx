@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Crown, User as UserIcon, UserMinus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Crown, UserMinus } from 'lucide-react';
 
 export interface FamilyMemberData {
   id: string;
@@ -34,6 +34,21 @@ const FamilyMemberList: React.FC<FamilyMemberListProps> = ({
   canRemoveMembers = false
 }) => {
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
+  const [brokenAvatars, setBrokenAvatars] = useState<Set<string>>(new Set());
+
+  // Reset broken avatars when members change so transient failures don't stick
+  useEffect(() => {
+    setBrokenAvatars(new Set());
+  }, [members]);
+
+  const handleAvatarError = (memberId: string) => {
+    setBrokenAvatars(prev => new Set(prev).add(memberId));
+  };
+
+  const hasValidAvatar = (member: FamilyMemberData) => {
+    return member.user?.avatar_url && !brokenAvatars.has(member.id);
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -88,12 +103,14 @@ const FamilyMemberList: React.FC<FamilyMemberListProps> = ({
                 className="relative group"
                 title={`${displayName}${isCurrentUser ? ' (You)' : ''}${member.role === 'owner' ? ' - Owner' : ''}`}
               >
-                {member.user?.avatar_url ? (
+                {hasValidAvatar(member) ? (
                   <img
-                    src={member.user.avatar_url}
+                    src={member.user!.avatar_url!}
                     alt={displayName}
+                    referrerPolicy="no-referrer"
                     className="w-7 h-7 rounded-full border-2 object-cover ring-1 ring-primary-200"
                     style={{ borderColor: 'var(--surface-bg)' }}
+                    onError={() => handleAvatarError(member.id)}
                   />
                 ) : (
                   <div className="w-7 h-7 bg-primary-900 rounded-full border-2 flex items-center justify-center ring-1 ring-primary-200" style={{ borderColor: 'var(--surface-bg)' }}>
@@ -131,19 +148,21 @@ const FamilyMemberList: React.FC<FamilyMemberListProps> = ({
         return (
           <div
             key={member.id}
-            className="flex items-center gap-3 p-3 bg-primary-50 rounded-xl hover:bg-primary-100 transition-colors group"
+            className="family-member-row group"
           >
             <div className="relative flex-shrink-0">
-              {member.user?.avatar_url ? (
+              {hasValidAvatar(member) ? (
                 <img
-                  src={member.user.avatar_url}
+                  src={member.user!.avatar_url!}
                   alt={displayName}
+                  referrerPolicy="no-referrer"
                   className="w-10 h-10 rounded-full object-cover border-2 shadow-sm"
                   style={{ borderColor: 'var(--surface-bg)' }}
+                  onError={() => handleAvatarError(member.id)}
                 />
               ) : (
-                <div className="w-10 h-10 bg-primary-900 rounded-full flex items-center justify-center shadow-sm">
-                  <span className="text-white font-semibold text-sm">{initials}</span>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center shadow-sm" style={{ backgroundColor: 'var(--text-primary)' }}>
+                  <span className="font-semibold text-sm" style={{ color: 'var(--text-inverted)' }}>{initials}</span>
                 </div>
               )}
               {member.role === 'owner' && (
@@ -154,41 +173,33 @@ const FamilyMemberList: React.FC<FamilyMemberListProps> = ({
             </div>
 
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <p className="text-sm font-semibold text-primary-900 truncate">
                   {displayName}
-                  {isCurrentUser && <span className="text-primary-500 font-normal"> (You)</span>}
                 </p>
-              </div>
-              <p className="text-xs text-primary-600 truncate">{member.user?.email}</p>
-            </div>
-
-            {showRole && (
-              <div className="flex-shrink-0">
-                {member.role === 'owner' ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-md text-xs font-medium">
-                    <Crown size={10} />
-                    Owner
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary-200 text-primary-700 rounded-md text-xs font-medium">
-                    <UserIcon size={10} />
-                    Member
+                {isCurrentUser && <span className="text-xs text-primary-500 flex-shrink-0">(You)</span>}
+                {showRole && (
+                  <span className="family-member-role-inline">
+                    {member.role === 'owner' ? 'Owner' : 'Member'}
                   </span>
                 )}
               </div>
-            )}
+              <p className="text-xs text-primary-600 truncate">{member.user?.email}</p>
+            </div>
 
             {showRemoveButton && (
               <button
                 onClick={() => handleRemoveMember(member.user_id)}
                 disabled={isRemoving}
-                className="flex-shrink-0 btn-icon text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+                className="btn-icon-sm text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50 flex-shrink-0"
                 title="Remove member"
                 aria-label={`Remove ${displayName}`}
               >
                 {isRemoving ? (
-                  <div className="animate-spin">⏳</div>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
                 ) : (
                   <UserMinus size={16} />
                 )}

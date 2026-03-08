@@ -255,7 +255,8 @@ All visual properties are defined in `index.css` as CSS variables and Tailwind t
 
 **Tailwind Classes**: Use semantic classes defined in the theme system:
 - **Buttons**: `btn-primary`, `btn-secondary`, `btn-glass`, `btn-glass-primary`, `btn-regenerate`, `btn-empty-state`, `btn-save-floating`, `btn-close-modal`, `btn-retry-modal`, `btn-icon`, `btn-icon-sm`, `btn-delete-hover`
-- **Cards**: `card`, `card-glass`, `card-glass-light`, `card-glass-medium`, `card-glass-subtle`, `card-interactive-glass`, `family-member-card`, `preferences-card`
+- **Cards**: `card`, `card-glass`, `card-glass-light`, `card-glass-medium`, `card-glass-subtle`, `card-interactive-glass`
+- **Family**: `family-member-card`, `family-member-row`, `family-member-role-badge`, `family-member-role-owner`, `family-member-role-member`, `family-member-role-inline`, `invite-link-display`, `preferences-card`
 - **Meal Cards**: `meal-card-breakfast`, `meal-card-lunch`, `meal-card-snack`, `meal-card-dinner` (with built-in glassmorphism + dark mode)
 - **Meal Type Pills**: `meal-type-pill meal-type-pill-breakfast`, `meal-type-pill-lunch`, `meal-type-pill-snack`, `meal-type-pill-dinner`
 - **Modals**: `modal-backdrop`, `modal-container`, `modal-header`, `error-icon-wrapper`, `error-detail-box`, `error-support-box`

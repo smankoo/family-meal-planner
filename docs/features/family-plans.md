@@ -64,9 +64,11 @@ User B sees updated meal + toast "Plan updated by family member"
 2. **FamilyMemberList** (`components/FamilyMemberList.tsx`)
    - Reusable component for displaying family members
    - Supports compact (avatars) and full (detailed) modes
-   - Shows owner crown badge and role indicators
+   - Shows owner crown badge overlay and inline role labels
    - Remove button appears on hover for removable members (owner-only feature)
    - Handles loading states during member removal
+   - Avatar error handling: tracks broken images, resets on member data refresh
+   - Uses `referrerPolicy="no-referrer"` on avatar images (required for Google OAuth profile pictures which return 403 with referrer headers)
 
 3. **useFamilyPlan Hook** (`hooks/useFamilyPlan.ts`)
    - Subscribes to Supabase Broadcast channel with `ack: true` for reliability

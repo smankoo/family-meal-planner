@@ -891,6 +891,47 @@
     color: var(--text-tertiary);
   }
 
+  /* ===== Invite Link Display ===== */
+  .invite-link-display {
+    @apply w-full text-sm font-mono rounded-lg px-3 py-2.5;
+    @apply overflow-hidden text-ellipsis whitespace-nowrap;
+    @apply cursor-pointer select-all;
+    @apply outline-none focus:ring-2;
+    background-color: var(--surface-secondary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-primary);
+    focus-ring-color: var(--color-primary-300);
+  }
+
+  /* ===== Family Member Row ===== */
+  .family-member-row {
+    @apply flex items-center gap-3 p-3 rounded-xl transition-colors;
+    background-color: var(--surface-secondary);
+  }
+  .family-member-row:hover {
+    background-color: var(--color-primary-200);
+  }
+
+  .family-member-role-badge {
+    @apply inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium;
+  }
+  .family-member-role-owner {
+    background-color: color-mix(in srgb, var(--color-warm-500) 20%, transparent);
+    color: var(--color-warm-500);
+  }
+  .family-member-role-member {
+    background-color: var(--surface-primary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-primary);
+  }
+
+  .family-member-role-inline {
+    @apply text-[10px] font-semibold uppercase tracking-wider flex-shrink-0;
+    @apply px-1.5 py-0.5 rounded;
+    color: var(--text-tertiary);
+    background-color: var(--surface-primary);
+  }
+
   /* ===== Family Member Card ===== */
   .family-member-card {
     @apply relative rounded-3xl p-8 shadow-sm transition-all;
