@@ -277,6 +277,7 @@ All visual properties are defined in `index.css` as CSS variables and Tailwind t
 - **Filters**: `completion-filter`, `completion-filter-tab`, `completion-filter-tab-active`, `completion-filter-tab-idle` (segmented pill for filtering by completion state; used in Prep and Grocery views)
 - **Plan Lock**: `plan-lock-slider`, `plan-lock-slider-locked`, `plan-lock-slider-unlocked`, `plan-lock-slider-thumb`, `plan-lock-banner`
 - **Utilities**: `loading-pill`, `auth-divider-text`, `theme-toggle`, `section-divider`
+- **Print**: `print-container` (hidden on screen, visible in `@media print`), `print-title`, `print-table`, `print-th`, `print-th-day`, `print-row`, `print-td`, `print-td-day`, `print-meal-name`, `print-meal-desc`, `print-meal-empty` — renders the weekly plan as a compact landscape table optimized for one US Letter sheet
 
 **Glassmorphism Utilities**:
 - `backdrop-blur-xs` (4px), `backdrop-blur-sm` (8px), `backdrop-blur-md` (12px), `backdrop-blur-lg` (16px), `backdrop-blur-xl` (20px)

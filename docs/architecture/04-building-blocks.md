@@ -80,6 +80,7 @@ components/
 │   ├── FamilySetup.tsx        # Family member configuration
 │   ├── FamilyInviteModal.tsx  # Family invite & member display
 │   ├── MealGrid.tsx           # 7-day meal plan display
+│   ├── PrintableMealPlan.tsx  # Print-optimized weekly plan (single Letter sheet)
 │   ├── ChatInterface.tsx      # LLM conversation UI
 │   ├── MealPrepView.tsx       # Prep task management
 │   └── GroceryListView.tsx    # Shopping list

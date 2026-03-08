@@ -51,6 +51,8 @@ import { Undo2, Sparkles, ChefHat, ArrowLeft, ArrowRight, X, RotateCcw, Loader2,
 import UserMenu from './components/UserMenu';
 import UserProfile from './components/UserProfile';
 import PlanLockToggle from './components/PlanLockToggle';
+import PrintableMealPlan from './components/PrintableMealPlan';
+import { Printer } from '@phosphor-icons/react';
 
 // Helper function to handle API errors consistently
 const handleApiError = (error: any, showToast: any, setErrorModal: any, onRetry?: () => void) => {
@@ -2025,15 +2027,25 @@ const App: React.FC = () => {
                             <div />
                           )}
 
-                          {/* Center: Now button */}
-                          <button
-                            onClick={() => mealGridRef.current?.scrollToNow()}
-                            className="btn-glass flex items-center gap-1.5 px-3 py-1.5 text-primary-600 text-xs font-semibold"
-                            title="What to eat now?"
-                            aria-label="Scroll to current meal"
-                          >
-                            <Clock size={12} /> Now
-                          </button>
+                          {/* Center: Now + Print buttons */}
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => mealGridRef.current?.scrollToNow()}
+                              className="btn-glass flex items-center gap-1.5 px-3 py-1.5 text-primary-600 text-xs font-semibold"
+                              title="What to eat now?"
+                              aria-label="Scroll to current meal"
+                            >
+                              <Clock size={12} /> Now
+                            </button>
+                            <button
+                              onClick={() => window.print()}
+                              className="btn-glass flex items-center gap-1.5 px-3 py-1.5 text-primary-600 text-xs font-semibold"
+                              title="Print meal plan"
+                              aria-label="Print meal plan"
+                            >
+                              <Printer size={12} weight="bold" />
+                            </button>
+                          </div>
 
                           {/* Right: Invite and Regenerate buttons */}
                           <div className="flex items-center gap-2">
@@ -2076,6 +2088,16 @@ const App: React.FC = () => {
                                 aria-label="Scroll to current meal"
                               >
                                 <Clock size={14} /> Now
+                              </button>
+                            )}
+                            {hasPlanGenerated && (
+                              <button
+                                onClick={() => window.print()}
+                                className="btn-glass flex items-center gap-2 px-3 py-1.5 text-primary-600 text-sm font-semibold"
+                                title="Print meal plan"
+                                aria-label="Print meal plan"
+                              >
+                                <Printer size={14} weight="bold" /> Print
                               </button>
                             )}
                             {hasPlanGenerated && !isPlanLocked && (
@@ -2270,6 +2292,11 @@ const App: React.FC = () => {
             isOpen={isChatOpen}
             onToggle={() => setIsChatOpen(!isChatOpen)}
         />
+      )}
+
+      {/* Print-only: rendered but hidden on screen, visible in @media print */}
+      {hasPlanGenerated && (
+        <PrintableMealPlan plan={planHistory.present} />
       )}
 
     </div>
