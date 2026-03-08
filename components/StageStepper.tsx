@@ -11,8 +11,8 @@ interface StageStepperProps {
 const StageStepper: React.FC<StageStepperProps> = ({ currentStage, setStage, hasMealPlan }) => {
   const steps = [
     { id: Stage.MEAL_PLANNING, label: 'Meals', icon: CalendarRange },
-    { id: Stage.MEAL_PREP, label: 'Prep', icon: ChefHat },
     { id: Stage.GROCERY_LIST, label: 'Shop', icon: ShoppingBag },
+    { id: Stage.MEAL_PREP, label: 'Prep', icon: ChefHat },
   ];
 
   return (

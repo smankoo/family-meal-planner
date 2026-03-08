@@ -1,7 +1,7 @@
 export enum Stage {
   MEAL_PLANNING = 0,
-  MEAL_PREP = 1,
-  GROCERY_LIST = 2
+  GROCERY_LIST = 1,
+  MEAL_PREP = 2
 }
 
 export enum MealTime {
