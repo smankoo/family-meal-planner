@@ -1,9 +1,11 @@
-import React, { useState, useRef, useLayoutEffect } from 'react';
+import React, { useState, useRef, useLayoutEffect, useCallback } from 'react';
 import { GroceryItem, WeekPlan } from '../types';
 import { Check, ShoppingBag, Loader2, ArrowRight, Apple, Milk, Beef, Wheat, Package } from 'lucide-react';
 import InvalidationBanner from './InvalidationBanner';
 import RegenerateButton from './RegenerateButton';
 import ProgressBar from './ProgressBar';
+import CompletionFilter, { FilterMode } from './CompletionFilter';
+import { useDelayedFilter } from '../hooks/useDelayedFilter';
 import { resolveMealName } from '../utils/mealResolver';
 
 // Category icon mapping - using filled Lucide icons with subtle color tints for distinction
@@ -104,6 +106,17 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
       onItemsChange(updatedItems);
     }
   };
+
+  // Completion filter state
+  const [filterMode, setFilterMode] = useState<FilterMode>('incomplete');
+
+  // Delayed filter: items linger briefly after toggle, then fade out
+  const getItemChecked = useCallback((item: GroceryItem) => item.checked, []);
+  const getItemId = useCallback((item: GroceryItem) => item.id, []);
+  const { getFilteredItems, isFadingOut, isLingering } = useDelayedFilter(
+    items, filterMode, getItemChecked, getItemId,
+  );
+  const filteredItems = getFilteredItems();
 
   // Skeleton component for loading states
   const ItemSkeleton: React.FC<{ isLoading?: boolean }> = ({ isLoading = false }) => (
@@ -210,7 +223,7 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
     );
   }
 
-  const groupedItems = items.reduce((acc, item) => {
+  const groupedItems = filteredItems.reduce((acc, item) => {
     const cat = item.category || 'Uncategorized';
     if (!acc[cat]) acc[cat] = [];
     acc[cat].push(item);
@@ -222,16 +235,24 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
 
       {/* Header - Desktop Only */}
       <div className="hidden md:flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 max-w-4xl mx-auto px-4 md:px-8">
-        <h2 className="text-xl md:text-2xl font-bold text-primary-900">Shopping List</h2>
+        <div className="flex items-center gap-4">
+          <h2 className="text-xl md:text-2xl font-bold text-primary-900">Shopping List</h2>
+          {items.length > 0 && (
+            <CompletionFilter value={filterMode} onChange={setFilterMode} />
+          )}
+        </div>
         {items.length > 0 && !isInvalidated && !isLocked && (
           <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={true} />
         )}
       </div>
 
-      {/* Mobile: Regenerate Button - Subtle, top-right corner */}
-      {items.length > 0 && !isInvalidated && !isLocked && (
-        <div className="md:hidden flex justify-end mb-4 px-4">
-          <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={false} />
+      {/* Mobile: Filter + Regenerate row */}
+      {items.length > 0 && (
+        <div className="md:hidden flex items-center justify-between mb-4 px-4">
+          <CompletionFilter value={filterMode} onChange={setFilterMode} />
+          {!isInvalidated && !isLocked && (
+            <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={false} />
+          )}
         </div>
       )}
 
@@ -306,6 +327,14 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
         </div>
       ) : (
         <>
+          {/* Filtered empty state */}
+          {filteredItems.length === 0 && items.length > 0 && (
+            <div className="flex flex-col items-center justify-center py-16 px-4 animate-fade-in">
+              <p className="text-secondary text-center">
+                {filterMode === 'complete' ? 'Nothing checked off yet.' : 'All done — nice work.'}
+              </p>
+            </div>
+          )}
           {/* Mobile View */}
           <div className="md:hidden flex flex-col pb-20 px-4">
             {Object.entries(groupedItems).sort().map(([category, catItems]) => (
@@ -330,8 +359,9 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
                       ref={(el) => registerItemRef(itemKey, el)}
                       onClick={() => toggleItem(item.id)}
                       className={`
-                        stagger-item relative rounded-2xl p-5 shadow-sm border transition-all active:scale-[0.98] ${isLocked ? 'cursor-default' : 'cursor-pointer'}
+                        ${isFadingOut(item.id) || isLingering(item.id) ? '' : 'stagger-item'} relative rounded-2xl p-5 shadow-sm border transition-all active:scale-[0.98] ${isLocked ? 'cursor-default' : 'cursor-pointer'}
                         ${item.checked ? 'border-emerald-200/50' : 'border-primary-100'}
+                        ${isFadingOut(item.id) ? 'animate-fade-out-down' : ''}
                       `}
                       style={{ animationDelay: `${itemIdx * 40}ms`, backgroundColor: 'var(--surface-primary)' }}
                     >
@@ -403,8 +433,9 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
                         ref={(el) => registerItemRef(itemKey, el)}
                         onClick={() => toggleItem(item.id)}
                         className={`
-                          stagger-item group px-6 py-4 ${isLocked ? 'cursor-default' : 'cursor-pointer'} transition-all duration-200
+                          ${isFadingOut(item.id) || isLingering(item.id) ? '' : 'stagger-item'} group px-6 py-4 ${isLocked ? 'cursor-default' : 'cursor-pointer'} transition-all duration-200
                           ${item.checked ? '' : 'hover:bg-primary-50/50'}
+                          ${isFadingOut(item.id) ? 'animate-fade-out-down' : ''}
                         `}
                         style={{ animationDelay: `${itemIdx * 40}ms`, backgroundColor: item.checked ? 'var(--surface-secondary)' : undefined }}
                       >

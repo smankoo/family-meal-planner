@@ -274,6 +274,7 @@ All visual properties are defined in `index.css` as CSS variables and Tailwind t
 - **Animations**: `stagger-item`, `stage-enter`, `strikethrough-animate`
 - **Highlights**: `meal-card-now-highlight` for the "Now" button's current-meal glow (auto-clears after 5s, respects prefers-reduced-motion)
 - **Navigation**: `stage-stepper`, `stage-stepper-tab`, `stage-stepper-tab-active`, `stage-stepper-tab-idle`, `stage-stepper-tab-disabled`
+- **Filters**: `completion-filter`, `completion-filter-tab`, `completion-filter-tab-active`, `completion-filter-tab-idle` (segmented pill for filtering by completion state; used in Prep and Grocery views)
 - **Plan Lock**: `plan-lock-slider`, `plan-lock-slider-locked`, `plan-lock-slider-unlocked`, `plan-lock-slider-thumb`, `plan-lock-banner`
 - **Utilities**: `loading-pill`, `auth-divider-text`, `theme-toggle`, `section-divider`
 

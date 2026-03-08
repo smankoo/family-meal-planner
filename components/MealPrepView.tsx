@@ -1,9 +1,11 @@
-import React, { useState, useRef, useLayoutEffect } from 'react';
+import React, { useState, useRef, useLayoutEffect, useCallback } from 'react';
 import { PrepTask, WeekPlan } from '../types';
 import { Check, Clock, ArrowRight, Loader2 } from 'lucide-react';
 import InvalidationBanner from './InvalidationBanner';
 import RegenerateButton from './RegenerateButton';
 import ProgressBar from './ProgressBar';
+import CompletionFilter, { FilterMode } from './CompletionFilter';
+import { useDelayedFilter } from '../hooks/useDelayedFilter';
 import { resolveMealName } from '../utils/mealResolver';
 
 interface MealPrepViewProps {
@@ -92,6 +94,17 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
     }
   };
 
+  // Completion filter state
+  const [filterMode, setFilterMode] = useState<FilterMode>('incomplete');
+
+  // Delayed filter: tasks linger briefly after toggle, then fade out
+  const getTaskCompleted = useCallback((task: PrepTask) => !!task.completed, []);
+  const getTaskId = useCallback((task: PrepTask) => task.id, []);
+  const { getFilteredItems: getFilteredTasks, isFadingOut, isLingering } = useDelayedFilter(
+    tasks, filterMode, getTaskCompleted, getTaskId,
+  );
+  const filteredTasks = getFilteredTasks();
+
   // Skeleton component for loading states
   const TaskSkeleton: React.FC<{ isLoading?: boolean }> = ({ isLoading = false }) => (
     <div className="card relative rounded-2xl p-5 min-h-[100px] flex gap-4">
@@ -170,7 +183,7 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
   }
 
   // Group by "Day"
-  const groupedTasks = tasks.reduce((acc, task) => {
+  const groupedTasks = filteredTasks.reduce((acc, task) => {
     if (!acc[task.day]) acc[task.day] = [];
     acc[task.day].push(task);
     return acc;
@@ -181,16 +194,24 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
 
       {/* Header - Desktop Only */}
       <div className="hidden md:flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 max-w-4xl mx-auto px-4 md:px-8">
-        <h2 className="text-xl md:text-2xl font-bold text-primary-900">Prep Strategy</h2>
+        <div className="flex items-center gap-4">
+          <h2 className="text-xl md:text-2xl font-bold text-primary-900">Prep Strategy</h2>
+          {tasks.length > 0 && (
+            <CompletionFilter value={filterMode} onChange={setFilterMode} />
+          )}
+        </div>
         {tasks.length > 0 && !isInvalidated && !isLocked && (
           <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={true} />
         )}
       </div>
 
-      {/* Mobile: Regenerate Button - Subtle, top-right corner */}
-      {tasks.length > 0 && !isInvalidated && !isLocked && (
-        <div className="md:hidden flex justify-end mb-4 px-4">
-          <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={false} />
+      {/* Mobile: Filter + Regenerate row */}
+      {tasks.length > 0 && (
+        <div className="md:hidden flex items-center justify-between mb-4 px-4">
+          <CompletionFilter value={filterMode} onChange={setFilterMode} />
+          {!isInvalidated && !isLocked && (
+            <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={false} />
+          )}
         </div>
       )}
 
@@ -265,6 +286,14 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
         </div>
       ) : (
         <div className="md:hidden flex flex-col pb-20 px-4">
+          {/* Filtered empty state - mobile */}
+          {filteredTasks.length === 0 && tasks.length > 0 && (
+            <div className="flex flex-col items-center justify-center py-16 px-4 animate-fade-in">
+              <p className="text-secondary text-center">
+                {filterMode === 'complete' ? 'Nothing completed yet.' : 'All done — nice work.'}
+              </p>
+            </div>
+          )}
           {Object.entries(groupedTasks).map(([day, dayTasks]) => (
             <div key={day} className="mb-8">
 
@@ -285,8 +314,9 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
                     ref={(el) => registerTaskRef(taskKey, el)}
                     onClick={() => toggleTask(task.id)}
                     className={`
-                      stagger-item relative rounded-2xl p-5 shadow-sm border transition-all active:scale-[0.98] ${isLocked ? 'cursor-default' : 'cursor-pointer'}
+                      ${isFadingOut(task.id) || isLingering(task.id) ? '' : 'stagger-item'} relative rounded-2xl p-5 shadow-sm border transition-all active:scale-[0.98] ${isLocked ? 'cursor-default' : 'cursor-pointer'}
                       ${task.completed ? 'border-emerald-200/50' : 'border-primary-100'}
+                      ${isFadingOut(task.id) ? 'animate-fade-out-down' : ''}
                     `}
                     style={{ animationDelay: `${taskIdx * 50}ms`, backgroundColor: 'var(--surface-primary)' }}
                   >
@@ -332,6 +362,14 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
       {/* Desktop View - Consistent with mobile styling */}
       <div className="hidden md:block pb-20">
         <div className="max-w-4xl mx-auto px-4 md:px-8">
+          {/* Filtered empty state - desktop */}
+          {filteredTasks.length === 0 && tasks.length > 0 && (
+            <div className="flex flex-col items-center justify-center py-16 px-4 animate-fade-in">
+              <p className="text-secondary text-center">
+                {filterMode === 'complete' ? 'Nothing completed yet.' : 'All done — nice work.'}
+              </p>
+            </div>
+          )}
           {Object.entries(groupedTasks).map(([day, dayTasks]) => (
             <div key={day} className="mb-8">
 
@@ -352,8 +390,9 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
                   ref={(el) => registerTaskRef(taskKey, el)}
                   onClick={() => toggleTask(task.id)}
                   className={`
-                    stagger-item relative rounded-2xl p-5 shadow-sm border transition-all hover:shadow-md ${isLocked ? 'cursor-default' : 'cursor-pointer'}
+                    ${isFadingOut(task.id) || isLingering(task.id) ? '' : 'stagger-item'} relative rounded-2xl p-5 shadow-sm border transition-all hover:shadow-md ${isLocked ? 'cursor-default' : 'cursor-pointer'}
                     ${task.completed ? 'border-emerald-200/50' : 'border-primary-100'}
+                    ${isFadingOut(task.id) ? 'animate-fade-out-down' : ''}
                   `}
                   style={{ animationDelay: `${taskIdx * 50}ms`, backgroundColor: 'var(--surface-primary)' }}
                 >
