@@ -189,12 +189,7 @@ const FamilyInviteModal: React.FC<FamilyInviteModalProps> = ({
                   </div>
                 </div>
 
-                <button
-                  onClick={onClose}
-                  className="btn-secondary w-full"
-                >
-                  Done
-                </button>
+
               </>
             )}
           </div>
