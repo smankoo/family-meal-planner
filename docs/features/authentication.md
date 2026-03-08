@@ -81,7 +81,7 @@ The Family Meal Planner uses **Supabase Auth** for production-grade authenticati
 
 ### Frontend (AuthContext)
 
-**Location**: `contexts/AuthContext.tsx`
+**Location**: `frontend/contexts/AuthContext.tsx`
 
 ```typescript
 interface AuthContextType {
@@ -268,7 +268,7 @@ secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"  # pragma: allowlist secret
 
 **3. Frontend Implementation**:
 
-**Location**: `components/AuthModal.tsx`
+**Location**: `frontend/components/AuthModal.tsx`
 
 ```typescript
 const handleGoogleSignIn = async () => {
@@ -318,7 +318,7 @@ const handlePasswordReset = async (email: string) => {
 };
 ```
 
-**2. Handle Callback** (`components/AuthCallback.tsx`):
+**2. Handle Callback** (`frontend/components/AuthCallback.tsx`):
 ```typescript
 const handlePasswordUpdate = async (newPassword: string) => {
   const { error } = await supabase.auth.updateUser({

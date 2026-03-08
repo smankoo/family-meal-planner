@@ -43,7 +43,7 @@ All user data is stored in the `user_data` table with these types:
 
 ### usePersistedState Hook
 
-**Location**: `hooks/usePersistedState.ts`
+**Location**: `frontend/hooks/usePersistedState.ts`
 
 ```typescript
 export function usePersistedState<T>(
@@ -83,7 +83,7 @@ export function usePersistedState<T>(
 
 ### Data Service
 
-**Location**: `services/dataService.ts`
+**Location**: `frontend/services/dataService.ts`
 
 ```typescript
 class DataService {

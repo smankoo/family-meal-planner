@@ -116,7 +116,7 @@ async def generate_plan_stream(request: MealPlanRequest):
 
 ### Frontend (React)
 
-**Location**: `services/geminiService.ts`
+**Location**: `frontend/services/geminiService.ts`
 
 ```typescript
 export async function generateInitialMealPlanStream(
@@ -194,7 +194,7 @@ export async function generateInitialMealPlanStream(
 
 ### UI Integration
 
-**Location**: `App.tsx`
+**Location**: `frontend/App.tsx`
 
 ```typescript
 const handleGenerateInitialPlan = async () => {

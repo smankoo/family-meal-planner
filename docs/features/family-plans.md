@@ -55,13 +55,13 @@ User B sees updated meal + toast "Plan updated by family member"
 
 ### Frontend Components
 
-1. **FamilyInviteModal** (`components/FamilyInviteModal.tsx`)
+1. **FamilyInviteModal** (`frontend/components/FamilyInviteModal.tsx`)
    - Modal for creating and sharing family invite links
    - Shows invite URL with copy functionality
    - Displays current family members with roles
    - Allows owners to remove non-owner members
 
-2. **FamilyMemberList** (`components/FamilyMemberList.tsx`)
+2. **FamilyMemberList** (`frontend/components/FamilyMemberList.tsx`)
    - Reusable component for displaying family members
    - Supports compact (avatars) and full (detailed) modes
    - Shows owner crown badge overlay and inline role labels
@@ -70,7 +70,7 @@ User B sees updated meal + toast "Plan updated by family member"
    - Avatar error handling: tracks broken images, resets on member data refresh
    - Uses `referrerPolicy="no-referrer"` on avatar images (required for Google OAuth profile pictures which return 403 with referrer headers)
 
-3. **useFamilyPlan Hook** (`hooks/useFamilyPlan.ts`)
+3. **useFamilyPlan Hook** (`frontend/hooks/useFamilyPlan.ts`)
    - Subscribes to Supabase Broadcast channel with `ack: true` for reliability
    - Runs 10s poll as safety net (faster recovery than 30s)
    - Immediate saves (no debouncing) for instant sync
@@ -251,7 +251,7 @@ Plan locking prevents accidental changes to finalized content on a per-tab basis
 - Lock state changes (toggling any lock field) are always permitted regardless of other lock states
 - All three lock states included in broadcast payload for real-time sync
 
-**Frontend** (`App.tsx`, `components/PlanLockToggle.tsx`, `components/MealPrepView.tsx`, `components/GroceryListView.tsx`):
+**Frontend** (`frontend/App.tsx`, `frontend/components/PlanLockToggle.tsx`, `frontend/components/MealPrepView.tsx`, `frontend/components/GroceryListView.tsx`):
 - `PlanLockToggle` component: reusable Apple-style slider with lock/unlock icons
 - Lock toggle rendered inline with the Regenerate button on each tab via `lockToggle` prop (Prep, Grocery) or directly in the action bar (Meals)
 - `handleToggleTabLock(tab)` handles toggling for any of the three tabs

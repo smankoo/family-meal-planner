@@ -18,12 +18,16 @@ lerna-debug.log*
 
 # Environment variables
 .env
-.env.*
-*.env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.development
+.env.production
+.env.*.local
+backend/.env
+backend/.env.*
+
+# Keep .env.example tracked as a template
+!.env.example
+!backend/.env.example
 
 # Python
 __pycache__/
@@ -37,7 +41,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -47,6 +50,11 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
 
 # Virtual environments
 venv/

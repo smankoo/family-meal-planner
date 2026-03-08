@@ -437,7 +437,7 @@ curl -X POST -H "Authorization: Bearer $TOKEN" \
 
 **Frontend Structure**:
 ```
-src/
+frontend/
 ├── components/        # React components
 ├── services/          # API clients
 ├── hooks/             # Custom hooks

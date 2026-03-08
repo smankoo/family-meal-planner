@@ -73,7 +73,7 @@ supabase start
 
 # This will output:
 # - API URL: http://127.0.0.1:54321
-# - DB URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+# - DB URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres  # pragma: allowlist secret
 # - Studio URL: http://127.0.0.1:54323
 # - Anon key: eyJhbGc...
 ```

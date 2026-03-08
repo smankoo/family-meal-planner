@@ -91,7 +91,7 @@ FastAPI → Supabase DB (via ORM)
 - `supabase/config.toml` - Configuration as code
 - `supabase/migrations/` - Database schema
 - `backend/supabase_auth.py` - JWT validation
-- `contexts/AuthContext.tsx` - Frontend auth
+- `frontend/contexts/AuthContext.tsx` - Frontend auth
 - `backend/models.py` - ORM models
 
 ## 💡 Tips

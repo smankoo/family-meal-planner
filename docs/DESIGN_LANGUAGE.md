@@ -244,7 +244,7 @@ Layouts change, but visual language doesn't:
 
 ## Design Tokens Reference
 
-All visual properties are defined in `index.css` as CSS variables and Tailwind theme extensions. Designers should reference these tokens rather than hardcoded values:
+All visual properties are defined in `frontend/index.css` as CSS variables and Tailwind theme extensions. Designers should reference these tokens rather than hardcoded values:
 
 **Colors**: `--color-primary-*`, `--color-accent-*`
 **Spacing**: `--spacing-card`, `--spacing-section`
@@ -302,8 +302,8 @@ The app supports light, dark, and system-preference themes via `ThemeContext`. T
 
 ### Rules for Dark Mode Compatibility
 1. **Never use raw Tailwind colors** like `bg-white`, `bg-zinc-50`, `text-zinc-900` — use semantic tokens (`bg-primary-50`, `text-primary-900`) or CSS vars (`var(--surface-primary)`)
-2. **Use CSS classes from index.css** — all component classes (`card`, `btn-primary`, `modal-container`, etc.) already handle both themes
-3. **For new components**, add styles to `index.css` using CSS vars, then reference the class name
+2. **Use CSS classes from frontend/index.css** — all component classes (`card`, `btn-primary`, `modal-container`, etc.) already handle both themes
+3. **For new components**, add styles to `frontend/index.css` using CSS vars, then reference the class name
 4. **Avatar borders** should use `var(--surface-bg)` instead of `border-white` for proper contrast in dark mode
 5. **The ThemeToggle component** provides the UI control — it's placed in the app header
 

@@ -27,7 +27,7 @@ Detailed implementation guides for key features:
 - **[Authentication System](features/authentication.md)** - Supabase Auth, OAuth, JWT validation
 - **[Data Persistence](features/data-persistence.md)** - Cloud-first storage, cross-device sync
 - **[Streaming LLM](features/streaming-llm.md)** - Progressive rendering, SSE implementation
-- **[Collaborative Plans](features/collaborative-plans.md)** - Plan sharing, real-time collaboration
+- **[Family Plans](features/family-plans.md)** - Family meal planning, real-time collaboration
 
 ## Quick Start
 
@@ -127,7 +127,7 @@ All code examples are production code from the actual application, not pseudocod
 
 File paths are relative to project root:
 - `backend/main.py` - Backend entry point
-- `components/App.tsx` - Frontend main component
+- `frontend/App.tsx` - Frontend main component
 - `supabase/migrations/` - Database migrations
 
 ## Contributing to Documentation
@@ -159,9 +159,9 @@ File paths are relative to project root:
 ### Project Files
 
 - `README.md` - Project overview and setup
-- `DESIGN_LANGUAGE.md` - UI/UX design principles
-- `SECURITY.md` - Security guidelines
-- `DEPLOYMENT.md` - Deployment procedures
+- `docs/DESIGN_LANGUAGE.md` - UI/UX design principles
+- `docs/SECURITY.md` - Security guidelines
+- `docs/deployment/DEPLOYMENT.md` - Deployment procedures
 
 ## Support
 
@@ -173,11 +173,12 @@ For questions or clarifications:
 
 ## Version History
 
+- **v3.1.0** (2026-03-07): Repository restructure — frontend sources moved to `frontend/`, docs consolidated into `docs/` subdirectories, stale files removed, config paths updated
 - **v3.0.0** (2026-02-03): Cloud-first persistence, collaborative plans
 - **v2.0.0** (2026-01-18): Streaming LLM implementation
 - **v1.0.0** (2026-01-10): Initial release with Supabase auth
 
 ---
 
-**Last Updated**: February 3, 2026
+**Last Updated**: March 7, 2026
 **Maintained By**: Development Team

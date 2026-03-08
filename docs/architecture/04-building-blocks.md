@@ -64,46 +64,47 @@ External Dependencies:
 ### Component Architecture
 
 ```
-components/
+frontend/
 ├── App.tsx                    # Main application logic
-├── AppWithProviders.tsx       # Context providers wrapper
-│
-├── Auth & User
-│   ├── AuthModal.tsx          # Sign in/up modal
-│   ├── AuthCallback.tsx       # OAuth callback handler
-│   ├── ProtectedRoute.tsx     # Route guard
-│   ├── UserMenu.tsx           # User dropdown menu
-│   ├── UserProfile.tsx        # Profile management
-│   └── FamilyMemberList.tsx   # Reusable member display
-│
-├── Core Features
-│   ├── FamilySetup.tsx        # Family member configuration
-│   ├── FamilyInviteModal.tsx  # Family invite & member display
-│   ├── MealGrid.tsx           # 7-day meal plan display
-│   ├── PrintableMealPlan.tsx  # Print-optimized weekly plan (single Letter sheet)
-│   ├── ChatInterface.tsx      # LLM conversation UI
-│   ├── MealPrepView.tsx       # Prep task management
-│   └── GroceryListView.tsx    # Shopping list
-│
-├── Shared Components
-│   ├── StageStepper.tsx       # Multi-stage navigation
-│   ├── FamilyInviteModal.tsx  # Plan sharing & member display
-│   ├── ConfirmationModal.tsx  # Confirmation dialogs
-│   ├── ErrorModal.tsx         # Error display
-│   ├── Toast.tsx              # Notifications
-│   ├── Footer.tsx             # App footer
-│   ├── LoadingScreen.tsx      # Full-screen loader
-│   ├── InvalidationBanner.tsx # Data invalidation warning
-│   └── ErrorBoundary.tsx      # Error boundary
-│
-└── Skeletons
-    └── MealGridSkeleton.tsx   # Loading placeholder
+├── components/
+│   ├── AppWithProviders.tsx   # Context providers wrapper
+│   │
+│   ├── Auth & User
+│   │   ├── AuthModal.tsx          # Sign in/up modal
+│   │   ├── AuthCallback.tsx       # OAuth callback handler
+│   │   ├── ProtectedRoute.tsx     # Route guard
+│   │   ├── UserMenu.tsx           # User dropdown menu
+│   │   ├── UserProfile.tsx        # Profile management
+│   │   └── FamilyMemberList.tsx   # Reusable member display
+│   │
+│   ├── Core Features
+│   │   ├── FamilySetup.tsx        # Family member configuration
+│   │   ├── FamilyInviteModal.tsx  # Family invite & member display
+│   │   ├── MealGrid.tsx           # 7-day meal plan display
+│   │   ├── PrintableMealPlan.tsx  # Print-optimized weekly plan (single Letter sheet)
+│   │   ├── ChatInterface.tsx      # LLM conversation UI
+│   │   ├── MealPrepView.tsx       # Prep task management
+│   │   └── GroceryListView.tsx    # Shopping list
+│   │
+│   ├── Shared Components
+│   │   ├── StageStepper.tsx       # Multi-stage navigation
+│   │   ├── FamilyInviteModal.tsx  # Plan sharing & member display
+│   │   ├── ConfirmationModal.tsx  # Confirmation dialogs
+│   │   ├── ErrorModal.tsx         # Error display
+│   │   ├── Toast.tsx              # Notifications
+│   │   ├── Footer.tsx             # App footer
+│   │   ├── LoadingScreen.tsx      # Full-screen loader
+│   │   ├── InvalidationBanner.tsx # Data invalidation warning
+│   │   └── ErrorBoundary.tsx      # Error boundary
+│   │
+│   └── skeletons/
+│       └── MealGridSkeleton.tsx   # Loading placeholder
 ```
 
 ### Service Layer
 
 ```
-services/
+frontend/services/
 ├── apiService.ts              # Backend API client
 │   ├── Authentication methods
 │   ├── User data CRUD
@@ -131,7 +132,7 @@ services/
 ### State Management
 
 ```
-contexts/
+frontend/contexts/
 ├── AuthContext.tsx            # User authentication state
 │   ├── user: User | null
 │   ├── session: Session | null
@@ -143,7 +144,7 @@ contexts/
 └── ToastContext.tsx           # Notification state
     └── showToast(message, type)
 
-hooks/
+frontend/hooks/
 ├── usePersistedState.ts       # Cloud-synced state
 │   ├── Loads from Supabase
 │   ├── Saves to Supabase
@@ -164,7 +165,7 @@ hooks/
 ### Configuration
 
 ```
-config/
+frontend/config/
 ├── supabase.ts                # Supabase client setup
 │   ├── createClient()
 │   ├── Auth configuration
@@ -179,7 +180,7 @@ config/
 ### Type Definitions
 
 ```typescript
-// types.ts - Core domain types
+// frontend/types.ts - Core domain types
 
 interface FamilyMember {
   id: string;

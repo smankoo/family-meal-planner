@@ -59,7 +59,7 @@ export default defineConfig(({ mode }) => {
     ],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(__dirname, './frontend'),
       }
     },
     // Define replacements for import.meta.env.VITE_* variables
