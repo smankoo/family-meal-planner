@@ -2,6 +2,53 @@ import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useIm
 import { WeekPlan, MealTime } from '../types';
 import { Users, Sparkles, ChevronRight, ChevronLeft, Loader2, RefreshCw, Sunrise, Sun, Cookie, Moon } from 'lucide-react';
 
+// Animates children on mount with a slide-up fade-in.
+// Defined outside MealGrid so React preserves identity across parent re-renders.
+const StreamAnimWrapper = React.memo(({ children }: { children: React.ReactNode }) => {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    // Set hidden state before browser paints
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(20px) scale(0.95)';
+
+    // Trigger transition on next frame
+    requestAnimationFrame(() => {
+      el.style.transition = 'opacity 0.45s ease-out, transform 0.45s ease-out';
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(0) scale(1)';
+
+      // Clean up inline styles after animation
+      setTimeout(() => {
+        el.style.transition = '';
+        el.style.opacity = '';
+        el.style.transform = '';
+      }, 500);
+    });
+  }, []); // Only on mount
+
+  return <div ref={ref}>{children}</div>;
+});
+
+// Skeleton component for loading states — defined outside MealGrid to preserve identity
+const MealSkeleton: React.FC<{ isLoading?: boolean }> = ({ isLoading = false }) => (
+  <div className="card relative min-h-[140px] xl:min-h-[160px] flex flex-col">
+    <div className="flex justify-between items-start mb-2">
+      <div className="w-8 h-2 skeleton-shimmer rounded"></div>
+      {isLoading && <Loader2 size={14} className="text-primary-300 animate-spin" />}
+    </div>
+
+    <div className="flex-1 space-y-2">
+      <div className="w-3/4 h-4 skeleton-shimmer rounded"></div>
+      <div className="w-full h-3 skeleton-shimmer rounded"></div>
+      <div className="w-2/3 h-3 skeleton-shimmer rounded"></div>
+    </div>
+  </div>
+);
+
 export interface MealGridHandle {
   scrollToNow: () => void;
 }
@@ -249,39 +296,13 @@ const MealGrid = forwardRef<MealGridHandle, MealGridProps>(({
     if (isStreaming && plan.every(day =>
       Object.values(day.meals).every(meal => !meal.name || meal.name.trim() === '')
     )) {
-      // This is a fresh plan generation, reset everything
+      // This is a fresh plan generation, reset animation tracking but mark initial load
+      // as completed so stagger-item never applies — stream-in handles per-card entrance
       animatedCardsRef.current = new Set();
       cardRefsRef.current.clear();
-      hasInitialLoadCompleted.current = false;
+      hasInitialLoadCompleted.current = true;
     }
   }, [isStreaming, plan]);
-
-  // Handle new cards that should animate using direct DOM manipulation
-  useLayoutEffect(() => {
-    newlyReceivedCards.forEach(cardKey => {
-      if (!animatedCardsRef.current.has(cardKey)) {
-        animatedCardsRef.current.add(cardKey);
-
-        // Find the card element and animate it directly
-        const cardElement = cardRefsRef.current.get(cardKey);
-        if (cardElement) {
-          // Remove any existing animation classes
-          cardElement.classList.remove('animate-fade-in-up', 'animate-stream-in');
-
-          // Force a reflow to ensure the class removal takes effect
-          cardElement.offsetHeight;
-
-          // Add the animation class
-          cardElement.classList.add('animate-stream-in');
-
-          // Remove the animation class after it completes to prevent re-triggering
-          setTimeout(() => {
-            cardElement.classList.remove('animate-stream-in');
-          }, 600); // Match animation duration
-        }
-      }
-    });
-  }, [newlyReceivedCards]);
 
   const hasChanged = (dayIndex: number, time: MealTime): boolean => {
     if (!previousPlan) return false;
@@ -313,22 +334,6 @@ const MealGrid = forwardRef<MealGridHandle, MealGridProps>(({
       dayHeaderRefsRef.current.delete(day);
     }
   };
-
-  // Skeleton component for loading states
-  const MealSkeleton: React.FC<{ isLoading?: boolean }> = ({ isLoading = false }) => (
-    <div className="card relative min-h-[140px] xl:min-h-[160px] flex flex-col">
-      <div className="flex justify-between items-start mb-2">
-        <div className="w-8 h-2 skeleton-shimmer rounded"></div>
-        {isLoading && <Loader2 size={14} className="text-primary-300 animate-spin" />}
-      </div>
-
-      <div className="flex-1 space-y-2">
-        <div className="w-3/4 h-4 skeleton-shimmer rounded"></div>
-        <div className="w-full h-3 skeleton-shimmer rounded"></div>
-        <div className="w-2/3 h-3 skeleton-shimmer rounded"></div>
-      </div>
-    </div>
-  );
 
   // --- Mobile View (Apple-style sticky section headers) ---
   const MobileView = () => {
@@ -365,13 +370,13 @@ const MealGrid = forwardRef<MealGridHandle, MealGridProps>(({
                           );
                         }
 
-                        return (
+                        const cardContent = (
                              <div
-                                key={time}
                                 ref={(el) => registerCardRef(cardKey, el)}
                                 data-meal-key={cardKey}
                                 className={`
-                                  ${!hasInitialLoadCompleted.current ? 'stagger-item' : ''} relative rounded-2xl p-5 shadow-sm border transition-all duration-500 active:scale-[0.98]
+                                  ${!hasInitialLoadCompleted.current ? 'stagger-item' : ''}
+                                  relative rounded-2xl p-5 shadow-sm border transition-all duration-500 active:scale-[0.98]
                                   ${getMealTypeClass(time)}
                                   ${isChanged ? 'ring-2 ring-indigo-200' : ''}
                                   ${highlightedMealKey === cardKey ? 'meal-card-now-highlight' : ''}
@@ -425,6 +430,12 @@ const MealGrid = forwardRef<MealGridHandle, MealGridProps>(({
                                 )}
                               </div>
                         );
+
+                        // During streaming, wrap newly appearing cards for entrance animation
+                        if (isStreaming) {
+                          return <StreamAnimWrapper key={time}>{cardContent}</StreamAnimWrapper>;
+                        }
+                        return <React.Fragment key={time}>{cardContent}</React.Fragment>;
                     })}
                 </div>
             </div>
@@ -469,13 +480,13 @@ const MealGrid = forwardRef<MealGridHandle, MealGridProps>(({
                           );
                         }
 
-                        return (
+                        const cardContent = (
                             <div
-                                key={`${dayPlan.day}-${time}`}
                                 ref={(el) => registerCardRef(cardKey, el)}
                                 data-meal-key={cardKey}
                                 className={`
-                                    ${!hasInitialLoadCompleted.current ? 'stagger-item' : ''} relative p-4 xl:p-5 rounded-2xl border transition-all duration-500 group
+                                    ${!hasInitialLoadCompleted.current ? 'stagger-item' : ''}
+                                    relative p-4 xl:p-5 rounded-2xl border transition-all duration-500 group
                                     flex flex-col h-full min-h-[140px] xl:min-h-[160px]
                                     hover:-translate-y-1
                                     ${getMealTypeClass(time)}
@@ -535,6 +546,11 @@ const MealGrid = forwardRef<MealGridHandle, MealGridProps>(({
                                 )}
                             </div>
                         );
+
+                        if (isStreaming) {
+                          return <StreamAnimWrapper key={`${dayPlan.day}-${time}`}>{cardContent}</StreamAnimWrapper>;
+                        }
+                        return <React.Fragment key={`${dayPlan.day}-${time}`}>{cardContent}</React.Fragment>;
                     })}
                 </div>
             </div>
@@ -545,8 +561,8 @@ const MealGrid = forwardRef<MealGridHandle, MealGridProps>(({
 
   return (
     <div className="w-full">
-      <MobileView />
-      <DesktopView />
+      {MobileView()}
+      {DesktopView()}
     </div>
   );
 });

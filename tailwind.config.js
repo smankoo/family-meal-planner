@@ -88,7 +88,7 @@ export default {
         'accent': 'var(--shadow-accent)',
       },
       animation: {
-        'stream-in': 'streamIn 0.6s ease-out',
+        'stream-in': 'streamIn 0.6s ease-out forwards',
         'fade-in-up': 'fadeInUp 0.5s ease-out',
         'slide-in-right': 'slideInRight 0.3s ease-out',
         'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
