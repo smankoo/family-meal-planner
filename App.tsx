@@ -370,8 +370,10 @@ const App: React.FC = () => {
   const [isCreatingInvite, setIsCreatingInvite] = useState(false);
   const [familyMembers, setFamilyMembers] = useState<any[]>([]);
 
-  // Plan lock state - synced via family plan
-  const [isPlanLocked, setIsPlanLocked] = useState(false);
+  // Per-tab lock states - synced via family plan
+  const [isMealsLocked, setIsMealsLocked] = useState(false);
+  const [isPrepLocked, setIsPrepLocked] = useState(false);
+  const [isGroceryLocked, setIsGroceryLocked] = useState(false);
 
   // Track if we're applying a remote update to prevent feedback loop
   const isApplyingRemoteUpdateRef = useRef(false);
@@ -392,7 +394,9 @@ const App: React.FC = () => {
     invalidation_state: any;
     has_plan: string;
     current_stage: string;
-    is_locked?: boolean;
+    is_meals_locked?: boolean;
+    is_prep_locked?: boolean;
+    is_grocery_locked?: boolean;
   }) => {
     console.log('[App] Received remote update from collaborator');
 
@@ -413,7 +417,9 @@ const App: React.FC = () => {
     setInvalidationState(data.invalidation_state || DEFAULT_INVALIDATION_STATE, true);
     setHasPlanGenerated(data.has_plan === 'true', true);
     setCurrentStage(parseInt(data.current_stage) || Stage.MEAL_PLANNING, true);
-    setIsPlanLocked(data.is_locked ?? false);
+    setIsMealsLocked(data.is_meals_locked ?? false);
+    setIsPrepLocked(data.is_prep_locked ?? false);
+    setIsGroceryLocked(data.is_grocery_locked ?? false);
 
     // Reset flag after a short delay to allow all state updates to complete
     setTimeout(() => {
@@ -438,12 +444,12 @@ const App: React.FC = () => {
       return;
     }
 
-    // If plan is locked, don't sync any changes (lock state is handled by handleTogglePlanLock)
-    if (isPlanLocked) {
+    // If plan is locked, don't sync any changes (lock state is handled by handleToggleTabLock)
+    if (isMealsLocked && isPrepLocked && isGroceryLocked) {
       return;
     }
 
-    // Sync current state to family plan (including lock state)
+    // Sync current state to family plan (including per-tab lock states)
     saveToFamilyPlan({
       plan_data: planHistory.present,
       family_data: family,
@@ -453,7 +459,9 @@ const App: React.FC = () => {
       invalidation_state: invalidationState,
       has_plan: hasPlanGenerated ? 'true' : 'false',
       current_stage: currentStage.toString(),
-      is_locked: isPlanLocked
+      is_meals_locked: isMealsLocked,
+      is_prep_locked: isPrepLocked,
+      is_grocery_locked: isGroceryLocked
     });
   }, [
     activePlanId,
@@ -467,7 +475,9 @@ const App: React.FC = () => {
     currentStage,
     isDataLoading,
     isLoading,
-    isPlanLocked,
+    isMealsLocked,
+    isPrepLocked,
+    isGroceryLocked,
     saveToFamilyPlan
   ]);
 
@@ -559,7 +569,9 @@ const App: React.FC = () => {
           setInvalidationState(membership.invalidation_state || DEFAULT_INVALIDATION_STATE, true);
           setHasPlanGenerated(membership.has_plan === 'true', true);
           setCurrentStage(parseInt(membership.current_stage) || Stage.MEAL_PLANNING, true);
-          setIsPlanLocked(membership.is_locked ?? false);
+          setIsMealsLocked(membership.is_meals_locked ?? false);
+          setIsPrepLocked(membership.is_prep_locked ?? false);
+          setIsGroceryLocked(membership.is_grocery_locked ?? false);
 
           // Always set family members from the membership response
           if (membership.members) {
@@ -599,7 +611,9 @@ const App: React.FC = () => {
               setInvalidationState(plan.invalidation_state || DEFAULT_INVALIDATION_STATE, true);
               setHasPlanGenerated(plan.has_plan === 'true', true);
               setCurrentStage(parseInt(plan.current_stage) || Stage.MEAL_PLANNING, true);
-              setIsPlanLocked(plan.is_locked ?? false);
+              setIsMealsLocked(plan.is_meals_locked ?? false);
+              setIsPrepLocked(plan.is_prep_locked ?? false);
+              setIsGroceryLocked(plan.is_grocery_locked ?? false);
               if (plan.members) setFamilyMembers(plan.members);
             }
           } catch (fallbackError) {
@@ -1043,8 +1057,8 @@ const App: React.FC = () => {
   };
 
   const handleRegeneratePlan = async () => {
-    if (isPlanLocked) {
-      showToast('Plan is locked. Unlock it to make changes.', 'warning');
+    if (isMealsLocked) {
+      showToast('Meal plan is locked. Unlock it to make changes.', 'warning');
       return;
     }
     setConfirmationModal({
@@ -1097,32 +1111,37 @@ const App: React.FC = () => {
       }
   };
 
-  // --- Plan Lock Toggle ---
-  const handleTogglePlanLock = async () => {
-    const newLockState = !isPlanLocked;
+  // --- Per-Tab Lock Toggle ---
+  const handleToggleTabLock = async (tab: 'meals' | 'prep' | 'grocery') => {
+    const stateMap = {
+      meals: { get: isMealsLocked, set: setIsMealsLocked, field: 'is_meals_locked' as const },
+      prep: { get: isPrepLocked, set: setIsPrepLocked, field: 'is_prep_locked' as const },
+      grocery: { get: isGroceryLocked, set: setIsGroceryLocked, field: 'is_grocery_locked' as const },
+    };
+
+    const { get: currentState, set: setState, field } = stateMap[tab];
+    const newLockState = !currentState;
 
     // Set flag to prevent sync effect from interfering
     isTogglingLockRef.current = true;
 
     // Optimistic update
-    setIsPlanLocked(newLockState);
+    setState(newLockState);
 
     if (activePlanId) {
       try {
-        await apiService.updateFamilyPlan(activePlanId, { is_locked: newLockState });
+        await apiService.updateFamilyPlan(activePlanId, { [field]: newLockState });
       } catch (error) {
         // Revert on failure
-        setIsPlanLocked(!newLockState);
-        console.error('Failed to toggle plan lock:', error);
+        setState(!newLockState);
+        console.error(`Failed to toggle ${tab} lock:`, error);
         showToast('Failed to update lock state', 'error');
       } finally {
-        // Reset flag after a short delay to allow state to settle
         setTimeout(() => {
           isTogglingLockRef.current = false;
         }, 100);
       }
     } else {
-      // Reset flag
       setTimeout(() => {
         isTogglingLockRef.current = false;
       }, 100);
@@ -1203,7 +1222,9 @@ const App: React.FC = () => {
             setActivePlanId(null);
             setFamilyMembers([]);
             setInviteUrl('');
-            setIsPlanLocked(false);
+            setIsMealsLocked(false);
+            setIsPrepLocked(false);
+            setIsGroceryLocked(false);
             setFamilyPlanLoaded(false);
 
             // Clear plan data — user starts fresh in individual mode
@@ -1305,7 +1326,9 @@ const App: React.FC = () => {
           setInvalidationState(plan.invalidation_state || DEFAULT_INVALIDATION_STATE, true);
           setHasPlanGenerated(plan.has_plan === 'true', true);
           setCurrentStage(parseInt(plan.current_stage) || Stage.MEAL_PLANNING, true);
-          setIsPlanLocked(plan.is_locked ?? false);
+          setIsMealsLocked(plan.is_meals_locked ?? false);
+          setIsPrepLocked(plan.is_prep_locked ?? false);
+          setIsGroceryLocked(plan.is_grocery_locked ?? false);
           setActivePlanId(plan.id);
           setViewMode('planning');
 
@@ -1344,8 +1367,8 @@ const App: React.FC = () => {
   }, [isDataLoading, user]);
 
   const handlePlanUpdate = async (userMessage: string) => {
-    if (isPlanLocked) {
-      showToast('Plan is locked. Unlock it to make changes.', 'warning');
+    if (isMealsLocked) {
+      showToast('Meal plan is locked. Unlock it to make changes.', 'warning');
       return;
     }
     setIsLoading(true);
@@ -1457,8 +1480,8 @@ const App: React.FC = () => {
   };
 
   const handleReplaceMeal = async (day: string, mealType: MealTime) => {
-    if (isPlanLocked) {
-      showToast('Plan is locked. Unlock it to make changes.', 'warning');
+    if (isMealsLocked) {
+      showToast('Meal plan is locked. Unlock it to make changes.', 'warning');
       return;
     }
     const cardKey = `${day}-${mealType}`;
@@ -1619,8 +1642,8 @@ const App: React.FC = () => {
   };
 
   const handleRegeneratePrep = async () => {
-    if (isPlanLocked) {
-      showToast('Plan is locked. Unlock it to make changes.', 'warning');
+    if (isPrepLocked) {
+      showToast('Prep plan is locked. Unlock it to make changes.', 'warning');
       return;
     }
     setIsLoading(true);
@@ -1732,8 +1755,8 @@ const App: React.FC = () => {
   };
 
   const handleRegenerateGrocery = async () => {
-    if (isPlanLocked) {
-      showToast('Plan is locked. Unlock it to make changes.', 'warning');
+    if (isGroceryLocked) {
+      showToast('Grocery list is locked. Unlock it to make changes.', 'warning');
       return;
     }
     setIsLoading(true);
@@ -1916,14 +1939,6 @@ const App: React.FC = () => {
 
           {/* Right: App Actions + User Menu */}
           <div className="pointer-events-auto flex items-center gap-2">
-              {/* Plan Lock Toggle - visible on all screen sizes when plan exists */}
-              {viewMode === 'planning' && hasPlanGenerated && (
-                <PlanLockToggle
-                  isLocked={isPlanLocked}
-                  onToggle={handleTogglePlanLock}
-                />
-              )}
-
               {/* Invite (app-level action) */}
               {viewMode === 'planning' && hasPlanGenerated && (
                 <div className="hidden md:flex items-center gap-2">
@@ -2019,7 +2034,7 @@ const App: React.FC = () => {
                       {hasPlanGenerated && (
                         <div className="flex justify-between items-center gap-2">
                           {/* Left: Undo button */}
-                          {planHistory.past.length > 0 && !isPlanLocked ? (
+                          {planHistory.past.length > 0 && !isMealsLocked ? (
                             <button onClick={handleUndo} className="btn-glass flex items-center gap-1.5 px-3 py-1.5 text-primary-600 text-xs font-semibold">
                                 <Undo2 size={12} /> Undo
                             </button>
@@ -2027,8 +2042,12 @@ const App: React.FC = () => {
                             <div />
                           )}
 
-                          {/* Center: Now + Print buttons */}
+                          {/* Center: Lock + Now + Print buttons */}
                           <div className="flex items-center gap-2">
+                            <PlanLockToggle
+                              isLocked={isMealsLocked}
+                              onToggle={() => handleToggleTabLock('meals')}
+                            />
                             <button
                               onClick={() => mealGridRef.current?.scrollToNow()}
                               className="btn-glass flex items-center gap-1.5 px-3 py-1.5 text-primary-600 text-xs font-semibold"
@@ -2069,7 +2088,7 @@ const App: React.FC = () => {
                                 </>
                               )}
                             </button>
-                            {!isPlanLocked && (
+                            {!isMealsLocked && (
                               <RegenerateButton onRegenerate={handleRegeneratePlan} isLoading={isLoading} showText={false} />
                             )}
                           </div>
@@ -2081,7 +2100,11 @@ const App: React.FC = () => {
 
                       {/* Page-level actions - Desktop */}
                       <div className="hidden md:flex justify-end items-center gap-3 mb-4">
-                            {planHistory.past.length > 0 && !isPlanLocked && (
+                            <PlanLockToggle
+                              isLocked={isMealsLocked}
+                              onToggle={() => handleToggleTabLock('meals')}
+                            />
+                            {planHistory.past.length > 0 && !isMealsLocked && (
                                <button onClick={handleUndo} className="btn-glass flex items-center gap-2 px-3 py-1.5 text-primary-600 text-sm font-semibold">
                                    <Undo2 size={14} /> Undo
                                </button>
@@ -2106,7 +2129,7 @@ const App: React.FC = () => {
                                 <Printer size={14} weight="bold" /> Print
                               </button>
                             )}
-                            {hasPlanGenerated && !isPlanLocked && (
+                            {hasPlanGenerated && !isMealsLocked && (
                               <RegenerateButton onRegenerate={handleRegeneratePlan} isLoading={isLoading} showText={true} />
                             )}
                       </div>
@@ -2125,7 +2148,7 @@ const App: React.FC = () => {
                            newlyReceivedCards={newlyReceivedCards}
                            onReplaceMeal={handleReplaceMeal}
                            replacingMeals={replacingMeals}
-                           isLocked={isPlanLocked}
+                           isLocked={isMealsLocked}
                          />
                       )}
                     </div>
@@ -2164,12 +2187,14 @@ const App: React.FC = () => {
                 }}>
                   <div key={`stage-${Stage.MEAL_PREP}`} className="stage-enter max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pb-40 pt-6 md:pt-8">
                     {/* Mobile Stepper (visible only on small screens) - Sticky */}
-                    <div data-sticky-header="prep" className="md:hidden mb-3 sticky top-0 z-20 pt-2 pb-3 -mx-4 px-4 flex justify-center backdrop-blur-xl" style={{ backgroundColor: 'var(--surface-bg)' }}>
-                      <StageStepper
-                         currentStage={currentStage}
-                         setStage={handleStageChange}
-                         hasMealPlan={hasPlanGenerated}
-                      />
+                    <div data-sticky-header="prep" className="md:hidden mb-3 sticky top-0 z-20 pt-2 pb-3 -mx-4 px-4 backdrop-blur-xl" style={{ backgroundColor: 'var(--surface-bg)' }}>
+                      <div className="flex justify-center mb-2">
+                        <StageStepper
+                           currentStage={currentStage}
+                           setStage={handleStageChange}
+                           hasMealPlan={hasPlanGenerated}
+                        />
+                      </div>
                     </div>
 
                     <MealPrepView
@@ -2185,7 +2210,13 @@ const App: React.FC = () => {
                          newlyReceivedTasks={newlyReceivedTasks}
                          isInvalidated={isPrepPlanInvalidated()}
                          onTasksChange={setPrepTasks}
-                         isLocked={isPlanLocked}
+                         isLocked={isPrepLocked}
+                         lockToggle={
+                           <PlanLockToggle
+                             isLocked={isPrepLocked}
+                             onToggle={() => handleToggleTabLock('prep')}
+                           />
+                         }
                     />
                     <Footer className="mt-16" />
                   </div>
@@ -2220,12 +2251,14 @@ const App: React.FC = () => {
                 }}>
                   <div key={`stage-${Stage.GROCERY_LIST}`} className="stage-enter max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pb-40 pt-6 md:pt-8">
                     {/* Mobile Stepper (visible only on small screens) - Sticky */}
-                    <div data-sticky-header="grocery" className="md:hidden mb-3 sticky top-0 z-20 pt-2 pb-3 -mx-4 px-4 flex justify-center backdrop-blur-xl" style={{ backgroundColor: 'var(--surface-bg)' }}>
-                      <StageStepper
-                         currentStage={currentStage}
-                         setStage={handleStageChange}
-                         hasMealPlan={hasPlanGenerated}
-                      />
+                    <div data-sticky-header="grocery" className="md:hidden mb-3 sticky top-0 z-20 pt-2 pb-3 -mx-4 px-4 backdrop-blur-xl" style={{ backgroundColor: 'var(--surface-bg)' }}>
+                      <div className="flex justify-center mb-2">
+                        <StageStepper
+                           currentStage={currentStage}
+                           setStage={handleStageChange}
+                           hasMealPlan={hasPlanGenerated}
+                        />
+                      </div>
                     </div>
 
                     <GroceryListView
@@ -2241,7 +2274,13 @@ const App: React.FC = () => {
                          newlyReceivedItems={newlyReceivedItems}
                          isInvalidated={isGroceryListInvalidated()}
                          onItemsChange={setGroceryItems}
-                         isLocked={isPlanLocked}
+                         isLocked={isGroceryLocked}
+                         lockToggle={
+                           <PlanLockToggle
+                             isLocked={isGroceryLocked}
+                             onToggle={() => handleToggleTabLock('grocery')}
+                           />
+                         }
                     />
                     <Footer className="mt-16" />
                   </div>

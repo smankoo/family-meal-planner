@@ -212,7 +212,9 @@ interface FamilyPlanResponse {
   invalidation_state: InvalidationState;
   has_plan: string;
   current_stage: string;
-  is_locked: boolean;  // Plan lock state
+  is_meals_locked: boolean;    // Per-tab lock: Meals
+  is_prep_locked: boolean;     // Per-tab lock: Prep
+  is_grocery_locked: boolean;  // Per-tab lock: Grocery
   title: string;
   created_by: string;
   created_at: string;
@@ -226,47 +228,47 @@ interface FamilyPlanResponse {
 
 ### Overview
 
-Plan locking prevents accidental changes to finalized meal plans. Once a family has completed their planning and shopping list, they can lock the plan to prevent any modifications until explicitly unlocked.
+Plan locking prevents accidental changes to finalized content on a per-tab basis. Each tab (Meals, Prep, Grocery) has its own independent lock, allowing users to finalize one section while continuing to edit others.
 
 ### Features
 
-- **Apple-style toggle**: Visual slider toggle in the app header shows lock state
-- **Collaborative**: Lock state syncs across all family members in real-time
-- **Comprehensive protection**: When locked, prevents:
-  - Meal replacements
-  - Plan regeneration
-  - Prep plan regeneration
-  - Grocery list regeneration
-  - Manual edits to any plan component
+- **Per-tab independence**: Each tab (Meals, Prep, Grocery) can be locked/unlocked independently
+- **Apple-style toggle**: Visual slider toggle positioned inline with the Regenerate button on each tab
+- **Collaborative**: Lock states sync across all family members in real-time
+- **Scoped protection**: When a tab is locked, only that tab's mutations are prevented:
+  - Meals locked: prevents meal replacements, plan regeneration, manual edits
+  - Prep locked: prevents task completion toggling, prep regeneration
+  - Grocery locked: prevents item check-off, grocery list regeneration
 
 ### Implementation
 
 **Backend** (`backend/models.py`, `backend/schemas.py`, `backend/routers/family_plans.py`):
-- `is_locked` boolean column in `CollaborativePlan` model (default `false`)
-- Migration: `add_is_locked_to_collaborative_plans.py`
-- `PUT /family-plans/{id}` returns HTTP 423 (Locked) if plan is locked and request isn't a lock toggle
-- Lock state included in broadcast payload for real-time sync
+- Three boolean columns in `CollaborativePlan`: `is_meals_locked`, `is_prep_locked`, `is_grocery_locked` (all default `false`)
+- Migration: `replace_is_locked_with_per_tab_locks.py` (replaces the old single `is_locked` column)
+- `PUT /family-plans/{id}` returns HTTP 423 (Locked) with tab-specific messaging if a locked tab's content is modified
+- Lock state changes (toggling any lock field) are always permitted regardless of other lock states
+- All three lock states included in broadcast payload for real-time sync
 
-**Frontend** (`App.tsx`, `components/PlanLockToggle.tsx`):
-- `PlanLockToggle` component: Apple-style slider with lock/unlock icons
-- Lock guards in mutation handlers prevent changes when locked
-- `MealGrid`, `MealPrepView`, `GroceryListView` accept `isLocked` prop
-- Replace buttons hidden, checkboxes dimmed when locked
+**Frontend** (`App.tsx`, `components/PlanLockToggle.tsx`, `components/MealPrepView.tsx`, `components/GroceryListView.tsx`):
+- `PlanLockToggle` component: reusable Apple-style slider with lock/unlock icons
+- Lock toggle rendered inline with the Regenerate button on each tab via `lockToggle` prop (Prep, Grocery) or directly in the action bar (Meals)
+- `handleToggleTabLock(tab)` handles toggling for any of the three tabs
+- `MealGrid`, `MealPrepView`, `GroceryListView` each accept `isLocked` prop scoped to their tab
+- Replace buttons hidden, checkboxes dimmed when the respective tab is locked
 - Optimistic updates with error handling and revert on failure
 
 **Sync Behavior**:
-- Lock state changes handled directly by `handleTogglePlanLock` (not sync effect)
+- Lock state changes handled directly by `handleToggleTabLock` (not sync effect)
 - `isTogglingLockRef` prevents sync effect interference during toggle
-- When locked, sync effect skips all content syncs (lock state only)
-- Lock state synced via real-time broadcast to all family members
+- All three lock states synced via real-time broadcast to all family members
 
 ### User Experience
 
-1. User clicks lock toggle in header
+1. User clicks lock toggle on a specific tab (e.g., Meals)
 2. Toggle animates to locked state (amber background)
-3. All mutation buttons/actions become disabled
-4. Other family members see lock state update instantly
-5. User clicks toggle again to unlock
-6. All mutation actions become available again
+3. Only that tab's mutation buttons/actions become disabled
+4. Other tabs remain editable unless independently locked
+5. Other family members see lock state update instantly
+6. User clicks toggle again to unlock that tab
 
-**Design**: Lock toggle uses centralized CSS classes (`plan-lock-slider`, `plan-lock-slider-locked`, `plan-lock-slider-unlocked`) with gray background when unlocked and amber when locked.
+**Design**: Lock toggle uses centralized CSS classes (`plan-lock-slider`, `plan-lock-slider-locked`, `plan-lock-slider-unlocked`) with gray background when unlocked and amber when locked. Toggle is consistently positioned to the left of the Regenerate button on all tabs.

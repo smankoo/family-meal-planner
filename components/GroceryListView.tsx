@@ -33,6 +33,7 @@ interface GroceryListViewProps {
   isInvalidated?: boolean; // New prop to show invalidation banner
   onItemsChange?: (items: GroceryItem[]) => void; // Callback to persist changes
   isLocked?: boolean;
+  lockToggle?: React.ReactNode;
 }
 
 const GroceryListView: React.FC<GroceryListViewProps> = ({
@@ -47,6 +48,7 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
   isInvalidated = false,
   onItemsChange,
   isLocked = false,
+  lockToggle,
 }) => {
   const [items, setItems] = useState<GroceryItem[]>(initialItems);
 
@@ -241,8 +243,11 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
             <CompletionFilter value={filterMode} onChange={setFilterMode} />
           )}
         </div>
-        {items.length > 0 && !isInvalidated && !isLocked && (
-          <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={true} />
+        {items.length > 0 && !isInvalidated && (
+          <div className="flex items-center gap-3">
+            {lockToggle}
+            {!isLocked && <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={true} />}
+          </div>
         )}
       </div>
 
@@ -250,9 +255,12 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
       {items.length > 0 && (
         <div className="md:hidden flex items-center justify-between mb-4 px-4">
           <CompletionFilter value={filterMode} onChange={setFilterMode} />
-          {!isInvalidated && !isLocked && (
-            <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={false} />
-          )}
+          <div className="flex items-center gap-2">
+            {lockToggle}
+            {!isInvalidated && !isLocked && (
+              <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={false} />
+            )}
+          </div>
         </div>
       )}
 

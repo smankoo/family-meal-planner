@@ -47,7 +47,9 @@ def _plan_broadcast_payload(plan: CollaborativePlan) -> dict:
         "invalidation_state": plan.invalidation_state,
         "has_plan": str(plan.has_plan) if plan.has_plan is not None else "true",
         "current_stage": str(plan.current_stage) if plan.current_stage is not None else "0",
-        "is_locked": plan.is_locked if plan.is_locked is not None else False,
+        "is_meals_locked": plan.is_meals_locked if plan.is_meals_locked is not None else False,
+        "is_prep_locked": plan.is_prep_locked if plan.is_prep_locked is not None else False,
+        "is_grocery_locked": plan.is_grocery_locked if plan.is_grocery_locked is not None else False,
         "updated_at": plan.updated_at.isoformat() if plan.updated_at else None,
         "last_modified_by": str(plan.last_modified_by) if plan.last_modified_by else None,
     }
@@ -66,7 +68,9 @@ def _plan_response(plan: CollaborativePlan, members: list[PlanMember]) -> Family
         invalidation_state=plan.invalidation_state,
         has_plan=str(plan.has_plan) if plan.has_plan is not None else "true",
         current_stage=str(plan.current_stage) if plan.current_stage is not None else "0",
-        is_locked=plan.is_locked if plan.is_locked is not None else False,
+        is_meals_locked=plan.is_meals_locked if plan.is_meals_locked is not None else False,
+        is_prep_locked=plan.is_prep_locked if plan.is_prep_locked is not None else False,
+        is_grocery_locked=plan.is_grocery_locked if plan.is_grocery_locked is not None else False,
         title=plan.title,
         created_by=str(plan.created_by),
         created_at=plan.created_at,
@@ -408,16 +412,39 @@ async def update_family_plan(
             detail="You are not a member of this family"
         )
 
-    # If the plan is locked, only allow lock/unlock updates (is_locked field only)
-    if plan.is_locked:
-        # Check if this is a lock toggle request (only is_locked field set)
-        is_lock_toggle = updates.is_locked is not None and all(
-            v is None for k, v in updates.model_dump().items() if k != 'is_locked'
+    # Per-tab lock enforcement: block data updates to locked tabs, but always allow lock toggles
+    lock_fields = {'is_meals_locked', 'is_prep_locked', 'is_grocery_locked'}
+    update_dict = updates.model_dump()
+
+    if plan.is_meals_locked and updates.plan_data is not None:
+        # Check if this request also toggles the meals lock — allow if so
+        is_just_lock_toggle = updates.is_meals_locked is not None and all(
+            v is None for k, v in update_dict.items() if k not in lock_fields
         )
-        if not is_lock_toggle:
+        if not is_just_lock_toggle:
             raise HTTPException(
                 status_code=status.HTTP_423_LOCKED,
-                detail="This plan is locked. Unlock it first to make changes."
+                detail="Meal plan is locked. Unlock it first to make changes."
+            )
+
+    if plan.is_prep_locked and updates.prep_tasks is not None:
+        is_just_lock_toggle = updates.is_prep_locked is not None and all(
+            v is None for k, v in update_dict.items() if k not in lock_fields
+        )
+        if not is_just_lock_toggle:
+            raise HTTPException(
+                status_code=status.HTTP_423_LOCKED,
+                detail="Prep plan is locked. Unlock it first to make changes."
+            )
+
+    if plan.is_grocery_locked and updates.grocery_items is not None:
+        is_just_lock_toggle = updates.is_grocery_locked is not None and all(
+            v is None for k, v in update_dict.items() if k not in lock_fields
+        )
+        if not is_just_lock_toggle:
+            raise HTTPException(
+                status_code=status.HTTP_423_LOCKED,
+                detail="Grocery list is locked. Unlock it first to make changes."
             )
 
     # Update fields
@@ -439,8 +466,12 @@ async def update_family_plan(
         plan.current_stage = updates.current_stage
     if updates.title is not None:
         plan.title = updates.title
-    if updates.is_locked is not None:
-        plan.is_locked = updates.is_locked
+    if updates.is_meals_locked is not None:
+        plan.is_meals_locked = updates.is_meals_locked
+    if updates.is_prep_locked is not None:
+        plan.is_prep_locked = updates.is_prep_locked
+    if updates.is_grocery_locked is not None:
+        plan.is_grocery_locked = updates.is_grocery_locked
 
     plan.last_modified_by = user_id
 

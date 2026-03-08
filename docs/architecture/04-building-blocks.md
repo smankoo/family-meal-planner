@@ -393,7 +393,9 @@ class CollaborativePlan(Base):
     has_plan: str
     current_stage: str
     title: str
-    is_locked: bool             # Prevents accidental changes
+    is_meals_locked: bool       # Per-tab lock: Meals
+    is_prep_locked: bool        # Per-tab lock: Prep
+    is_grocery_locked: bool     # Per-tab lock: Grocery
     created_by: UUID            # FK to profiles
     last_modified_by: UUID      # FK to profiles
     created_at: datetime
@@ -452,7 +454,9 @@ CREATE TABLE collaborative_plans (
     has_plan TEXT,
     current_stage TEXT,
     title TEXT,
-    is_locked BOOLEAN NOT NULL DEFAULT false,
+    is_meals_locked BOOLEAN NOT NULL DEFAULT false,
+    is_prep_locked BOOLEAN NOT NULL DEFAULT false,
+    is_grocery_locked BOOLEAN NOT NULL DEFAULT false,
     created_by UUID REFERENCES profiles(id),
     last_modified_by UUID REFERENCES profiles(id),
     created_at TIMESTAMPTZ DEFAULT NOW(),

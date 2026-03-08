@@ -20,6 +20,7 @@ interface MealPrepViewProps {
   isInvalidated?: boolean; // New prop to show invalidation banner
   onTasksChange?: (tasks: PrepTask[]) => void; // Callback to persist changes
   isLocked?: boolean;
+  lockToggle?: React.ReactNode;
 }
 
 const MealPrepView: React.FC<MealPrepViewProps> = ({
@@ -34,6 +35,7 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
   isInvalidated = false,
   onTasksChange,
   isLocked = false,
+  lockToggle,
 }) => {
   const [tasks, setTasks] = useState<PrepTask[]>(initialTasks);
 
@@ -200,8 +202,11 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
             <CompletionFilter value={filterMode} onChange={setFilterMode} />
           )}
         </div>
-        {tasks.length > 0 && !isInvalidated && !isLocked && (
-          <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={true} />
+        {tasks.length > 0 && !isInvalidated && (
+          <div className="flex items-center gap-3">
+            {lockToggle}
+            {!isLocked && <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={true} />}
+          </div>
         )}
       </div>
 
@@ -209,9 +214,12 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
       {tasks.length > 0 && (
         <div className="md:hidden flex items-center justify-between mb-4 px-4">
           <CompletionFilter value={filterMode} onChange={setFilterMode} />
-          {!isInvalidated && !isLocked && (
-            <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={false} />
-          )}
+          <div className="flex items-center gap-2">
+            {lockToggle}
+            {!isInvalidated && !isLocked && (
+              <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={false} />
+            )}
+          </div>
         </div>
       )}
 

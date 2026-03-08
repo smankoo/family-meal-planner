@@ -13,7 +13,9 @@ interface FamilyPlanState {
   invalidation_state: any;
   has_plan: string;
   current_stage: string;
-  is_locked?: boolean;
+  is_meals_locked?: boolean;
+  is_prep_locked?: boolean;
+  is_grocery_locked?: boolean;
   updated_at?: string;
   last_modified_by?: string;
   modified_by?: string; // From broadcast payload
@@ -106,7 +108,9 @@ export function useFamilyPlan(
       invalidation_state: data.invalidation_state,
       has_plan: String(data.has_plan),
       current_stage: String(data.current_stage),
-      is_locked: data.is_locked ?? false,
+      is_meals_locked: data.is_meals_locked ?? false,
+      is_prep_locked: data.is_prep_locked ?? false,
+      is_grocery_locked: data.is_grocery_locked ?? false,
       updated_at: data.updated_at,
       last_modified_by: modifiedBy,
     });
@@ -141,7 +145,9 @@ export function useFamilyPlan(
           invalidation_state: plan.invalidation_state,
           has_plan: String(plan.has_plan),
           current_stage: String(plan.current_stage),
-          is_locked: plan.is_locked ?? false,
+          is_meals_locked: plan.is_meals_locked ?? false,
+          is_prep_locked: plan.is_prep_locked ?? false,
+          is_grocery_locked: plan.is_grocery_locked ?? false,
           updated_at: remoteUpdatedAt,
           last_modified_by: remoteModifiedBy,
         }, 'poll');

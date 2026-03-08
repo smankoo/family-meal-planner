@@ -168,7 +168,9 @@ class FamilyPlanCreate(BaseModel):
     has_plan: Optional[str] = "true"
     current_stage: Optional[str] = "0"
     title: Optional[str] = None
-    is_locked: Optional[bool] = False
+    is_meals_locked: Optional[bool] = False
+    is_prep_locked: Optional[bool] = False
+    is_grocery_locked: Optional[bool] = False
 
 
 class FamilyPlanUpdate(BaseModel):
@@ -181,7 +183,9 @@ class FamilyPlanUpdate(BaseModel):
     has_plan: Optional[str] = None
     current_stage: Optional[str] = None
     title: Optional[str] = None
-    is_locked: Optional[bool] = None
+    is_meals_locked: Optional[bool] = None
+    is_prep_locked: Optional[bool] = None
+    is_grocery_locked: Optional[bool] = None
 
 
 class FamilyPlanResponse(BaseModel):
@@ -196,7 +200,9 @@ class FamilyPlanResponse(BaseModel):
     has_plan: str
     current_stage: str
     title: Optional[str] = None
-    is_locked: bool = False
+    is_meals_locked: bool = False
+    is_prep_locked: bool = False
+    is_grocery_locked: bool = False
     created_by: str
     created_at: datetime
     updated_at: datetime
