@@ -2052,15 +2052,21 @@ const App: React.FC = () => {
                             <button
                               onClick={handleInviteToFamily}
                               disabled={isCreatingInvite}
-                              className="btn-icon-sm"
+                              className="btn-glass flex items-center gap-2 px-3 py-1.5 text-primary-600 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                               title="Invite to Family"
                             >
                               {isCreatingInvite ? (
                                 <Loader2 size={16} className="animate-spin" />
                               ) : familyMembers.length > 0 ? (
-                                <FamilyMemberList members={familyMembers} compact maxDisplay={1} />
+                                <>
+                                  <FamilyMemberList members={familyMembers} compact maxDisplay={3} />
+                                  <span className="ml-1">{familyMembers.length}</span>
+                                </>
                               ) : (
-                                <UserPlus size={16} />
+                                <>
+                                  <UserPlus size={14} />
+                                  {isCreatingInvite ? 'Creating...' : 'Invite'}
+                                </>
                               )}
                             </button>
                             {!isPlanLocked && (
