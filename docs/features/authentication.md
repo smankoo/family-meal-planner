@@ -482,6 +482,42 @@ describe('Authentication', () => {
 - Verify user_id matches
 - Review RLS policies in Supabase
 
+## Account Deletion
+
+Users can permanently delete their account from the Settings page. The deletion process handles family plan memberships gracefully.
+
+### Deletion Flow
+
+```
+1. User navigates to Settings → Account
+2. User clicks "Delete account" link
+3. Confirmation section expands with warning
+4. User types "delete my account" to confirm
+5. Frontend calls DELETE /account/me
+6. Backend cleans up family memberships:
+   - Sole owner → transfers ownership to another member
+   - Last member → deletes the plan entirely
+   - Regular member → removes membership
+7. Backend deletes all user_data rows
+8. Backend deletes profile row
+9. Backend deletes Supabase auth user via admin API
+10. Frontend signs out and redirects to login
+```
+
+### Backend Implementation
+
+**Location**: `backend/routers/account.py`
+
+The endpoint requires `SUPABASE_SERVICE_ROLE_KEY` to delete the auth user via the Supabase Admin API. This key must never be exposed to the browser.
+
+### Environment Variables
+
+```bash
+# Required for account deletion
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+# Get from: supabase status -o env (local) or Supabase Dashboard > Settings > API (cloud)
+```
+
 ## Related Documentation
 
 - [Supabase Auth Documentation](https://supabase.com/docs/guides/auth)

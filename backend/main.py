@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 # Import database
 from database import engine, Base
-from routers import user_data, family_plans
+from routers import user_data, family_plans, account
 from supabase_auth import get_current_user_id
 from realtime_broadcast import broadcast_service
 
@@ -66,6 +66,7 @@ app.add_middleware(
 # Include routers AFTER middleware
 app.include_router(user_data.router)
 app.include_router(family_plans.router)
+app.include_router(account.router)
 
 
 @app.on_event("shutdown")

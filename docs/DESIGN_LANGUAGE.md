@@ -270,6 +270,7 @@ All visual properties are defined in `frontend/index.css` as CSS variables and T
 - **Checkboxes**: `checkbox-enhanced`, `checkbox-checked`, `checkbox-unchecked`
 - **Related Meals**: `related-meal-pill`, `related-meal-pill-checked`
 - **User Menu**: `user-menu-trigger`, `user-menu-dropdown`, `user-menu-info`, `user-menu-item`, `user-menu-footer`
+- **Account**: `delete-account-section` (danger-tinted container for the account deletion flow)
 - **Avatars**: `avatar-fallback`
 - **Skeletons**: `skeleton-shimmer`, `skeleton-block`, `skeleton-block-light`
 - **Animations**: `stagger-item`, `stage-enter`, `strikethrough-animate`

@@ -270,15 +270,18 @@ backend/
 │   │   ├── PUT /user-data/{type}
 │   │   └── DELETE /user-data/{type}
 │   │
-│   └── family_plans.py        # Family plan sharing + real-time broadcast
-│       ├── POST /family-plans/
-│       ├── GET /family-plans/my-plans
-│       ├── GET /family-plans/by-invite-code/{code}
-│       ├── POST /family-plans/join
-│       ├── GET /family-plans/{id}
-│       ├── PUT /family-plans/{id}          # Broadcasts via Supabase
-│       ├── POST /family-plans/{id}/leave
-│       └── DELETE /family-plans/{id}
+│   ├── family_plans.py        # Family plan sharing + real-time broadcast
+│   │   ├── POST /family-plans/
+│   │   ├── GET /family-plans/my-plans
+│   │   ├── GET /family-plans/by-invite-code/{code}
+│   │   ├── POST /family-plans/join
+│   │   ├── GET /family-plans/{id}
+│   │   ├── PUT /family-plans/{id}          # Broadcasts via Supabase
+│   │   ├── POST /family-plans/{id}/leave
+│   │   └── DELETE /family-plans/{id}
+│   │
+│   └── account.py             # Account management
+│       └── DELETE /account/me              # Permanent account deletion
 │
 ├── realtime_broadcast.py      # Supabase Broadcast REST client
 │   ├── broadcast_plan_update()
@@ -354,6 +357,14 @@ GET    /family-plans/{id}                   # Get plan with member profiles
 PUT    /family-plans/{id}                   # Update plan + broadcast
 POST   /family-plans/{id}/leave             # Leave family (clears user data)
 DELETE /family-plans/{id}                   # Delete plan (owner only)
+```
+
+#### Account Endpoints
+
+```python
+DELETE /account/me                          # Permanently delete account
+                                            # Cleans up family memberships (transfers ownership)
+                                            # Deletes user data, profile, and Supabase auth user
 ```
 
 **Note**: All family plan endpoints now include full user profile data (name, email, avatar_url) for each plan member, enabling rich member display in the UI.

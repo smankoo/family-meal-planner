@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { User, LogOut, Edit3, Check, X, Loader2, Users } from 'lucide-react';
+import { LogOut, Edit3, Check, X, Loader2, Users } from 'lucide-react';
+import { Warning } from '@phosphor-icons/react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import FamilyMemberList, { FamilyMemberData } from './FamilyMemberList';
@@ -9,9 +10,10 @@ interface UserProfileProps {
   className?: string;
   activePlanId?: string;
   onLeaveFamily?: () => Promise<void>;
+  onDeleteAccount?: () => Promise<void>;
 }
 
-const UserProfile: React.FC<UserProfileProps> = ({ className = '', activePlanId, onLeaveFamily }) => {
+const UserProfile: React.FC<UserProfileProps> = ({ className = '', activePlanId, onLeaveFamily, onDeleteAccount }) => {
   const { user, signOut, updateProfile } = useAuth();
   const { showToast } = useToast();
 
@@ -21,6 +23,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ className = '', activePlanId,
   const [familyMembers, setFamilyMembers] = useState<FamilyMemberData[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [isLeavingFamily, setIsLeavingFamily] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [showDeleteSection, setShowDeleteSection] = useState(false);
 
   useEffect(() => {
     const fetchFamilyMembers = async () => {
@@ -249,6 +254,87 @@ const UserProfile: React.FC<UserProfileProps> = ({ className = '', activePlanId,
           )}
         </div>
       )}
+
+      {/* Delete Account Section */}
+      <div className="mt-6 pt-6 border-t border-primary-100">
+        {!showDeleteSection ? (
+          <button
+            onClick={() => setShowDeleteSection(true)}
+            className="text-sm text-primary-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+          >
+            Delete account
+          </button>
+        ) : (
+          <div className="delete-account-section">
+            <div className="flex items-start gap-3 mb-3">
+              <Warning size={20} weight="fill" className="text-red-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-sm font-semibold text-red-600 dark:text-red-400">Delete your account</h4>
+                <p className="text-xs text-primary-500 mt-1 leading-relaxed">
+                  This will permanently delete your account, all your meal plans, preferences, and data.
+                  {activePlanId && ' If you are the sole owner of a family plan, ownership will be transferred to another member, or the plan will be deleted.'}
+                  {' '}This action cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <label htmlFor="delete-confirm" className="text-xs text-primary-500 block mb-1.5">
+                  Type <span className="font-semibold text-primary-700">delete my account</span> to confirm
+                </label>
+                <input
+                  id="delete-confirm"
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  className="form-field w-full px-3 py-2 text-sm"
+                  placeholder="delete my account"
+                  disabled={isDeletingAccount}
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteSection(false);
+                    setDeleteConfirmText('');
+                  }}
+                  disabled={isDeletingAccount}
+                  className="btn-secondary flex-1 text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!onDeleteAccount) return;
+                    setIsDeletingAccount(true);
+                    try {
+                      await onDeleteAccount();
+                    } catch (error: any) {
+                      console.error('Account deletion failed:', error);
+                      showToast(error.message || 'Failed to delete account. Please try again.', 'error');
+                    } finally {
+                      setIsDeletingAccount(false);
+                    }
+                  }}
+                  disabled={deleteConfirmText !== 'delete my account' || isDeletingAccount}
+                  className="btn-danger flex-1 text-sm flex items-center justify-center gap-2"
+                >
+                  {isDeletingAccount ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    'Delete Account'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

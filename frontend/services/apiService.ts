@@ -316,6 +316,15 @@ class ApiService {
 
     return this.handleResponse(response);
   }
+
+  async deleteAccount(): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/account/me`, {
+      method: 'DELETE',
+      headers: await this.getHeaders(),
+    });
+
+    await this.handleResponse(response);
+  }
 }
 
 export const apiService = new ApiService();

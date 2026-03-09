@@ -1176,6 +1176,13 @@
     border-top: 1px solid var(--border-primary);
   }
 
+  /* ===== Delete Account ===== */
+  .delete-account-section {
+    @apply rounded-xl p-4;
+    background-color: color-mix(in srgb, #ef4444 6%, var(--surface-secondary));
+    border: 1px solid color-mix(in srgb, #ef4444 20%, var(--border-primary));
+  }
+
   /* ===== Error Modal ===== */
   .error-icon-wrapper {
     @apply w-10 h-10 rounded-full flex items-center justify-center;

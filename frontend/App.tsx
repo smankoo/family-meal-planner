@@ -646,6 +646,23 @@ const App: React.FC = () => {
     }
   }, [isDataLoading, hasPlanGenerated, viewMode]);
 
+  // Auto-populate first family member's name from OAuth profile on first run.
+  // Only fires once when data finishes loading and user hasn't generated a plan yet.
+  useEffect(() => {
+    if (isDataLoading || hasPlanGenerated || !user) return;
+
+    const oauthName = (user.user_metadata?.full_name || user.user_metadata?.name || '') as string;
+    if (!oauthName) return;
+
+    // Only pre-fill if the first member's name is still empty (default state)
+    const firstMember = family[0];
+    if (!firstMember || firstMember.name) return;
+
+    const updated = [...family];
+    updated[0] = { ...updated[0], name: oauthName };
+    setFamily(updated);
+  }, [isDataLoading, hasPlanGenerated, user, family, setFamily]);
+
 
   // --- Actions ---
 
@@ -1286,6 +1303,21 @@ const App: React.FC = () => {
   };
 
 
+
+  // --- Delete Account Handler ---
+  const handleDeleteAccount = async () => {
+    try {
+      await apiService.deleteAccount();
+
+      // Sign out from Supabase (clears session)
+      await signOut();
+
+      showToast('Your account has been deleted.', 'success');
+    } catch (error: any) {
+      console.error('Account deletion failed:', error);
+      throw error; // Re-throw so UserProfile can show the error
+    }
+  };
 
   // --- URL Parameter Handling for Family Invites ---
   useEffect(() => {
@@ -1995,6 +2027,7 @@ const App: React.FC = () => {
                isLoading={isLoading}
                activePlanId={activePlanId}
                onLeaveFamily={activePlanId ? handleLeaveFamily : undefined}
+               onDeleteAccount={handleDeleteAccount}
              />
 
              <Footer className="mt-12" />
