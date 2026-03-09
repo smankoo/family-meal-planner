@@ -287,6 +287,33 @@ const handleGoogleSignIn = async () => {
 };
 ```
 
+## OAuth Profile Auto-Population
+
+On first sign-in via Google OAuth, the app automatically pre-fills the first family member's name from the user's Google profile. This reduces onboarding friction by eliminating redundant data entry.
+
+### Available Data from Google OAuth
+
+| Field | Source | Available |
+|-------|--------|-----------|
+| Full name | `user.user_metadata.full_name` | Yes |
+| Avatar URL | `user.user_metadata.avatar_url` | Yes |
+| Email | `user.email` | Yes |
+| Age | N/A | No (not exposed by Google) |
+
+### Behavior
+
+- Only triggers on first run (before any plan has been generated)
+- Only fills the name if the first family member's name field is still empty
+- Users can freely edit or clear the auto-populated value
+- Email-only signups are unaffected (no `full_name` in metadata)
+- Returning users are never overwritten
+
+### Implementation
+
+**Location**: `frontend/App.tsx` (useEffect after viewMode initialization)
+
+The effect reads `user.user_metadata.full_name` (falling back to `user.user_metadata.name`) and sets it on the first family member entry when all guard conditions pass.
+
 ## Password Reset Flow
 
 ### User Flow
