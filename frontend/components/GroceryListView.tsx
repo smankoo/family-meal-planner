@@ -1,12 +1,15 @@
 import React, { useState, useRef, useLayoutEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { GroceryItem, WeekPlan } from '../types';
 import { Check, ShoppingBag, Loader2, ArrowRight, Apple, Milk, Beef, Wheat, Package } from 'lucide-react';
+import { Printer } from '@phosphor-icons/react';
 import InvalidationBanner from './InvalidationBanner';
 import RegenerateButton from './RegenerateButton';
 import ProgressBar from './ProgressBar';
 import CompletionFilter, { FilterMode } from './CompletionFilter';
 import { useDelayedFilter } from '../hooks/useDelayedFilter';
 import { resolveMealName } from '../utils/mealResolver';
+import PrintableGroceryList from './PrintableGroceryList';
 
 // Category icon mapping - using filled Lucide icons with subtle color tints for distinction
 const categoryIcons: Record<string, React.ReactNode> = {
@@ -244,6 +247,16 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
           )}
         </div>
         <div className="flex items-center gap-3">
+          {items.length > 0 && (
+            <button
+              onClick={() => window.print()}
+              className="btn-glass flex items-center gap-2 px-3 py-1.5 text-primary-600 text-sm font-semibold"
+              title="Print shopping list"
+              aria-label="Print shopping list"
+            >
+              <Printer size={14} weight="bold" /> Print
+            </button>
+          )}
           {lockToggle}
           {items.length > 0 && !isInvalidated && !isLocked && (
             <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={true} />
@@ -257,6 +270,16 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
           <CompletionFilter value={filterMode} onChange={setFilterMode} />
         ) : <div />}
         <div className="flex items-center gap-2">
+          {items.length > 0 && (
+            <button
+              onClick={() => window.print()}
+              className="btn-glass flex items-center gap-1.5 px-3 py-1.5 text-primary-600 text-xs font-semibold"
+              title="Print shopping list"
+              aria-label="Print shopping list"
+            >
+              <Printer size={12} weight="bold" />
+            </button>
+          )}
           {lockToggle}
           {items.length > 0 && !isInvalidated && !isLocked && (
             <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={false} />
@@ -494,6 +517,17 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
           </div>
         </>
       )}
+
+      {/* Print-only: renders filtered grocery list, hidden on screen */}
+      {items.length > 0 && document.getElementById('root')?.firstElementChild &&
+        createPortal(
+          <PrintableGroceryList
+            items={filteredItems}
+            filterLabel={filterMode === 'incomplete' ? 'To Do' : filterMode === 'complete' ? 'Done' : undefined}
+          />,
+          document.getElementById('root')!.firstElementChild!
+        )
+      }
     </div>
   );
 };

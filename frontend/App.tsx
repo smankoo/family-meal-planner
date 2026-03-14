@@ -2373,7 +2373,7 @@ const App: React.FC = () => {
       )}
 
       {/* Print-only: rendered but hidden on screen, visible in @media print */}
-      {hasPlanGenerated && (
+      {currentStage === Stage.MEAL_PLANNING && hasPlanGenerated && (
         <PrintableMealPlan plan={planHistory.present} />
       )}
 

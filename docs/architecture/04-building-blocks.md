@@ -82,6 +82,8 @@ frontend/
 │   │   ├── FamilyInviteModal.tsx  # Family invite & member display
 │   │   ├── MealGrid.tsx           # 7-day meal plan display
 │   │   ├── PrintableMealPlan.tsx  # Print-optimized weekly plan (single Letter sheet)
+│   │   ├── PrintableGroceryList.tsx # Print-optimized shopping list (multi-column checklist)
+│   │   ├── PrintablePrepPlan.tsx  # Print-optimized prep plan (day-grouped checklist)
 │   │   ├── ChatInterface.tsx      # LLM conversation UI
 │   │   ├── MealPrepView.tsx       # Prep task management
 │   │   └── GroceryListView.tsx    # Shopping list

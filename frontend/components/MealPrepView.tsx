@@ -1,12 +1,15 @@
 import React, { useState, useRef, useLayoutEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { PrepTask, WeekPlan } from '../types';
 import { Check, Clock, ArrowRight, Loader2 } from 'lucide-react';
+import { Printer } from '@phosphor-icons/react';
 import InvalidationBanner from './InvalidationBanner';
 import RegenerateButton from './RegenerateButton';
 import ProgressBar from './ProgressBar';
 import CompletionFilter, { FilterMode } from './CompletionFilter';
 import { useDelayedFilter } from '../hooks/useDelayedFilter';
 import { resolveMealName } from '../utils/mealResolver';
+import PrintablePrepPlan from './PrintablePrepPlan';
 
 interface MealPrepViewProps {
   tasks: PrepTask[];
@@ -203,6 +206,16 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
           )}
         </div>
         <div className="flex items-center gap-3">
+          {tasks.length > 0 && (
+            <button
+              onClick={() => window.print()}
+              className="btn-glass flex items-center gap-2 px-3 py-1.5 text-primary-600 text-sm font-semibold"
+              title="Print prep plan"
+              aria-label="Print prep plan"
+            >
+              <Printer size={14} weight="bold" /> Print
+            </button>
+          )}
           {lockToggle}
           {tasks.length > 0 && !isInvalidated && !isLocked && (
             <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={true} />
@@ -216,6 +229,16 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
           <CompletionFilter value={filterMode} onChange={setFilterMode} />
         ) : <div />}
         <div className="flex items-center gap-2">
+          {tasks.length > 0 && (
+            <button
+              onClick={() => window.print()}
+              className="btn-glass flex items-center gap-1.5 px-3 py-1.5 text-primary-600 text-xs font-semibold"
+              title="Print prep plan"
+              aria-label="Print prep plan"
+            >
+              <Printer size={12} weight="bold" />
+            </button>
+          )}
           {lockToggle}
           {tasks.length > 0 && !isInvalidated && !isLocked && (
             <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={false} />
@@ -442,6 +465,17 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
         ))}
         </div>
       </div>
+
+      {/* Print-only: renders filtered prep plan, hidden on screen */}
+      {tasks.length > 0 && document.getElementById('root')?.firstElementChild &&
+        createPortal(
+          <PrintablePrepPlan
+            tasks={filteredTasks}
+            filterLabel={filterMode === 'incomplete' ? 'To Do' : filterMode === 'complete' ? 'Done' : undefined}
+          />,
+          document.getElementById('root')!.firstElementChild!
+        )
+      }
     </div>
   );
 };
