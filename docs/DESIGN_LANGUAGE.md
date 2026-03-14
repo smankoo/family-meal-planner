@@ -269,6 +269,7 @@ All visual properties are defined in `frontend/index.css` as CSS variables and T
 - **Progress**: `progress-bar-container`, `progress-bar-fill`, `progress-bar-fill-amber`
 - **Checkboxes**: `checkbox-enhanced`, `checkbox-checked`, `checkbox-unchecked`
 - **Related Meals**: `related-meal-pill`, `related-meal-pill-checked`
+- **Add Item**: `add-item-row`, `add-item-input`, `add-item-qty`, `btn-add-item` (inline form for manually adding items to the shopping list)
 - **User Menu**: `user-menu-trigger`, `user-menu-dropdown`, `user-menu-info`, `user-menu-item`, `user-menu-footer`
 - **Account**: `delete-account-section` (danger-tinted container for the account deletion flow)
 - **Avatars**: `avatar-fallback`

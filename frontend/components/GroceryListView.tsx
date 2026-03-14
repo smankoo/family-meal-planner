@@ -2,7 +2,7 @@ import React, { useState, useRef, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { GroceryItem, WeekPlan } from '../types';
 import { Check, ShoppingBag, Loader2, ArrowRight, Apple, Milk, Beef, Wheat, Package } from 'lucide-react';
-import { Printer } from '@phosphor-icons/react';
+import { Printer, Plus } from '@phosphor-icons/react';
 import InvalidationBanner from './InvalidationBanner';
 import RegenerateButton from './RegenerateButton';
 import ProgressBar from './ProgressBar';
@@ -22,6 +22,7 @@ const categoryIcons: Record<string, React.ReactNode> = {
   'Frozen': <Package size={16} strokeWidth={2} fill="currentColor" className="text-[#3b82f6]" />,
   'Beverages': <Package size={16} strokeWidth={2} fill="currentColor" className="text-[#ec4899]" />,
   'Snacks': <Package size={16} strokeWidth={2} fill="currentColor" className="text-[#f97316]" />,
+  'Other': <Package size={16} strokeWidth={2} fill="currentColor" className="text-primary-400" />,
 };
 
 interface GroceryListViewProps {
@@ -110,6 +111,35 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
     if (onItemsChange) {
       onItemsChange(updatedItems);
     }
+  };
+
+  // Add item state
+  const [newItemName, setNewItemName] = useState('');
+  const [newItemQty, setNewItemQty] = useState('');
+  const newItemInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAddItem = () => {
+    const trimmedName = newItemName.trim();
+    if (!trimmedName) return;
+
+    const newItem: GroceryItem = {
+      id: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: trimmedName,
+      category: 'Other',
+      quantity: newItemQty.trim() || undefined,
+      checked: false,
+    };
+
+    const updatedItems = [...items, newItem];
+    setItems(updatedItems);
+    if (onItemsChange) {
+      onItemsChange(updatedItems);
+    }
+
+    // Reset form
+    setNewItemName('');
+    setNewItemQty('');
+    newItemInputRef.current?.focus();
   };
 
   // Completion filter state
@@ -234,6 +264,13 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
     acc[cat].push(item);
     return acc;
   }, {} as Record<string, GroceryItem[]>);
+
+  // Sort categories alphabetically, but always put "Other" last
+  const sortCategories = (a: [string, GroceryItem[]], b: [string, GroceryItem[]]) => {
+    if (a[0] === 'Other') return 1;
+    if (b[0] === 'Other') return -1;
+    return a[0].localeCompare(b[0]);
+  };
 
   return (
     <div className="animate-fade-in">
@@ -368,7 +405,7 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
           )}
           {/* Mobile View */}
           <div className="md:hidden flex flex-col pb-20 px-4">
-            {Object.entries(groupedItems).sort().map(([category, catItems]) => (
+            {Object.entries(groupedItems).sort(sortCategories).map(([category, catItems]) => (
               <div key={category} className="mb-8">
 
                 {/* Category Header - Apple-style section header */}
@@ -440,10 +477,8 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
               </div>
             ))}
           </div>
-
-          {/* Desktop View - Grouped layout optimized for shopping lists */}
           <div className="hidden md:block pb-20 max-w-4xl mx-auto px-4 md:px-8">
-            {Object.entries(groupedItems).sort().map(([category, catItems]) => (
+            {Object.entries(groupedItems).sort(sortCategories).map(([category, catItems]) => (
               <div key={category} className="mb-8">
 
                 {/* Category Header - Sticky */}
@@ -515,6 +550,41 @@ const GroceryListView: React.FC<GroceryListViewProps> = ({
               </div>
             ))}
           </div>
+
+          {/* Add Item - shared across mobile/desktop */}
+          {!isLocked && (
+            <div className="px-4 md:max-w-4xl md:mx-auto md:px-8 pb-20">
+              <div className="add-item-row">
+                <input
+                  ref={newItemInputRef}
+                  type="text"
+                  className="add-item-input"
+                  placeholder="Add an item..."
+                  value={newItemName}
+                  onChange={(e) => setNewItemName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddItem()}
+                  aria-label="New item name"
+                />
+                <input
+                  type="text"
+                  className="add-item-qty"
+                  placeholder="Qty"
+                  value={newItemQty}
+                  onChange={(e) => setNewItemQty(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddItem()}
+                  aria-label="Quantity (optional)"
+                />
+                <button
+                  className="btn-add-item"
+                  onClick={handleAddItem}
+                  disabled={!newItemName.trim()}
+                  aria-label="Add item"
+                >
+                  <Plus size={16} weight="bold" />
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
 

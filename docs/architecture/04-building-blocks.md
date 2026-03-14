@@ -86,7 +86,7 @@ frontend/
 │   │   ├── PrintablePrepPlan.tsx  # Print-optimized prep plan (day-grouped checklist)
 │   │   ├── ChatInterface.tsx      # LLM conversation UI
 │   │   ├── MealPrepView.tsx       # Prep task management
-│   │   └── GroceryListView.tsx    # Shopping list
+│   │   └── GroceryListView.tsx    # Shopping list with manual item addition
 │   │
 │   ├── Shared Components
 │   │   ├── StageStepper.tsx       # Multi-stage navigation

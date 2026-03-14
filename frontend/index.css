@@ -1117,6 +1117,48 @@
     color: var(--text-tertiary);
   }
 
+  /* ===== Add Item Inline Form ===== */
+  .add-item-row {
+    @apply flex items-center gap-3 rounded-2xl pl-4 pr-3 py-3 transition-all duration-200;
+    background-color: var(--surface-primary);
+    border: 1px dashed var(--border-primary);
+  }
+  .add-item-row:focus-within {
+    border-style: solid;
+    border-color: var(--color-accent-400);
+    box-shadow: 0 0 0 3px var(--color-accent-100);
+  }
+  .add-item-input {
+    @apply flex-1 bg-transparent border-none outline-none text-base font-medium;
+    color: var(--text-primary);
+  }
+  .add-item-input::placeholder {
+    color: var(--text-tertiary);
+  }
+  .add-item-qty {
+    @apply w-12 md:w-20 bg-transparent border-none outline-none text-sm text-right font-medium flex-shrink-0;
+    color: var(--text-secondary);
+  }
+  .add-item-qty::placeholder {
+    color: var(--text-tertiary);
+  }
+  .btn-add-item {
+    @apply w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-200;
+    background-color: var(--color-accent-500);
+    color: white;
+  }
+  .btn-add-item:hover {
+    background-color: var(--color-accent-600);
+    transform: scale(1.05);
+  }
+  .btn-add-item:active {
+    transform: scale(0.95);
+  }
+  .btn-add-item:disabled {
+    @apply opacity-30 cursor-not-allowed;
+    transform: none;
+  }
+
   /* ===== Empty State ===== */
   .empty-state-heading {
     @apply text-lg font-semibold mb-2;
