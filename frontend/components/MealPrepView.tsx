@@ -202,26 +202,26 @@ const MealPrepView: React.FC<MealPrepViewProps> = ({
             <CompletionFilter value={filterMode} onChange={setFilterMode} />
           )}
         </div>
-        {tasks.length > 0 && !isInvalidated && (
-          <div className="flex items-center gap-3">
-            {lockToggle}
-            {!isLocked && <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={true} />}
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {lockToggle}
+          {tasks.length > 0 && !isInvalidated && !isLocked && (
+            <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={true} />
+          )}
+        </div>
       </div>
 
       {/* Mobile: Filter + Regenerate row */}
-      {tasks.length > 0 && (
-        <div className="md:hidden flex items-center justify-between mb-4 px-4">
+      <div className="md:hidden flex items-center justify-between mb-4 px-4">
+        {tasks.length > 0 ? (
           <CompletionFilter value={filterMode} onChange={setFilterMode} />
-          <div className="flex items-center gap-2">
-            {lockToggle}
-            {!isInvalidated && !isLocked && (
-              <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={false} />
-            )}
-          </div>
+        ) : <div />}
+        <div className="flex items-center gap-2">
+          {lockToggle}
+          {tasks.length > 0 && !isInvalidated && !isLocked && (
+            <RegenerateButton onRegenerate={onRegenerate} isLoading={isLoading} showText={false} />
+          )}
         </div>
-      )}
+      </div>
 
       {/* Progress Bar - Sticky below tab menu on mobile, dynamically positioned */}
       {tasks.length > 0 && (
