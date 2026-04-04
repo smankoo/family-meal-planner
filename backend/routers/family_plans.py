@@ -30,10 +30,32 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/family-plans", tags=["family-plans"])
 
+# Data types in user_data that are shared via the family plan.
+# When a user joins or creates a family, these are deleted from individual storage
+# so the collaborative_plans row is the sole source of truth.
+SHARED_DATA_TYPES = [
+    "meal_plan", "family", "preferences", "prep_tasks",
+    "grocery_items", "invalidation_state", "has_plan", "current_stage",
+]
+
 
 def generate_invite_code() -> str:
     """Generate a full UUID invite code for better uniqueness"""
     return str(uuid.uuid4())
+
+
+def _clear_individual_shared_data(db: Session, user_id: str) -> None:
+    """Delete individual user_data rows for shared types.
+
+    Called when a user joins/creates a family so the collaborative_plans
+    row becomes the sole source of truth — no stale individual data left behind.
+    """
+    from models import UserData
+
+    db.query(UserData).filter(
+        UserData.user_id == user_id,
+        UserData.data_type.in_(SHARED_DATA_TYPES),
+    ).delete(synchronize_session="fetch")
 
 
 def _plan_broadcast_payload(plan: CollaborativePlan) -> dict:
@@ -192,6 +214,10 @@ async def create_family_plan(
     )
 
     db.add(member)
+
+    # Delete individual user_data — the family plan is now the sole source of truth
+    _clear_individual_shared_data(db, user_id)
+
     db.commit()
     db.refresh(family_plan)
 
@@ -340,6 +366,9 @@ async def join_family(
             data=str(plan.id)
         )
         db.add(active_plan_data)
+
+    # Delete individual user_data — the family plan is now the sole source of truth
+    _clear_individual_shared_data(db, user_id)
 
     db.commit()
 
@@ -593,15 +622,8 @@ async def leave_family(
     if active_plan_data:
         db.delete(active_plan_data)
 
-    # Clear the user's individual plan data so they start fresh
-    # (their data was the family's data while they were a member)
-    for data_type in ["meal_plan", "prep_tasks", "grocery_items", "invalidation_state", "has_plan", "current_stage"]:
-        user_data_row = db.query(UserData).filter(
-            UserData.user_id == user_id,
-            UserData.data_type == data_type
-        ).first()
-        if user_data_row:
-            db.delete(user_data_row)
+    # Clear individual shared data so the user starts fresh in solo mode
+    _clear_individual_shared_data(db, user_id)
 
     db.commit()
 
