@@ -11,6 +11,8 @@ import { dataService, DataType } from '../services/dataService';
  * - Migration: On first login, any existing localStorage data is automatically migrated to cloud
  * - Debouncing: Saves are debounced to avoid overwhelming the backend during rapid updates
  * - Streaming support: Can skip persistence during streaming to avoid saving incomplete data
+ * - Family mode: When skipIndividualStorage is true, skips loading/saving to individual
+ *   user_data — the family plan (collaborative_plans) is the sole source of truth.
  *
  * This ensures users can seamlessly switch between devices and always have their latest data.
  */
@@ -19,7 +21,8 @@ export function usePersistedState<T>(
   dataType: DataType,
   defaultValue: T,
   validator?: (value: any) => value is T,
-  skipPersistence?: boolean // Optional flag to skip persistence (e.g., during streaming)
+  skipPersistence?: boolean, // Optional flag to skip persistence (e.g., during streaming)
+  skipIndividualStorage?: boolean // When true, don't load from or save to individual user_data (family mode)
 ): [T, (value: T, skipSave?: boolean) => void, boolean] {
   const { user } = useAuth();
   const [state, setState] = useState<T>(defaultValue);
@@ -30,6 +33,12 @@ export function usePersistedState<T>(
   // Load initial state
   useEffect(() => {
     const loadInitialState = async () => {
+      // In family mode, data comes from loadFamilyMembership, not individual user_data.
+      if (skipIndividualStorage) {
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
 
       try {
@@ -57,20 +66,20 @@ export function usePersistedState<T>(
     };
 
     loadInitialState();
-  }, [user?.id, dataType]); // Only re-run when user or dataType changes
+  }, [user?.id, dataType, skipIndividualStorage]); // Re-run if family mode changes
 
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
-        // Flush any pending save
-        if (pendingSaveRef.current && user?.id) {
+        // Flush any pending save (but not in family mode — no individual writes)
+        if (pendingSaveRef.current && user?.id && !skipIndividualStorage) {
           dataService.saveData(dataType, pendingSaveRef.current);
         }
       }
     };
-  }, [user?.id, dataType]);
+  }, [user?.id, dataType, skipIndividualStorage]);
 
   // Save state function - cloud-first with debouncing
   const savePersistedState = useCallback((newValue: T | ((prev: T) => T), skipSave: boolean = false) => {
@@ -81,6 +90,12 @@ export function usePersistedState<T>(
 
     // Update local state immediately for responsive UI
     setState(valueToSet);
+
+    // In family mode, never write to individual user_data.
+    // The sync effect in App.tsx writes to the family plan instead.
+    if (skipIndividualStorage) {
+      return;
+    }
 
     // Skip persistence if explicitly requested (e.g., during streaming)
     if (skipSave || skipPersistence) {
@@ -122,7 +137,7 @@ export function usePersistedState<T>(
     } else {
       console.warn(`Cannot save ${dataType} - no user authenticated`);
     }
-  }, [user?.id, dataType, skipPersistence, state]);
+  }, [user?.id, dataType, skipPersistence, skipIndividualStorage, state]);
 
   return [state, savePersistedState, loading];
 }

@@ -260,62 +260,87 @@ const App: React.FC = () => {
 
   // --- Initialization with Persistence ---
 
+  // Active family plan ID — loaded first so we know whether to skip individual storage
+  const [activePlanId, setActivePlanId, activePlanIdLoading] = usePersistedState<string | null>(
+    'fmp_active_plan_id',
+    'active_plan_id',
+    null
+  );
+
+  // When in a family, shared data lives in the collaborative_plans table (the family plan).
+  // Skip loading from and saving to individual user_data for shared types.
+  const isInFamily = !!activePlanId && !activePlanIdLoading;
+
   const [family, setFamily, familyLoading] = usePersistedState(
     'fmp_family',
     'family',
     INITIAL_FAMILY,
-    validateFamily
+    validateFamily,
+    undefined,
+    isInFamily
   );
 
   const [preferences, setPreferences, preferencesLoading] = usePersistedState(
     'fmp_preferences',
     'preferences',
     INITIAL_PREFERENCES,
-    validatePreferences
+    validatePreferences,
+    undefined,
+    isInFamily
   );
 
   const [hasPlanGenerated, setHasPlanGenerated, hasPlanLoading] = usePersistedState(
     'fmp_has_plan',
     'has_plan',
-    false
+    false,
+    undefined,
+    undefined,
+    isInFamily
   );
 
   const [currentStage, setCurrentStage, stageLoading] = usePersistedState(
     'fmp_current_stage',
     'current_stage',
-    Stage.MEAL_PLANNING
+    Stage.MEAL_PLANNING,
+    undefined,
+    undefined,
+    isInFamily
   );
 
   const [planHistory, setPlanHistory, planHistoryLoading] = usePersistedState(
     'fmp_plan_history',
     'meal_plan',
     DEFAULT_PLAN_HISTORY,
-    validatePlanHistory
+    validatePlanHistory,
+    undefined,
+    isInFamily
   );
 
   const [prepTasks, setPrepTasks, prepTasksLoading] = usePersistedState(
     'fmp_prep_tasks',
     'prep_tasks',
-    []
+    [],
+    undefined,
+    undefined,
+    isInFamily
   );
 
   const [groceryItems, setGroceryItems, groceryItemsLoading] = usePersistedState(
     'fmp_grocery_items',
     'grocery_items',
-    []
+    [],
+    undefined,
+    undefined,
+    isInFamily
   );
 
   const [invalidationState, setInvalidationState, invalidationLoading] = usePersistedState(
     'fmp_invalidation_state',
     'invalidation_state',
-    DEFAULT_INVALIDATION_STATE
-  );
-
-  // Active family plan ID - persisted so family sync works across page refreshes
-  const [activePlanId, setActivePlanId, activePlanIdLoading] = usePersistedState<string | null>(
-    'fmp_active_plan_id',
-    'active_plan_id',
-    null
+    DEFAULT_INVALIDATION_STATE,
+    undefined,
+    undefined,
+    isInFamily
   );
 
   // Check if any data is still loading
@@ -369,6 +394,7 @@ const App: React.FC = () => {
   const [inviteUrl, setInviteUrl] = useState('');
   const [isCreatingInvite, setIsCreatingInvite] = useState(false);
   const [familyMembers, setFamilyMembers] = useState<any[]>([]);
+  const [familyPlanLoaded, setFamilyPlanLoaded] = useState(false);
 
   // Per-tab lock states - synced via family plan
   const [isMealsLocked, setIsMealsLocked] = useState(false);
@@ -439,8 +465,11 @@ const App: React.FC = () => {
 
   // Effect to sync all changes to family plan
   React.useEffect(() => {
-    // Don't sync if no active plan, still loading, applying a remote update, or toggling lock
-    if (!activePlanId || isDataLoading || isLoading || isApplyingRemoteUpdateRef.current || isTogglingLockRef.current) {
+    // Don't sync if no active plan, still loading, applying a remote update, or toggling lock.
+    // CRITICAL: Don't sync until familyPlanLoaded is true — otherwise we'd write stale
+    // individual user_data back to the family plan before loadFamilyMembership has loaded
+    // the correct shared plan from the backend.
+    if (!activePlanId || isDataLoading || !familyPlanLoaded || isLoading || isApplyingRemoteUpdateRef.current || isTogglingLockRef.current) {
       return;
     }
 
@@ -465,6 +494,7 @@ const App: React.FC = () => {
     });
   }, [
     activePlanId,
+    familyPlanLoaded,
     planHistory.present,
     family,
     preferences,
@@ -526,8 +556,6 @@ const App: React.FC = () => {
 
   // Load family plan data when activePlanId is set on startup
   // This ensures users in a family always see the shared plan data
-  const [familyPlanLoaded, setFamilyPlanLoaded] = useState(false);
-
   useEffect(() => {
     const loadFamilyMembership = async () => {
       // Wait for initial data to load
@@ -737,7 +765,9 @@ const App: React.FC = () => {
 
     const onComplete = async () => {
       setIsPrepGenerating(false);
-      await dataService.saveData('prep_tasks', streamingTasksRef.current);
+      if (!activePlanId) {
+        await dataService.saveData('prep_tasks', streamingTasksRef.current);
+      }
       console.log('[Background] ✓ Prep plan generation completed');
 
       setInvalidationState(prev => ({
@@ -843,7 +873,9 @@ const App: React.FC = () => {
 
     const onComplete = async () => {
       setIsGroceryGenerating(false);
-      await dataService.saveData('grocery_items', streamingItemsRef.current);
+      if (!activePlanId) {
+        await dataService.saveData('grocery_items', streamingItemsRef.current);
+      }
       console.log('[Background] ✓ Grocery list generation completed');
 
       setInvalidationState(prev => ({
@@ -1016,8 +1048,30 @@ const App: React.FC = () => {
             future: []
           };
 
-          await dataService.saveData('meal_plan', completedPlan);
-          console.log('✓ Saved completed meal plan after streaming');
+          if (!activePlanId) {
+            await dataService.saveData('meal_plan', completedPlan);
+            console.log('✓ Saved completed meal plan after streaming');
+          }
+
+          // Explicitly sync to family plan so other members see it immediately.
+          // The sync effect also fires when isLoading changes, but this explicit
+          // save ensures the new plan reaches the DB even if the effect is delayed
+          // or its save gets queued behind another in-flight request.
+          if (activePlanId) {
+            saveToFamilyPlan({
+              plan_data: streamingPlanRef.current,
+              family_data: members,
+              preferences_data: prefs,
+              prep_tasks: [],
+              grocery_items: [],
+              invalidation_state: invalidationState,
+              has_plan: 'true',
+              current_stage: Stage.MEAL_PLANNING.toString(),
+              is_meals_locked: isMealsLocked,
+              is_prep_locked: isPrepLocked,
+              is_grocery_locked: isGroceryLocked,
+            });
+          }
 
           // Track successful plan generation
           await analyticsService.trackMealPlanningEvent('plan_generation_completed', {
@@ -1729,8 +1783,10 @@ const App: React.FC = () => {
           setIsLoading(false);
 
           // Save the completed prep tasks from the ref
-          await dataService.saveData('prep_tasks', streamingTasksRef.current);
-          console.log('✓ Saved completed prep tasks after streaming');
+          if (!activePlanId) {
+            await dataService.saveData('prep_tasks', streamingTasksRef.current);
+            console.log('✓ Saved completed prep tasks after streaming');
+          }
 
           // Mark prep plan as current with the meal plan version
           setInvalidationState(prev => ({
@@ -1843,8 +1899,10 @@ const App: React.FC = () => {
           setIsLoading(false);
 
           // Save the completed grocery items from the ref
-          await dataService.saveData('grocery_items', streamingItemsRef.current);
-          console.log('✓ Saved completed grocery items after streaming');
+          if (!activePlanId) {
+            await dataService.saveData('grocery_items', streamingItemsRef.current);
+            console.log('✓ Saved completed grocery items after streaming');
+          }
 
           // Mark grocery list as current with the meal plan version
           setInvalidationState(prev => ({

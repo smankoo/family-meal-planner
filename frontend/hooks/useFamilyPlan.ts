@@ -210,7 +210,15 @@ export function useFamilyPlan(
   const saveToFamilyPlan = useCallback(async (
     updates: Partial<FamilyPlanState>
   ) => {
-    if (!activePlanId || isSavingRef.current) return;
+    if (!activePlanId) return;
+
+    if (isSavingRef.current) {
+      // Queue the latest update — it will be sent after the current save completes.
+      // This prevents silently dropping updates (e.g., the completed plan after regeneration).
+      pendingUpdateRef.current = updates;
+      console.log('[FamilyPlan] Save in-flight, queued update');
+      return;
+    }
 
     isSavingRef.current = true;
     setIsSyncing(true);
@@ -239,6 +247,14 @@ export function useFamilyPlan(
     } finally {
       setIsSyncing(false);
       isSavingRef.current = false;
+
+      // Flush any queued update (always send the latest state)
+      const queued = pendingUpdateRef.current;
+      if (queued) {
+        pendingUpdateRef.current = null;
+        console.log('[FamilyPlan] Flushing queued update');
+        saveToFamilyPlan(queued);
+      }
     }
   }, [activePlanId, showToast]);
 
